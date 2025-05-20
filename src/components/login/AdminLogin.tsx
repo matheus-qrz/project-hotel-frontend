@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { getSession, signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useAuthStore, useRestaurantStore } from '@/stores';
+import { useAuthStore } from '@/stores';
+import { generateRestaurantSlug } from '@/utils/slugify';
 
 export function AdminLogin() {
     const router = useRouter();
@@ -34,75 +35,54 @@ export function AdminLogin() {
         setError('');
 
         try {
-            // 1. Fazer login na API backend primeiro para obter os dados
             const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
             const response = await fetch(`${baseUrl}/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    email,
-                    password
-                })
+                body: JSON.stringify({ email, password })
             });
 
             const data = await response.json();
 
             if (!response.ok) {
-                setError(data.message || 'Credenciais inválidas');
-                setIsLoading(false);
-                return;
+                throw new Error(data.message || 'Falha na autenticação');
             }
 
-            // 2. Fazer login no NextAuth
             const result = await signIn('credentials', {
                 email,
                 password,
                 redirect: false,
             });
 
-            if (result?.error) {
-                setError(result.error || 'Falha na autenticação');
-                setIsLoading(false);
-                return;
-            }
+            if (result?.ok) {
+                // Garantir que os dados estão no formato correto
+                const restaurantId = data.restaurantInfo?.restaurantId;
+                const restaurantName = data.restaurantInfo?.restaurantName;
 
-            if (result?.status === 200) {
-                // 3. Armazenar o token no Zustand
-                const authToken = data.token; // Acesse o token retornado pela API
-                if (authToken) {
-                    console.log("Armazenando token..: ", authToken);
-                    useAuthStore.getState().setToken(authToken); // Armazena o token no Zustand
-                } else {
-                    console.error('Auth token is null');
-                    setError('Token de autenticação não encontrado.');
-                    setIsLoading(false);
-                    return;
+                if (!restaurantId || !restaurantName) {
+                    throw new Error('Informações do restaurante não encontradas');
                 }
 
-                // 4. Configurar dados do usuário baseado na resposta
-                if (data.user && data.user.restaurantId) {
-                    // Caso usuário ADMIN
-                    useAuthStore.getState().setRestaurantId(data.user.restaurantId); // Atualiza o estado no Zustand
-                    useAuthStore.getState().setUserRole(data.user.role); // Atualiza o papel do usuário
-                    // useAuthStore.getState().setUserName(data.user.firstName); // Atualiza o nome do usuário
-                    router.push(`/restaurant/${data.user.restaurantId}/dashboard`);
-                } else if (data.restaurant) {
-                    // Caso login direto pelo restaurante
-                    useAuthStore.getState().setRestaurantId(data.restaurant._id); // Atualiza o estado no Zustand
-                    useAuthStore.getState().setUserRole('ADMIN'); // Define papel como ADMIN
-                    // useAuthStore.getState().setUserName(data.restaurant.admin.fullName); // Atualiza o nome do admin
-                    router.push(`/restaurant/${data.restaurant._id}/dashboard`);
-                } else {
-                    setError('Não foi possível obter os dados do restaurante');
+                // Atualizar o estado
+                useAuthStore.getState().setToken(data.token);
+                useAuthStore.getState().setRestaurantId(restaurantId);
+                useAuthStore.getState().setUserRole(data.user.role);
+
+                // Gerar o slug
+                const slug = generateRestaurantSlug(restaurantName, restaurantId);
+
+                // Redirecionar baseado no papel do usuário
+                if (data.user.role === 'ADMIN') {
+                    router.push(`/restaurant/${slug}/dashboard`);
+                } else if (data.user.role === 'MANAGER') {
+                    router.push(`/restaurant/${slug}/manager`);
                 }
-            } else {
-                setError('Erro ao processar login. Tente novamente.');
             }
         } catch (error) {
-            console.error('Erro ao processar login:', error);
-            setError('Erro ao conectar com o servidor. Tente novamente.');
+            console.error('Erro durante login:', error);
+            setError('Erro ao processar login');
         } finally {
             setIsLoading(false);
         }

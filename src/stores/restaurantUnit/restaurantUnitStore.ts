@@ -3,24 +3,25 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useAuthStore } from '../index'; // Importe o authStore para acessar getHeaders
 
-interface Address {
-    zipCode: string;
-    street: string;
-    number: number;
-    complement?: string;
-}
-
-interface RestaurantUnit {
-    id: string;
+export interface RestaurantUnit {
+    _id: string;
     name: string;
-    address: Address;
-    cnpj: string;
-    socialName: string;
     manager: string;
-    phone: string;
-    attendants: string[];
-    restaurant: string;
-    isActive: boolean;
+    cnpj: string;
+    status: "active" | "outOfHours" | "inactive";
+    isTopSeller?: boolean;
+    isMatrix?: boolean;
+    address?: {
+        street: string;
+        number: string;
+        complement?: string;
+        zipCode: string;
+    };
+    businessHours?: Array<{
+        days: string[];
+        opens: string;
+        closes: string;
+    }>;
 }
 
 interface RestaurantUnitState {
@@ -34,6 +35,8 @@ interface RestaurantUnitState {
     setCurrentUnitId: (unitId: string | null) => void; // Alterado nome da função
 }
 
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+
 export const useRestaurantUnitStore = create<RestaurantUnitState>()(
     persist(
         (set) => ({
@@ -44,7 +47,7 @@ export const useRestaurantUnitStore = create<RestaurantUnitState>()(
             fetchUnits: async (restaurantId: string) => {
                 try {
                     const headers = useAuthStore.getState().getHeaders();
-                    const response = await fetch(`/restaurant/${restaurantId}/units?includeMatrix=true`, {
+                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/units?includeMatrix=true`, {
                         headers,
                     });
 
@@ -52,17 +55,31 @@ export const useRestaurantUnitStore = create<RestaurantUnitState>()(
                         throw new Error('Erro ao buscar unidades');
                     }
 
-                    const units = await response.json();
-                    set({ units });
+                    const data = await response.json();
+                    // Certifique-se de que está acessando o array de unidades corretamente
+                    const formattedUnits = data.units.map((unit: any) => ({
+                        _id: unit._id,
+                        name: unit.name,
+                        manager: unit.managers && unit.managers[0]
+                            ? `${unit.managers[0].firstName} ${unit.managers[0].lastName}`
+                            : 'Sem gerente',
+                        cnpj: unit.cnpj,
+                        status: unit.status,
+                        isTopSeller: unit.isTopSeller || false,
+                        isMatrix: unit.isMatrix || false
+                    }));
+
+                    set({ units: formattedUnits });
                 } catch (error) {
                     console.error('Erro ao buscar unidades:', error);
+                    throw error;
                 }
             },
 
             fetchUnitByRestaurantId: async (restaurantId: string) => {
                 try {
                     const headers = useAuthStore.getState().getHeaders();
-                    const response = await fetch(`/restaurant/${restaurantId}/units`, {
+                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/units`, {
                         headers,
                     });
 
@@ -78,7 +95,7 @@ export const useRestaurantUnitStore = create<RestaurantUnitState>()(
                         return unitId;
                     }
 
-                    const restaurantResponse = await fetch(`/restaurant/${restaurantId}`, {
+                    const restaurantResponse = await fetch(`${API_URL}/restaurant/${restaurantId}`, {
                         headers,
                     });
 
@@ -100,7 +117,7 @@ export const useRestaurantUnitStore = create<RestaurantUnitState>()(
             addUnit: async (restaurantId: string, unitData: Omit<RestaurantUnit, 'id'>) => {
                 try {
                     const headers = useAuthStore.getState().getHeaders();
-                    const response = await fetch(`/restaurant/${restaurantId}/units`, {
+                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/units`, {
                         method: 'POST',
                         headers: {
                             ...headers,
@@ -123,7 +140,7 @@ export const useRestaurantUnitStore = create<RestaurantUnitState>()(
             updateUnit: async (unitId: string, unitData: Partial<Omit<RestaurantUnit, 'id'>>) => {
                 try {
                     const headers = useAuthStore.getState().getHeaders();
-                    const response = await fetch(`/unit/${unitId}`, {
+                    const response = await fetch(`${API_URL}/unit/${unitId}`, {
                         method: 'PUT',
                         headers: {
                             ...headers,
@@ -139,7 +156,7 @@ export const useRestaurantUnitStore = create<RestaurantUnitState>()(
                     const updatedUnit = await response.json();
                     set((state) => ({
                         units: state.units.map((unit) =>
-                            unit.id === unitId ? { ...unit, ...updatedUnit } : unit
+                            unit._id === unitId ? { ...unit, ...updatedUnit } : unit
                         ),
                     }));
                 } catch (error) {
@@ -150,7 +167,7 @@ export const useRestaurantUnitStore = create<RestaurantUnitState>()(
             deleteUnit: async (unitId: string, restaurantId: string) => {
                 try {
                     const headers = useAuthStore.getState().getHeaders();
-                    const response = await fetch(`/restaurant/${restaurantId}/units/${unitId}`, {
+                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/units/${unitId}`, {
                         method: 'DELETE',
                         headers,
                     });
@@ -160,14 +177,12 @@ export const useRestaurantUnitStore = create<RestaurantUnitState>()(
                     }
 
                     set((state) => ({
-                        units: state.units.filter((unit) => unit.id !== unitId),
+                        units: state.units.filter((unit) => unit._id !== unitId),
                     }));
                 } catch (error) {
                     console.error('Erro ao deletar unidade:', error);
                 }
             },
-
-            // ... (manter o resto das funções como estão)
         }),
         {
             name: 'restaurant-unit-storage',

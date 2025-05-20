@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Edit, Mail, Phone, Calendar, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,10 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/useToast';
 import {
-    IEmployee,
     getEmployeeById,
     formatRole,
 } from '@/services/employee/index';
+import { IEmployee } from '@/services/employee/types';
+import { useAuthCheck } from '@/hooks/sessionManager';
 
 interface EmployeeDetailsProps {
     unitId: string;
@@ -21,8 +22,9 @@ interface EmployeeDetailsProps {
 
 export default function EmployeeDetails({ unitId, employeeId }: EmployeeDetailsProps) {
     const router = useRouter();
+    const { slug } = useParams();
     const { toast } = useToast();
-
+    const { isAuthenticated, isAdminOrManager, session } = useAuthCheck();
     const [employee, setEmployee] = useState<IEmployee | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -32,7 +34,7 @@ export default function EmployeeDetails({ unitId, employeeId }: EmployeeDetailsP
         const fetchEmployee = async () => {
             try {
                 setIsLoading(true);
-                const data = await getEmployeeById(employeeId);
+                const data = await getEmployeeById(employeeId, session?.token ?? '');
                 setEmployee(data);
             } catch (error: any) {
                 console.error('Erro ao buscar funcionário:', error);
@@ -52,12 +54,12 @@ export default function EmployeeDetails({ unitId, employeeId }: EmployeeDetailsP
 
     // Voltar para a lista
     const goBack = () => {
-        router.push(`/admin/units/${unitId}/employees`);
+        router.push(`/restaurant/${slug}/employees`);
     };
 
     // Ir para edição
     const goToEdit = () => {
-        router.push(`/admin/units/${unitId}/employees/${employeeId}/edit`);
+        router.push(`/restaurant/${slug}/employees/${employeeId}/edit`);
     };
 
     // Renderizar skeleton durante carregamento

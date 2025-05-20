@@ -1,59 +1,60 @@
-// components/login/GuestLogin.tsx
 "use client"
 
 import { useState } from 'react';
 import { useAuthCheck } from '@/hooks/sessionManager';
+import { useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { useCartStore } from '@/stores';
+import { extractIdFromSlug, extractNameFromSlug } from '@/utils/slugify';
+import { Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2 } from 'lucide-react';
 
-interface GuestLoginProps {
-    onLoginSuccess?: () => void;
-}
 
-export function GuestLogin({ onLoginSuccess }: GuestLoginProps) {
-    const [name, setName] = useState('');
+export function GuestLogin() {
+    const { setGuestInfo } = useCartStore();
+    const { slug, tableId } = useParams();
+    const [guestData, setGuestData] = useState({
+        name: '',
+    });
+    const router = useRouter();
     const { authenticateAsGuest, isLoading, error } = useAuthCheck();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('GuestLogin - Enviando formulário de login como convidado:', { name });
 
         try {
-            // Verificar se há informações de mesa armazenadas
-            const storageKeys = Object.keys(localStorage);
-            const tableKey = storageKeys.find(key => key.startsWith('table-'));
-
-            if (!tableKey) {
-                throw new Error('Informações da mesa não encontradas. Por favor, escaneie o QR Code novamente.');
-            }
-
-            // Extrair restaurantName e tableId
-            const restaurantName = tableKey.replace('table-', '');
-            const tableId = localStorage.getItem(tableKey);
+            const restaurantName = slug && extractNameFromSlug(String(slug));
+            const restaurantId = slug && extractIdFromSlug(String(slug));
 
             if (!tableId) {
-                throw new Error('Número da mesa não encontrado. Por favor, escaneie o QR Code novamente.');
+                throw new Error('Número da mesa não encontrado.');
             }
 
-            // Usar o novo método authenticateAsGuest
-            const result = await authenticateAsGuest(tableId, '', restaurantName);
+            const result = await authenticateAsGuest(
+                String(tableId),
+                String(restaurantId),
+                String(restaurantName),
+                { name: guestData.name }
+            );
 
             if (result.success) {
-                console.log('Login como convidado bem-sucedido');
-
-                // Armazenar o nome do convidado para uso posterior
-                localStorage.setItem('guest_name', name);
-
-                if (onLoginSuccess) {
-                    onLoginSuccess();
-                }
+                setGuestInfo({ name: guestData.name });
+                router.push(`/restaurant/${slug}/${tableId}/menu`);
             }
         } catch (err: any) {
-            console.error('GuestLogin - Erro tratado no componente:', err);
+            console.error('Erro no login como convidado:', err);
         }
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setGuestData(prev => ({
+            ...prev,
+            [name]: value
+        }));
     };
 
     return (
@@ -67,13 +68,14 @@ export function GuestLogin({ onLoginSuccess }: GuestLoginProps) {
             )}
 
             <div className="space-y-2">
-                <Label htmlFor="name">Nome</Label>
+                <Label htmlFor="name" className='text-md'>Nome</Label>
                 <Input
                     id="name"
+                    name="name"
                     type="text"
                     placeholder="Seu nome"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    value={guestData.name}
+                    onChange={handleInputChange}
                     required
                 />
             </div>
@@ -81,7 +83,7 @@ export function GuestLogin({ onLoginSuccess }: GuestLoginProps) {
             <Button
                 type="submit"
                 className="w-full"
-                disabled={isLoading}
+                disabled={isLoading || !guestData.name.trim()}
             >
                 {isLoading ? (
                     <>
@@ -89,12 +91,12 @@ export function GuestLogin({ onLoginSuccess }: GuestLoginProps) {
                         Entrando...
                     </>
                 ) : (
-                    'Continuar como convidado'
+                    'Continuar'
                 )}
             </Button>
 
-            <p className="text-xs text-gray-500 mt-2">
-                Usaremos seu nome apenas para identificação durante sua visita.
+            <p className="text-sm text-center text-gray-500 mt-2">
+                Suas informações serão usadas apenas para identificação durante sua visita.
             </p>
         </form>
     );

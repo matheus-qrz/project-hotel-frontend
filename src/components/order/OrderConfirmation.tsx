@@ -1,53 +1,70 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, Home, Clock } from 'lucide-react';
 import { formatCurrency } from '@/services/restaurant/services';
+import { useOrderStore, Order } from '@/stores/order/orderStore';
 
 interface OrderConfirmationProps {
     orderId: string;
     restaurantId: string;
     restaurantName: string;
+    tableId: string;
     splitCount?: number;
+    unitId?: string;
     onBackToMenu: () => void;
     onBackToHome: () => void;
-    orderData?: {
-        status: string;
-        totalAmount: number;
-        items: Array<{
-            name: string;
-            quantity: number;
-            price: number;
-        }>;
-    };
 }
 
 export default function OrderConfirmation({
     orderId,
     restaurantId,
     restaurantName,
+    tableId,
+    unitId,
     splitCount = 1,
     onBackToMenu,
     onBackToHome,
-    orderData
 }: OrderConfirmationProps) {
-    // Usar dados mockados se orderData não for fornecido
-    const order = orderData || {
-        status: 'pending',
-        totalAmount: 75.50,
-        items: [
-            { name: 'X-Burger', quantity: 2, price: 25.90 },
-            { name: 'Batata Frita', quantity: 1, price: 15.90 },
-            { name: 'Refrigerante Lata', quantity: 2, price: 6.90 }
-        ]
-    };
+    const { currentOrders, fetchTableOrders, getTableTotal, getAmountPerPerson } = useOrderStore();
+    const [isLoading, setIsLoading] = useState(true);
 
-    // Valor por pessoa quando a conta é dividida
-    const totalPerPerson = splitCount > 1 ? order.totalAmount / splitCount : order.totalAmount;
+    useEffect(() => {
+        const loadOrder = async () => {
+            try {
+                await fetchTableOrders(restaurantId, tableId, unitId ?? '');
+                setIsLoading(false);
+            } catch (error) {
+                console.error('Erro ao carregar pedido:', error);
+                setIsLoading(false);
+            }
+        };
+
+        loadOrder();
+    }, [restaurantId, tableId, fetchTableOrders]);
+
+    // Encontrar o pedido específico
+    const order = currentOrders.find((order: Order) => order._id === orderId) as Order | undefined;
+
+    if (isLoading) {
+        return <div>Carregando...</div>;
+    }
+
+    if (!order) {
+        return <div>Pedido não encontrado</div>;
+    }
 
     // Formatar ID do pedido
-    const displayOrderId = orderId.startsWith('order_')
-        ? orderId.substring(6, 14).toUpperCase()
-        : orderId.substring(0, 8).toUpperCase();
+    const displayOrderId = orderId.substring(0, 8).toUpperCase();
+
+    // Mapear status para exibição
+    const statusDisplay = {
+        pending: { text: 'Pendente', icon: <Clock size={16} className="mr-1 text-orange-500" /> },
+        processing: { text: 'Em Preparo', icon: <Clock size={16} className="mr-1 text-blue-500" /> },
+        completed: { text: 'Concluído', icon: <CheckCircle size={16} className="mr-1 text-green-500" /> },
+        cancelled: { text: 'Cancelado', icon: <Clock size={16} className="mr-1 text-red-500" /> }
+    };
+
+    const currentStatus = statusDisplay[order.status as keyof typeof statusDisplay] || statusDisplay.pending;
 
     return (
         <div className="container mx-auto px-4 py-8 max-w-md">
@@ -78,9 +95,15 @@ export default function OrderConfirmation({
                     </div>
 
                     <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Mesa:</span>
+                        <span>{order.meta.tableId}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center">
                         <span className="text-gray-600">Status:</span>
-                        <span className="text-orange-500 flex items-center font-medium">
-                            <Clock size={16} className="mr-1" /> Pendente
+                        <span className="flex items-center font-medium">
+                            {currentStatus.icon}
+                            {currentStatus.text}
                         </span>
                     </div>
 
@@ -92,7 +115,7 @@ export default function OrderConfirmation({
                     {splitCount > 1 && (
                         <div className="flex justify-between items-center text-sm text-gray-600">
                             <span>Valor por pessoa ({splitCount}):</span>
-                            <span>{formatCurrency(totalPerPerson)}</span>
+                            <span>{formatCurrency(getAmountPerPerson(splitCount))}</span>
                         </div>
                     )}
                 </div>
@@ -103,7 +126,7 @@ export default function OrderConfirmation({
                 <h2 className="text-lg font-bold mb-4">Itens do Pedido</h2>
 
                 <div className="space-y-3">
-                    {order.items.map((item, index) => (
+                    {order.items.map((item: any, index: any) => (
                         <div key={index} className="flex justify-between items-start pb-3 border-b border-gray-100 last:border-0 last:pb-0">
                             <div>
                                 <div className="font-medium">{item.name}</div>
@@ -111,7 +134,9 @@ export default function OrderConfirmation({
                                     {item.quantity}x {formatCurrency(item.price)}
                                 </div>
                             </div>
-                            <span className="font-medium">{formatCurrency(item.price * item.quantity)}</span>
+                            <span className="font-medium">
+                                {formatCurrency(item.price * item.quantity)}
+                            </span>
                         </div>
                     ))}
                 </div>

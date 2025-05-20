@@ -9,28 +9,28 @@ import { QrCode, Camera, ArrowLeft } from 'lucide-react';
 interface ScanClientProps {
     restaurantName: string;
     restaurantId: string;
+    tableId: string;
 }
 
-export default function ScanClient({ restaurantName, restaurantId }: ScanClientProps) {
+export default function ScanClient({ restaurantName, restaurantId, tableId }: ScanClientProps) {
     const router = useRouter();
-    const [tableNumber, setTableNumber] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [scanMode, setScanMode] = useState<'manual' | 'camera'>('manual');
 
     // Função para validar e salvar o número da mesa
     const saveTableNumber = () => {
-        if (!tableNumber.trim()) {
+        if (!tableId.trim()) {
             setError('Por favor, informe o número da mesa');
             return;
         }
 
-        if (isNaN(Number(tableNumber)) || Number(tableNumber) <= 0) {
+        if (isNaN(Number(tableId)) || Number(tableId) <= 0) {
             setError('Por favor, informe um número de mesa válido');
             return;
         }
 
         // Salvar no localStorage
-        localStorage.setItem(`table-${restaurantName}`, tableNumber);
+        localStorage.setItem(`table-${restaurantName}`, tableId);
 
         // Redirecionar para o menu
         router.push(`/${restaurantName}/menu`);
@@ -87,9 +87,8 @@ export default function ScanClient({ restaurantName, restaurantId }: ScanClientP
                             <Input
                                 type="number"
                                 placeholder="Número da mesa"
-                                value={tableNumber}
+                                value={tableId}
                                 onChange={(e) => {
-                                    setTableNumber(e.target.value);
                                     setError(null);
                                 }}
                                 className="text-center text-xl font-bold h-12"

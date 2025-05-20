@@ -1,16 +1,15 @@
-'use client'
+'use client';
 
-import React, { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
 import { useToast } from '@/hooks/useToast';
-
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent } from '@/components/ui/card';
 import {
     Form,
     FormControl,
@@ -19,161 +18,166 @@ import {
     FormItem,
     FormLabel,
     FormMessage,
-} from "@/components/ui/form";
+} from '@/components/ui/form';
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Loader2 } from "lucide-react";
-import { useProductStore } from "@/stores/products";
-import { Separator } from "@/components/ui/separator";
-import { useAuthCheck } from "@/hooks/sessionManager";
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Loader2 } from 'lucide-react';
+import { useProductStore } from '@/stores/products';
+import { Separator } from '@/components/ui/separator';
+import { useAuthCheck } from '@/hooks/sessionManager';
+import { extractIdFromSlug } from '@/utils/slugify';
+import { Product } from '@/stores/products/productStore';
 
-// Form schema using Zod
 const formSchema = z.object({
-    name: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres" }),
-    category: z.string().min(1, { message: "Selecione uma categoria" }),
+    name: z.string().min(2, { message: 'Nome deve ter pelo menos 2 caracteres' }),
+    category: z.string().min(1, { message: 'Selecione uma categoria' }),
     price: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
-        message: "Preço deve ser um número positivo",
+        message: 'Preço deve ser um número positivo',
     }),
     description: z.string().optional(),
     quantity: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
-        message: "Quantidade deve ser um número positivo",
+        message: 'Quantidade deve ser um número positivo',
     }),
     image: z.string().optional(),
     isAvailable: z.boolean().default(true),
     isOnPromotion: z.boolean().default(false),
-    discountPercentage: z.string().optional(),
+    discountPercentage: z.string().optional().refine((val) => !val || (!isNaN(Number(val)) && Number(val) > 0 && Number(val) <= 100), {
+        message: 'Percentual de desconto deve ser entre 0 e 100',
+    }),
     promotionalPrice: z.string().optional(),
-    promotionStartDate: z.string().optional(),
-    promotionEndDate: z.string().optional(),
+    promotionStartDate: z.string().optional().refine((val) => !val || !isNaN(Date.parse(val)), {
+        message: 'Data de início inválida',
+    }),
+    promotionEndDate: z.string().optional().refine((val) => !val || !isNaN(Date.parse(val)), {
+        message: 'Data de término inválida',
+    }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 const CATEGORIES = [
-    { id: "appetizers", name: "Entradas" },
-    { id: "main", name: "Pratos Principais" },
-    { id: "desserts", name: "Sobremesas" },
-    { id: "drinks", name: "Bebidas" },
-    { id: "sides", name: "Acompanhamentos" },
+    { id: 'appetizers', name: 'Entradas' },
+    { id: 'main', name: 'Pratos Principais' },
+    { id: 'desserts', name: 'Sobremesas' },
+    { id: 'drinks', name: 'Bebidas' },
+    { id: 'sides', name: 'Acompanhamentos' },
 ];
 
-export default function ProductForm() {
-    const { restaurantId } = useParams();
+interface ProductFormProps {
+    slug: string;
+}
+
+export default function ProductForm({ slug }: ProductFormProps) {
     const router = useRouter();
-    const { session, isAdminOrManager } = useAuthCheck();
+    const { session } = useAuthCheck();
     const { createProduct } = useProductStore();
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = React.useState(false);
     const { toast } = useToast();
 
-    // Initialize form with default values
+    const restaurantId = slug && extractIdFromSlug(String(slug));
+
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            name: "",
-            category: "",
-            price: "",
-            description: "",
-            quantity: "1",
-            image: "",
+            name: '',
+            category: '',
+            price: '',
+            description: '',
+            quantity: '1',
+            image: '',
             isAvailable: true,
             isOnPromotion: false,
-            discountPercentage: "",
-            promotionalPrice: "",
-            promotionStartDate: "",
-            promotionEndDate: "",
+            discountPercentage: '',
+            promotionalPrice: '',
+            promotionStartDate: '',
+            promotionEndDate: '',
         },
     });
 
-    const isOnPromotion = form.watch("isOnPromotion");
-    const price = form.watch("price");
-    const discountPercentage = form.watch("discountPercentage");
+    const isOnPromotion = form.watch('isOnPromotion');
+    const price = form.watch('price');
+    const discountPercentage = form.watch('discountPercentage');
 
-    // Calculate promotional price when discount changes
     useEffect(() => {
         if (isOnPromotion && price && discountPercentage) {
             const priceNum = Number(price);
             const discountNum = Number(discountPercentage);
-
             if (!isNaN(priceNum) && !isNaN(discountNum)) {
                 const calculatedPrice = priceNum * (1 - discountNum / 100);
-                form.setValue("promotionalPrice", calculatedPrice.toFixed(2));
+                form.setValue('promotionalPrice', calculatedPrice.toFixed(2));
             }
         }
     }, [price, discountPercentage, isOnPromotion, form]);
 
-    // Adicione esta função para lidar com o upload da imagem
-    const handleImageUpload = async (event: any) => {
-        const file = event.target.files[0];
+    const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
-                if (typeof reader.result === "string") {
-                    form.setValue("image", reader.result); // Armazena a imagem em formato base64
+                if (typeof reader.result === 'string') {
+                    form.setValue('image', reader.result);
                 }
             };
-            reader.readAsDataURL(file); // Lê o arquivo como URL de dados
+            reader.readAsDataURL(file);
         }
     };
 
-    async function onSubmit(values: FormValues) {
+    // Ajuste o onSubmit para converter os valores corretamente:
+    const onSubmit = async (values: FormValues) => {
+        if (!restaurantId || !session?.token) return;
+
         setLoading(true);
-
         try {
-            const token = session && session.token;
-            // Format the data for API submission
-            if (token) {
-                const formattedData = {
-                    ...values,
-                    price: Number(values.price),
-                    quantity: Number(values.quantity),
-                    ...(values.isOnPromotion && {
-                        discountPercentage: values.discountPercentage ? values.discountPercentage : undefined,
-                        promotionalPrice: values.promotionalPrice ? values.promotionalPrice : undefined,
-                        promotionStartDate: values.promotionStartDate || undefined,
-                        promotionEndDate: values.promotionEndDate || undefined,
-                    }),
-                };
+            // Garantindo que os tipos correspondam exatamente ao esperado pelo createProduct
+            const formattedData: Omit<Product, '_id'> = {
+                name: values.name,
+                category: values.category,
+                price: Number(values.price),
+                quantity: Number(values.quantity),
+                description: values.description ?? '',
+                image: values.image ?? '',
+                isAvailable: values.isAvailable,
+                isOnPromotion: values.isOnPromotion,
+                // Campos promocionais com valores padrão quando não em promoção
+                discountPercentage: values.isOnPromotion ? Number(values.discountPercentage) : 0,
+                promotionalPrice: values.isOnPromotion ? Number(values.promotionalPrice) : 0,
+                promotionStartDate: values.isOnPromotion ? values.promotionStartDate ?? '' : '',
+                promotionEndDate: values.isOnPromotion ? values.promotionEndDate ?? '' : ''
+            };
 
-                // Submit to API
-                await createProduct(formattedData, String(restaurantId));
+            await createProduct(formattedData, restaurantId);
 
-                toast({
-                    title: "Sucesso",
-                    description: "Produto adicionado com sucesso."
-                });
-                router.push(`/restaurant/${restaurantId}/products`);
-            }
-        } catch (error) {
-            console.error("Erro ao criar produto:", error);
             toast({
-                title: "Erro",
-                variant: "destructive",
-                description: "Erro ao cadastrar o produto."
+                title: 'Sucesso',
+                description: 'Produto adicionado com sucesso.'
+            });
+
+            router.push(`/restaurant/${slug}/products`);
+        } catch (error) {
+            console.error('Erro ao criar produto:', error);
+            toast({
+                title: 'Erro',
+                variant: 'destructive',
+                description: 'Erro ao cadastrar o produto.'
             });
         } finally {
             setLoading(false);
         }
-    }
+    };
 
     return (
         <div className="container mx-auto px-4 max-w-3xl">
-            <div className="flex flex-row items-start gap-2 mb-6">
-                <h1 className="text-2xl font-bold">Novo Produto</h1>
-            </div>
-
             <Card>
                 <CardContent className="pt-6">
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Nome do produto */}
                                 <FormField
                                     control={form.control}
                                     name="name"
@@ -188,7 +192,6 @@ export default function ProductForm() {
                                     )}
                                 />
 
-                                {/* Categoria */}
                                 <FormField
                                     control={form.control}
                                     name="category"
@@ -217,7 +220,6 @@ export default function ProductForm() {
                                     )}
                                 />
 
-                                {/* Preço */}
                                 <FormField
                                     control={form.control}
                                     name="price"
@@ -238,7 +240,6 @@ export default function ProductForm() {
                                     )}
                                 />
 
-                                {/* Quantidade */}
                                 <FormField
                                     control={form.control}
                                     name="quantity"
@@ -258,7 +259,6 @@ export default function ProductForm() {
                                     )}
                                 />
 
-                                {/* URL da imagem */}
                                 <FormField
                                     control={form.control}
                                     name="image"
@@ -268,8 +268,8 @@ export default function ProductForm() {
                                             <FormControl>
                                                 <Input
                                                     type="file"
-                                                    accept="image/*" // Aceita apenas arquivos de imagem
-                                                    onChange={handleImageUpload} // Chama a função ao selecionar um arquivo
+                                                    accept="image/*"
+                                                    onChange={handleImageUpload}
                                                 />
                                             </FormControl>
                                             <FormDescription>
@@ -280,7 +280,6 @@ export default function ProductForm() {
                                     )}
                                 />
 
-                                {/* Descrição */}
                                 <FormField
                                     control={form.control}
                                     name="description"
@@ -299,7 +298,6 @@ export default function ProductForm() {
                                     )}
                                 />
 
-                                {/* Disponibilidade */}
                                 <FormField
                                     control={form.control}
                                     name="isAvailable"
@@ -321,7 +319,6 @@ export default function ProductForm() {
                                     )}
                                 />
 
-                                {/* Em promoção */}
                                 <FormField
                                     control={form.control}
                                     name="isOnPromotion"
@@ -344,14 +341,12 @@ export default function ProductForm() {
                                 />
                             </div>
 
-                            {/* Campos condicionais de promoção */}
                             {isOnPromotion && (
                                 <div className="space-y-6 mt-4 p-4 border rounded-lg bg-muted/20">
                                     <h3 className="font-medium">Detalhes da promoção</h3>
                                     <Separator />
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        {/* Percentual de desconto */}
                                         <FormField
                                             control={form.control}
                                             name="discountPercentage"
@@ -373,7 +368,6 @@ export default function ProductForm() {
                                             )}
                                         />
 
-                                        {/* Preço promocional */}
                                         <FormField
                                             control={form.control}
                                             name="promotionalPrice"
@@ -398,7 +392,6 @@ export default function ProductForm() {
                                             )}
                                         />
 
-                                        {/* Data de início */}
                                         <FormField
                                             control={form.control}
                                             name="promotionStartDate"
@@ -416,7 +409,6 @@ export default function ProductForm() {
                                             )}
                                         />
 
-                                        {/* Data de término */}
                                         <FormField
                                             control={form.control}
                                             name="promotionEndDate"

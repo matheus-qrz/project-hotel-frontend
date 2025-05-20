@@ -311,7 +311,7 @@ export default function AddRestaurantUnit({ restaurantId }: iAddRestaurantUnit) 
                                 </Button>
                                 <Button
                                     className="w-full bg-black hover:bg-gray-800 text-white"
-                                // onClick={() => router.push(`/restaurant/unit/${unitData.i}`)}
+                                    onClick={() => router.push(`/restaurant/unit/${unitData.id}`)}
                                 >
                                     Visualizar unidade
                                     <ChevronRight className="h-4 w-4 ml-2" />

@@ -1,71 +1,89 @@
 'use client';
 
 import { signIn, signOut, useSession } from 'next-auth/react';
-import { useEffect, ReactNode, useState } from 'react';
+import { useEffect, useState, ReactNode } from 'react';
 import { useAuthStore, useRestaurantStore } from '@/stores';
 import { useRouter } from 'next/navigation';
+import { v4 as uuidv4 } from 'uuid';
 
 interface SessionManagerProps {
     children: ReactNode;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+interface GuestInfo {
+    id: string;
+    name: string;
+    tableId: string;
+    restaurantId: string;
+    restaurantName: string;
+    createdAt: string;
+}
 
-// Este componente gerencia a sessão e sincroniza com os Zustand stores
 export default function SessionManager({ children }: SessionManagerProps) {
     const { data: session, status } = useSession();
     const updateFromSession = useAuthStore(state => state.updateFromSession);
-    const setRestaurantId = useRestaurantStore(state => state.setRestaurantId);
+    const fetchRestaurantData = useRestaurantStore(state => state.fetchRestaurantData);
 
-    // Sincroniza o estado dos stores com a sessão
     useEffect(() => {
         if (status === 'authenticated' && session) {
-            // Atualiza o authStore
             updateFromSession(session);
 
-            // Atualiza o restaurantStore se tiver restaurantId
             if (session.user?.restaurantId) {
-                setRestaurantId(session.user.restaurantId);
+                fetchRestaurantData(session.user.restaurantId);
             }
         }
-    }, [session, status, updateFromSession, setRestaurantId]);
+    }, [session, status, updateFromSession, fetchRestaurantData]);
 
     return <>{children}</>;
 }
 
-// Hook para verificar autenticação e tipos de usuário
 export function useAuthCheck() {
     const { data: session, status } = useSession();
     const router = useRouter();
-    const token = useAuthStore(state => state.token);
-    const [loading, setLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const {
+        token,
         setToken,
         setUserRole,
-        setRestaurantId
+        setRestaurantId,
+        clear: clearAuth
     } = useAuthStore();
 
-    // Verifica se está autenticado
-    const isAuthenticated = status === 'authenticated' && (!!token || !!session?.token);
+    // Verificar e restaurar a sessão do localStorage    
+    useEffect(() => {
+        const storedSession = localStorage.getItem('user-session');
+        const guestToken = localStorage.getItem('guest_token');
 
-    // Verifica tipos específicos de usuário
+        if (storedSession && status === 'unauthenticated' && !guestToken) {
+            try {
+                const sessionData = JSON.parse(storedSession);
+                setToken(sessionData.token);
+                setUserRole(sessionData.role);
+                setRestaurantId(sessionData.restaurantId);
+            } catch (error) {
+                console.error('Erro ao restaurar sessão:', error);
+                localStorage.removeItem('user-session');
+            }
+        }
+    }, [status, setToken, setUserRole, setRestaurantId]);
+
+    const isAuthenticated = status === 'authenticated' && (!!token || !!session?.token);
     const isAdmin = isAuthenticated && session?.user?.role === 'ADMIN';
     const isManager = isAuthenticated && session?.user?.role === 'MANAGER';
     const isAttendant = isAuthenticated && session?.user?.role === 'ATTENDANT';
     const isClient = isAuthenticated && session?.user?.role === 'CLIENT';
 
-    // Agrupamentos úteis
     const isAdminOrManager = isAdmin || isManager;
     const isStaff = isAdmin || isManager || isAttendant;
 
     const registerAdminWithRestaurant = async (payload: any) => {
-        setLoading(true);
+        setIsLoading(true);
         setError(null);
 
         try {
-            const response = await fetch(`${API_URL}/restaurant/register`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/register/restaurant`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -79,7 +97,6 @@ export function useAuthCheck() {
                 throw new Error(data.message || 'Erro ao registrar restaurante');
             }
 
-            // Armazenar dados no store
             if (data.token) {
                 setToken(data.token);
                 setUserRole('ADMIN');
@@ -87,10 +104,8 @@ export function useAuthCheck() {
 
             if (data.restaurant?._id) {
                 setRestaurantId(data.restaurant._id);
-                useRestaurantStore.getState().setRestaurantId(data.restaurant._id);
             }
 
-            // Integração com NextAuth
             await signIn('credentials', {
                 email: payload.email,
                 password: payload.password,
@@ -106,20 +121,19 @@ export function useAuthCheck() {
             setError(error.message || 'Erro ao registrar restaurante');
             return {
                 success: false,
-                message: error.message || 'Erro ao registrar restaurante'
+                message: error.message
             };
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
     };
 
     const login = async (email: string, password: string) => {
-        setLoading(true);
+        setIsLoading(true);
         setError(null);
 
         try {
-            // Chamar a API para autenticação
-            const response = await fetch(`${API_URL}/login`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -133,27 +147,19 @@ export function useAuthCheck() {
                 throw new Error(data.message || 'Credenciais inválidas');
             }
 
-            // Armazenar token no store
+            const sessionData = {
+                token: data.token,
+                role: data.user?.role || 'CLIENT',
+                restaurantId: data.user?.restaurantId || data.restaurant?._id
+            };
+
+            localStorage.setItem('user-session', JSON.stringify(sessionData));
             setToken(data.token);
-
-            // Armazenar o papel do usuário
-            if (data.user && data.user.role) {
-                setUserRole(data.user.role);
-
-                // Armazenar restaurantId se for um usuário de restaurante
-                if (['ADMIN', 'MANAGER', 'ATTENDANT'].includes(data.user.role) && data.user.restaurantId) {
-                    setRestaurantId(data.user.restaurantId);
-                }
-            } else if (data.restaurant) {
-                // Se for login de restaurante
-                setUserRole('ADMIN');
-                setRestaurantId(data.restaurant._id);
-            } else {
-                // Se for um cliente normal
-                setUserRole('CLIENT');
+            setUserRole(sessionData.role);
+            if (sessionData.restaurantId) {
+                setRestaurantId(sessionData.restaurantId);
             }
 
-            // Integração com NextAuth
             await signIn('credentials', {
                 email,
                 password,
@@ -169,45 +175,69 @@ export function useAuthCheck() {
             setError(error.message || 'Erro ao fazer login');
             return {
                 success: false,
-                message: error.message || 'Erro ao fazer login'
+                message: error.message
             };
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
     };
 
-    // Função para autenticação como convidado
-    const authenticateAsGuest = (tableId: string, restaurantId: string, restaurantName: string) => {
-        // Criar token de convidado
-        const guestToken = `guest_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+    const authenticateAsGuest = async (
+        tableId: string,
+        restaurantId: string,
+        restaurantName: string,
+        guestData?: { name: string; }
+    ) => {
+        setIsLoading(true);
+        setError(null);
 
-        // Armazenar no store
-        setToken(guestToken);
+        try {
+            const guestInfo: GuestInfo = {
+                id: uuidv4(),
+                name: guestData?.name || `Mesa ${tableId}`,
+                tableId,
+                restaurantId,
+                restaurantName,
+                createdAt: new Date().toISOString()
+            };
 
-        // Armazenar informações no localStorage
-        localStorage.setItem('guest_token', guestToken);
-        localStorage.setItem(`table-${restaurantName}`, tableId);
+            const guestToken = btoa(`${guestInfo.id}:${tableId}:${Date.now()}`);
 
-        return {
-            success: true,
-            isGuest: true,
-            tableId,
-            restaurantId
-        };
+            // Salvar informações do guest
+            localStorage.setItem('guest_info', JSON.stringify(guestInfo));
+            localStorage.setItem('guest_token', guestToken);
+
+            // Importante: Atualizar o estado do auth store
+            setToken(guestToken);
+            setUserRole('GUEST');
+
+            // Não limpar a sessão aqui
+            // clearAuth();
+
+            return {
+                success: true,
+                token: guestToken,
+                guestInfo
+            };
+        } catch (error: any) {
+            setError('Erro ao autenticar como convidado');
+            return {
+                success: false,
+                error: error.message
+            };
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    // Função para realizar logout
     const logout = async () => {
         try {
-            // Fazer logout no NextAuth
             await signOut({ redirect: false });
-
-            // Limpar states do Zustand
-            useAuthStore.getState().clear();
-
-            // Redirecionar para a página inicial
+            localStorage.removeItem('user-session');
+            localStorage.removeItem('guest_token');
+            localStorage.removeItem('guest_info');
+            clearAuth();
             router.push('/');
-
             return { success: true };
         } catch (error) {
             console.error('Erro ao fazer logout:', error);
@@ -217,7 +247,7 @@ export function useAuthCheck() {
 
     return {
         isAuthenticated,
-        isLoading: status === 'loading' || loading,
+        isLoading: status === 'loading' || isLoading,
         isAdmin,
         isManager,
         isAttendant,
@@ -227,8 +257,6 @@ export function useAuthCheck() {
         role: session?.user?.role,
         session,
         error,
-
-        // Funções de autenticação
         registerAdminWithRestaurant,
         authenticateAsGuest,
         login,
@@ -236,13 +264,10 @@ export function useAuthCheck() {
     };
 }
 
-
-// Hook para sincronizar a sessão com o store (usar em componentes de layout ou providers)
 export function useSyncSession() {
     const { data: session, status } = useSession();
     const updateFromSession = useAuthStore(state => state.updateFromSession);
 
-    // Apenas expõe os métodos para componentes que precisam sincronizar manualmente
     return {
         syncSession: () => {
             if (status === 'authenticated' && session) {

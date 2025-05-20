@@ -1,39 +1,7 @@
-// services/employee/index.ts
+import type { IEmployee, ICreateEmployeeData } from '@/services/employee/types';
+
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
-// Interfaces
-export interface IEmployee {
-    _id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone?: string;
-    unitId?: string;
-    role: "ADMIN" | "MANAGER" | "ATTENDANT";
-    createdAt?: string;
-}
-
-export interface ICreateEmployeeData {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone?: string;
-    password?: string;
-    role: "ADMIN" | "MANAGER" | "ATTENDANT";
-    unitId: string;
-}
-
-export interface IUpdateEmployeeData {
-    firstName?: string;
-    lastName?: string;
-    email?: string;
-    phone?: string;
-    password?: string;
-    role?: "ADMIN" | "MANAGER" | "ATTENDANT";
-}
-
-
-// Formatador de roles para exibição
 export const formatRole = (role: string): string => {
     const roleMap: Record<string, string> = {
         'ADMIN': 'Administrador',
@@ -43,142 +11,112 @@ export const formatRole = (role: string): string => {
     return roleMap[role] || role;
 };
 
-export const getEmployeesByRestaurant = async (restaurantId: string, token: string): Promise<IEmployee[]> => {
-    try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/restaurant/${restaurantId}/employees`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Falha ao buscar funcionários');
+export async function getEmployeesByRestaurant(restaurantId: string, token: string): Promise<IEmployee[]> {
+    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/employees`, {
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
         }
+    });
 
-        const data = await response.json();
-        console.log('Dados recebidos da API:', data);
-        return data;
-    } catch (error) {
-        console.error('Erro ao buscar funcionários:', error);
-        throw error;
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao buscar funcionários');
     }
-};
 
-// Obter todos os funcionários de uma unidade
-export const getEmployeesByUnit = async (unitId: string): Promise<IEmployee[]> => {
-    try {
-        const token = sessionStorage.getItem('token'); // Ajuste conforme seu sistema de autenticação
+    return response.json();
+}
 
-        const response = await fetch(`${API_URL}/unit/${unitId}/employees`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || "Erro ao buscar funcionários");
+export async function getEmployeesByUnit(unitId: string, token: string): Promise<IEmployee[]> {
+    const response = await fetch(`${API_URL}/unit/${unitId}/employees`, {
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
         }
+    });
 
-        return await response.json();
-    } catch (error: any) {
-        console.error("Erro ao buscar funcionários:", error);
-        throw error;
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao buscar funcionários da unidade');
     }
-};
 
-// Obter funcionário por ID
-export const getEmployeeById = async (id: string): Promise<IEmployee> => {
-    try {
-        const token = sessionStorage.getItem('token'); // Ajuste conforme seu sistema de autenticação
+    return response.json();
+}
 
-        const response = await fetch(`${API_URL}/employee/${id}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || "Erro ao buscar funcionário");
+export async function getEmployeeById(id: string, token: string): Promise<IEmployee> {
+    const response = await fetch(`${API_URL}/users/${id}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
         }
+    });
 
-        return await response.json();
-    } catch (error: any) {
-        console.error("Erro ao buscar funcionário:", error);
-        throw error;
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao buscar funcionário');
     }
-};
 
-// Criar funcionário
-export const createEmployee = async (employeeData: Omit<IEmployee, '_id'>, restaurantId: string, token: string): Promise<IEmployee> => {
-    try {
-        const response = await fetch(`${API_URL}/users/${restaurantId}/create`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(employeeData)
-        });
+    return response.json();
+}
 
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.msg || 'Falha ao criar funcionário');
+export async function createEmployee(
+    employeeData: ICreateEmployeeData,
+    restaurantId: string,
+    token: string
+): Promise<IEmployee> {
+    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/employee/create`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            ...employeeData,
+            id: employeeData.unitId || restaurantId
+        })
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Falha ao criar funcionário');
+    }
+
+    return response.json();
+}
+
+export async function updateEmployee(
+    id: string,
+    data: Partial<ICreateEmployeeData>,
+    token: string
+): Promise<IEmployee> {
+    const response = await fetch(`${API_URL}/users/${id}/edit`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao atualizar funcionário');
+    }
+
+    return response.json();
+}
+
+export async function deleteEmployee(id: string, token: string): Promise<void> {
+    const response = await fetch(`${API_URL}/users/${id}/delete`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
         }
+    });
 
-        return await response.json();
-    } catch (error) {
-        console.error('Erro ao criar funcionário:', error);
-        throw error;
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao excluir funcionário');
     }
-};
-
-// Atualizar funcionário
-export const updateEmployee = async (id: string, data: IUpdateEmployeeData): Promise<IEmployee> => {
-    try {
-        const token = sessionStorage.getItem('token'); // Ajuste conforme seu sistema de autenticação
-
-        const response = await fetch(`${API_URL}/employee/${id}/update`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(data)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || "Erro ao atualizar funcionário");
-        }
-
-        return await response.json();
-    } catch (error: any) {
-        console.error("Erro ao atualizar funcionário:", error);
-        throw error;
-    }
-};
-
-// Excluir funcionário
-export const deleteEmployee = async (id: string): Promise<void> => {
-    try {
-        const token = sessionStorage.getItem('token'); // Ajuste conforme seu sistema de autenticação
-
-        const response = await fetch(`${API_URL}/employee/${id}/delete`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || "Erro ao excluir funcionário");
-        }
-    } catch (error: any) {
-        console.error("Erro ao excluir funcionário:", error);
-        throw error;
-    }
-};
+}

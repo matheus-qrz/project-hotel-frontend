@@ -1,16 +1,15 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { useParams, usePathname } from "next/navigation"
 import { signOut } from 'next-auth/react'
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Menu, BadgePercent, BarChart, Store, Sun, Cog, Home, LogOut, UserCog2, Moon, SquareMenu, QrCode } from "lucide-react"
+import { Menu, BadgePercent, BarChart, Store, Sun, Cog, Home, LogOut, UserCog2, Moon, SquareMenu, QrCode, History } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useSidebar } from "@/components/ui/sidebar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu"
-import { useRestaurantId } from "@/hooks/useRestaurantId"
 import { useRestaurantUnitId } from "@/hooks/useRestaurantUnitId"
 import { useAuthStore } from "@/stores"
 
@@ -26,11 +25,12 @@ interface SidebarProps {
 }
 
 export function Sidebar({ className }: SidebarProps) {
-    const { restaurantId } = useRestaurantId();
+    const { slug } = useParams();
     const unitId = useRestaurantUnitId();
-    const pathname = usePathname()
-    const { setTheme } = useTheme()
+    const pathname = usePathname();
+    const { setTheme } = useTheme();
     const { isOpen } = useSidebar();
+    const { role } = useAuthStore();
 
     if (!isOpen) {
         return null;
@@ -44,50 +44,69 @@ export function Sidebar({ className }: SidebarProps) {
         });
     };
 
-    const items: NavItem[] = [
+    const allItems: NavItem[] = [
         {
             title: "Início",
-            href: `/restaurant/${restaurantId}/dashboard`,
+            href: role === 'ADMIN' ? `/restaurant/${slug}/dashboard` : `/restaurant/${slug}/manager`,
             icon: <Home size={20} />,
             color: "#ef4444"
         },
         {
             title: "Funcionários",
-            href: `/restaurant/${restaurantId}/employees`,
+            href: `/restaurant/${slug}/employees`,
             icon: <UserCog2 size={20} />,
             color: "#84cc16"
         },
         {
             title: "Unidades",
-            href: `/restaurant/${restaurantId}/units`,
+            href: `/restaurant/${slug}/units`,
             icon: <Store size={20} />,
             color: "#d946ef"
         },
         {
             title: "QR-Code",
-            href: `/restaurant/${restaurantId}/qrcode`,
+            href: `/restaurant/${slug}/qrcode`,
             icon: <QrCode size={20} />,
             color: "#0400ff"
         },
         {
             title: "Menu",
-            href: `/restaurant/${restaurantId}/products`,
+            href: `/restaurant/${slug}/products`,
             icon: <SquareMenu size={20} />,
             color: "#f3de1f"
         },
-        // {
-        //     title: "Promoções",
-        //     href: "/promocoes",
-        //     icon: <BadgePercent size={20} />,
-        //     color: "#f97316"
-        // },
-        // {
-        //     title: "Estatísticas",
-        //     href: "/estatisticas",
-        //     icon: <BarChart size={20} />,
-        //     color: "#06b6d4"
-        // }
-    ]
+        {
+            title: "Promoções",
+            href: "/promocoes",
+            icon: <BadgePercent size={20} />,
+            color: "#f97316"
+        },
+        {
+            title: "Estatísticas",
+            href: `/restaurant/${slug}/statistics`,
+            icon: <BarChart size={20} />,
+            color: "#06b6d4"
+        },
+        {
+            title: "Histórico de pedidos",
+            href: `/restaurant/${slug}/order-history`,
+            icon: <History size={20} />,
+            color: "#10b981"
+        }
+    ];
+
+    const filterItemsByRole = (role: string): NavItem[] => {
+        if (role === "ADMIN") {
+            return allItems;
+        } else if (role === "MANAGER") {
+            return allItems.filter(item =>
+                ["Início", "Funcionários", "QR-Code", "Menu", "Promoções", "Histórico de pedidos"].includes(item.title)
+            );
+        }
+        return [];
+    };
+
+    const items = filterItemsByRole(String(role));
 
     return (
         <div className={cn("fixed top-0 left-0 w-72 h-screen bg-background border-r border-border", className)}>

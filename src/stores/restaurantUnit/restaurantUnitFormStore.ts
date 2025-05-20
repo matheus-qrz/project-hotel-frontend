@@ -14,6 +14,7 @@ interface Schedule {
 
 interface UnitFormState {
     unitData: {
+        id?: string;
         cnpjPart1: string;
         cnpjPart2: string;
         cnpjPart3: string;

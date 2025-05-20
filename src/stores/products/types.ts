@@ -9,13 +9,11 @@ export interface Product {
     isAvailable: boolean;
     quantity: number;
     restaurant: string;
-    // Novos campos para promoções
     isOnPromotion: boolean;
     promotionalPrice?: number;
     discountPercentage?: number;
     promotionStartDate?: string;
     promotionEndDate?: string;
-    // Outros campos opcionais
     ingredients?: string[];
     nutritionalInfo?: string;
     allergens?: string;

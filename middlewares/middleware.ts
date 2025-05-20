@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import type { NextRequest } from 'next/server';
+import { generateRestaurantSlug } from '@/utils/slugify';
 
 // Helper para verificar se a rota está em um ciclo de redirecionamento
 function isRedirectLoop(request: NextRequest): boolean {
@@ -37,7 +38,6 @@ export async function middleware(request: NextRequest) {
         // Verificar se estamos em um loop de redirecionamento
         if (isRedirectLoop(request)) {
             console.warn('Detectado ciclo de redirecionamento! Permitindo acesso para quebrar o ciclo.');
-            // Permitir o acesso para quebrar o ciclo, mas limpar o contador
             const response = NextResponse.next();
             return updateRedirectCount(response, false);
         }
@@ -49,61 +49,50 @@ export async function middleware(request: NextRequest) {
 
         const path = request.nextUrl.pathname;
         const isAdminRoute = path.startsWith('/restaurant');
-        const isAttendantRoute = path.startsWith('/attendant');
+        const isManagerRoute = path.startsWith('/manager');
         const isLoginRoute = path === '/login';
         const isApiAuthRoute = path.startsWith('/api/auth');
 
-        // Não interferir com rotas de API de autenticação
         if (isApiAuthRoute) {
             return NextResponse.next();
         }
 
-        // Verificar e validar restaurantId nas rotas administrativas
+        // middleware.ts
         if (isAdminRoute) {
             if (!token || (token.role !== 'ADMIN' && token.role !== 'MANAGER')) {
-                console.log('Redirecionando para login: Token ausente ou role inválida');
-                const response = NextResponse.redirect(new URL('/login', request.url));
-                return updateRedirectCount(response, true);
+                return NextResponse.redirect(new URL('/login', request.url));
             }
 
             const pathParts = path.split('/');
-            const restaurantId = pathParts[2];
+            const slug = pathParts[2];
 
-            // Verificar se o restaurantId é válido
-            if (!restaurantId || restaurantId === 'undefined') {
-                // Se o usuário tem um restaurantId no token, redirecionar para ele
-                if (token.restaurantId) {
-                    const newPath = path.replace(/\/restaurant\/([^\/]*)/, `/restaurant/${token.restaurantId}`);
-                    console.log(`Ajustando restaurantId na URL: ${newPath}`);
-                    const response = NextResponse.redirect(new URL(newPath, request.url));
-                    return updateRedirectCount(response, true);
+            if (!slug || slug === 'undefined') {
+                if (token.restaurantId && token.restaurantName) {
+                    const newSlug = generateRestaurantSlug(String(token.restaurantName), token.restaurantId);
+                    const newPath = `/restaurant/${newSlug}/dashboard`;
+                    return NextResponse.redirect(new URL(newPath, request.url));
                 }
-                // Caso contrário, redirecionar para uma página de seleção de restaurante
-                console.log('Redirecionando para seleção de restaurante: restaurantId inválido');
-                const response = NextResponse.redirect(new URL('/restaurant-selection', request.url));
-                return updateRedirectCount(response, true);
+                return NextResponse.redirect(new URL('/restaurant-selection', request.url));
             }
-        }
-
-        if (isAttendantRoute && (!token || !['ADMIN', 'MANAGER', 'ATTENDANT'].includes(token.role as string))) {
-            console.log('Redirecionando para login: Acesso negado para rota de atendente');
-            const response = NextResponse.redirect(new URL('/login', request.url));
-            return updateRedirectCount(response, true);
         }
 
         if (isLoginRoute && token) {
-            if (token.role === 'ADMIN' || token.role === 'MANAGER') {
-                const restaurantId = token.restaurantId;
-                if (restaurantId) {
-                    console.log(`Redirecionando usuário autenticado para dashboard: ${restaurantId}`);
-                    const response = NextResponse.redirect(new URL(`/restaurant/${restaurantId}/dashboard`, request.url));
+            if (token.role === 'ADMIN') {
+                const slug = generateRestaurantSlug(String(token.restaurantName), String(token.restaurantId));
+                if (slug) {
+                    console.log(`Redirecionando usuário autenticado para dashboard: ${slug}`);
+                    const response = NextResponse.redirect(new URL(`/restaurant/${slug}/dashboard`, request.url));
                     return updateRedirectCount(response, true);
                 }
             }
-            if (token.role === 'ATTENDANT') {
-                console.log('Redirecionando atendente autenticado para orders');
-                const response = NextResponse.redirect(new URL('/attendant/orders', request.url));
-                return updateRedirectCount(response, true);
+
+            if (token.role === 'MANAGER') {
+                const slug = generateRestaurantSlug(String(token.restaurantName), String(token.restaurantId));
+                if (slug) {
+                    console.log(`Redirecionando usuário autenticado para tela de pedidos: ${slug}`);
+                    const response = NextResponse.redirect(new URL(`/restaurant/${slug}/manager`, request.url));
+                    return updateRedirectCount(response, true);
+                }
             }
 
             console.log('Redirecionando usuário autenticado com role desconhecida para home');
@@ -111,7 +100,6 @@ export async function middleware(request: NextRequest) {
             return updateRedirectCount(response, true);
         }
 
-        // Se não redirecionamos, resetamos o contador
         const response = NextResponse.next();
         return updateRedirectCount(response, false);
 
@@ -125,7 +113,7 @@ export async function middleware(request: NextRequest) {
 export const config = {
     matcher: [
         '/restaurant/:path*',
-        '/attendant/:path*',
+        '/manager/:path*',
         '/login',
         '/api/auth/:path*',
     ],

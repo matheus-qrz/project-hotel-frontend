@@ -2,23 +2,24 @@
 
 import { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { extractIdFromSlug, extractNameFromSlug } from '@/utils/slugify';
 
 export default function RestaurantPage() {
-    const params = useParams();
+    const { slug, tableId } = useParams();
     const router = useRouter();
-    const restaurantName = params.restaurantName as string;
-    const restaurantId = params.restaurantId as string;
-    const APIBACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+    const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+
+    const restaurantName = slug && extractNameFromSlug(String(slug));
 
     useEffect(() => {
         // Função para buscar o ID do restaurante pelo nome
         async function fetchRestaurantId() {
             try {
-                const response = await fetch(`${APIBACKEND_URL}/restaurant/by-slug/${restaurantName}`);
+                const response = await fetch(`${API_URL}/restaurant/by-slug/${restaurantName}`);
                 if (response.ok) {
                     const restaurant = await response.json();
                     // Redirecionar para a URL com ID
-                    router.push(`/${restaurantName}/${restaurantId}/menu`);
+                    router.push(`/${slug}${tableId}/menu`);
                 } else {
                     // Restaurante não encontrado
                     router.push('/404');
@@ -29,7 +30,7 @@ export default function RestaurantPage() {
         }
 
         fetchRestaurantId();
-    }, [restaurantName, router]);
+    }, [slug, tableId, router]);
 
     return <div>Carregando...</div>;
 }

@@ -5,13 +5,13 @@ import type { ReactNode } from 'react';
 import Providers from '@/providers/providers';
 
 export default function AppLayout({
-  children
+    children
 }: {
-  children: ReactNode
+    children: ReactNode
 }) {
-  return (
-    <Providers>
-      {children}
-    </Providers>
-  );
+    return (
+        <Providers>
+            {children}
+        </Providers>
+    );
 }

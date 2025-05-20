@@ -1,47 +1,42 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UserLogin } from '@/components/login/UserLogin';
 import { GuestLogin } from '@/components/login/GuestLogin';
 import { useAuthCheck } from '@/hooks/sessionManager';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
-import { useRestaurantStore } from '@/stores';
+import { extractIdFromSlug } from '@/utils/slugify';
 
 export function LoginPage() {
     const router = useRouter();
-    const searchParams = useSearchParams();
+    const { slug, tableId } = useParams();
     const { authenticateAsGuest, isAuthenticated, role, isLoading } = useAuthCheck();
     const [restaurantInfo, setRestaurantInfo] = useState<{ name: string } | null>(null);
 
-    // Obter parâmetros da URL
-    const restaurantId = useRestaurantStore.getState().restaurantId;
-    const tableId = searchParams.get('tableId');
-    const redirect = searchParams.get('redirect') || '';
+    const restaurantId = slug && extractIdFromSlug(String(slug));
 
     // Redirecionar se já estiver autenticado
     useEffect(() => {
         if (!isLoading && isAuthenticated) {
             if (role === 'ADMIN') {
-                router.push(`/restaurant/${restaurantId}/dashboard`);
+                router.push(`/restaurant/${slug}/dashboard`);
             } else if (role === 'MANAGER') {
-                router.push(`/restaurant/${restaurantId}/dashboard`);
+                router.push(`/restaurant/${slug}/dashboard`);
             } else if (role === 'ATTENDANT') {
                 router.push('/attendant/orders');
             } else if (role === 'CLIENT' || 'GUEST') {
                 // Para cliente ou convidado, redirecionar conforme params
-                if (redirect) {
-                    router.push(redirect);
-                } else if (restaurantId) {
-                    router.push(`/restaurant/${restaurantId}/menu`);
+                if (restaurantId) {
+                    router.push(`/restaurant/${restaurantId}/${tableId}/menu`);
                 } else {
                     router.push('/');
                 }
             }
         }
-    }, [isAuthenticated, role, isLoading, router, redirect, restaurantId]);
+    }, [isAuthenticated, slug, role, isLoading, router, restaurantId]);
 
     // Buscar informações do restaurante
     useEffect(() => {
@@ -53,7 +48,7 @@ export function LoginPage() {
 
                     // Salvar informações da mesa para uso futuro
                     if (tableId) {
-                        localStorage.setItem(`table-${data.name.toLowerCase().replace(/\s+/g, '-')}`, tableId);
+                        localStorage.setItem(`table-${data.name.toLowerCase().replace(/\s+/g, '-')}`, String(tableId));
                     }
                 })
                 .catch(err => console.error("Erro ao buscar restaurante:", err));
@@ -65,20 +60,15 @@ export function LoginPage() {
         if (restaurantId && tableId && restaurantInfo) {
             // Usar função do contexto de autenticação para autenticar como convidado anônimo
             authenticateAsGuest(
-                tableId,
+                String(tableId),
                 restaurantId,
                 restaurantInfo.name.toLowerCase().replace(/\s+/g, '-')
             );
 
-            // Redirecionar para o menu
-            if (redirect) {
-                router.push(redirect);
-            } else {
-                router.push(`/restaurant/${restaurantId}/menu`);
-            }
+            router.push(`/restaurant/${restaurantId}/${tableId}/menu`);
         } else if (restaurantId) {
             // Mesmo sem tableId, permitir acesso ao menu
-            router.push(`/restaurant/${restaurantId}/menu`);
+            router.push(`/restaurant/${restaurantId}/${tableId}/menu`);
         }
     };
 
@@ -119,25 +109,13 @@ export function LoginPage() {
                         <TabsContent value="user">
                             <UserLogin
                                 onLoginSuccess={() => {
-                                    if (redirect) {
-                                        router.push(redirect);
-                                    } else if (restaurantId) {
-                                        router.push(`/restaurant/${restaurantId}/menu`);
-                                    }
+                                    router.push(`/restaurant/${restaurantId}/${tableId}/menu`);
                                 }}
                             />
                         </TabsContent>
 
                         <TabsContent value="guest">
-                            <GuestLogin
-                                onLoginSuccess={() => {
-                                    if (redirect) {
-                                        router.push(redirect);
-                                    } else if (restaurantId) {
-                                        router.push(`/restaurant/${restaurantId}/menu`);
-                                    }
-                                }}
-                            />
+                            <GuestLogin />
                         </TabsContent>
                     </Tabs>
 

@@ -1,62 +1,69 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useAuthCheck } from '@/hooks/sessionManager';
+import { extractIdFromSlug } from '@/utils/slugify';
 
 // API URL
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || '';
 
-interface QRCodeHandlerProps {
-    params: {
-        restaurantName: string;
-        tableId: string;
-    };
-}
 
-export default function QRCodeHandler({ params }: QRCodeHandlerProps) {
+export default function QRCodeHandler() {
     const router = useRouter();
-    const { restaurantName, tableId } = params;
-    const { authenticateAsGuest, isAuthenticated } = useAuthCheck();
+    const { slug, tableId, unitId } = useParams();
+    const { session } = useAuthCheck();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    const restaurantId = slug && extractIdFromSlug(String(slug));
 
     useEffect(() => {
         const handleQRScan = async () => {
             try {
                 setLoading(true);
 
-                // Salvar a mesa no localStorage (independente de autenticação)
-                localStorage.setItem(`table-${restaurantName}`, tableId);
-
-                // Buscar informações do restaurante pelo slug
-                const response = await fetch(`${API_URL}/restaurant/by-slug/${restaurantName}`);
-
-                if (!response.ok) {
-                    throw new Error('Restaurante não encontrado');
+                // Salvar mesa e unidade no localStorage
+                localStorage.setItem(`table-${slug}`, String(tableId));
+                if (unitId) {
+                    localStorage.setItem(`unit-${slug}`, String(unitId));
                 }
 
-                const restaurant = await response.json();
+                // Buscar informações do restaurante e unidade
+                const restaurantResponse = await fetch(`${API_URL}/restaurant/by-slug/${slug}`);
+                if (!restaurantResponse.ok) throw new Error('Restaurante não encontrado');
 
-                // Se o usuário não estiver autenticado, autenticar como convidado
-                if (!isAuthenticated) {
-                    authenticateAsGuest(tableId, restaurant._id, restaurantName);
+                const restaurant = await restaurantResponse.json();
+
+                // Se tiver unitId, verificar se a unidade existe
+                if (unitId) {
+                    const unitResponse = await fetch(`${API_URL}/units/${unitId}`);
+                    if (!unitResponse.ok) throw new Error('Unidade não encontrada');
                 }
 
-                // Redirecionar para a página da mesa
-                router.push(`/${restaurantName}/table/${tableId}`);
+                // Criar token de convidado com informação da unidade
+                const guestToken = `guest_${Date.now()}_${unitId || 'main'}_${Math.random().toString(36).substring(2, 15)}`;
+                session?.token === guestToken;
+                localStorage.setItem('guest_token', guestToken);
+
+                // Redirecionar incluindo a unidade na URL se existir
+                const redirectPath = unitId
+                    ? `/restaurant/${slug}/unit/${unitId}/${tableId}`
+                    : `/restaurant/${slug}/${tableId}`;
+
+                router.push(redirectPath);
             } catch (error) {
                 console.error('Erro ao processar QR code:', error);
-                setError('Não foi possível acessar este QR code. Verifique se o restaurante existe.');
+                setError('QR code inválido ou unidade não encontrada.');
             } finally {
                 setLoading(false);
             }
         };
 
         handleQRScan();
-    }, [restaurantName, tableId, router, authenticateAsGuest, isAuthenticated]);
+    }, [slug, tableId, unitId, router, session?.token]);
 
     if (loading) {
         return (

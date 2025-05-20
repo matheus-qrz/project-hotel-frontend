@@ -1,144 +1,163 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import {
-  IProduct,
-  addToCart,
-  formatCurrency
-} from '@/services/restaurant/services';
+import React, { useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { CartItemProps, useCartStore } from '@/stores/cart';
+import { useProductStore } from '@/stores/products';
+import ProductCard from '@/components/products/ProductCard';
 import { Button } from '@/components/ui/button';
-import { Plus, Minus } from 'lucide-react';
+import { ShoppingCart } from 'lucide-react';
+import { extractNameFromSlug } from '@/utils/slugify';
+import { getCategoryName } from '@/utils/getCategoryName';
+import { DelayedLoading } from '../loading/DelayedLoading';
+import { useAuthStore } from '@/stores';
 
 interface MenuClientProps {
-  restaurantId: string;
-  restaurantName: string;
-  initialProducts: IProduct[];
+  slug: string;
   initialCategories: string[];
 }
 
 export default function MenuClient({
-  restaurantId,
-  restaurantName,
-  initialProducts,
+  slug,
   initialCategories
 }: MenuClientProps) {
-  const [products, setProducts] = useState<IProduct[]>(initialProducts);
-  const [categories, setCategories] = useState<string[]>(initialCategories);
+  const { tableId } = useParams();
+  const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  useEffect(() => {
-    console.log('MenuClient - Produtos:', products);
-    console.log('MenuClient - Categorias:', categories);
-  }, [products, categories]);
+  const restaurantName = slug && extractNameFromSlug(String(slug));
 
-  // Função para adicionar item ao carrinho
-  const handleAddToCart = (productId: string) => {
-    const updatedProducts = products.map(product =>
-      product._id === productId
-        ? { ...product, quantity: (product.quantity || 0) + 1 }
-        : product
-    );
-    setProducts(updatedProducts);
+  const { items, addItem, updateQuantity, removeItem, getTotal } = useCartStore();
+  const { products, loading: isLoading } = useProductStore();
+  const { guestInfo } = useAuthStore();
 
-    // Adicionar ao carrinho no localStorage
-    addToCart(restaurantName, productId, (products.find(p => p._id === productId)?.quantity || 0) + 1);
-  };
+  const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
+  const totalPrice = getTotal();
 
-  // Função para remover item do carrinho
-  const handleRemoveFromCart = (productId: string) => {
-    const currentProduct = products.find(p => p._id === productId);
-    if (currentProduct && (currentProduct.quantity || 0) > 0) {
-      const updatedProducts = products.map(product =>
-        product._id === productId
-          ? { ...product, quantity: Math.max(0, (product.quantity || 0) - 1) }
-          : product
-      );
-      setProducts(updatedProducts);
+  const handleQuantityChange = (id: string, newQuantity: number) => {
+    const product = products.find(p => p._id === id);
+    if (!product) return;
 
-      // Atualizar carrinho no localStorage
-      addToCart(restaurantName, productId, Math.max(0, (currentProduct.quantity || 0) - 1));
+    if (newQuantity === 0) {
+      removeItem(id);
+    } else {
+      const cartItem: CartItemProps = {
+        id: product._id ?? '',
+        name: product.name,
+        price: product.price,
+        quantity: newQuantity,
+        image: product.image ?? '',
+        status: 'pending',
+      };
+
+      const existingItem = items.find(item => item.id === id);
+      if (existingItem) {
+        updateQuantity(id, newQuantity);
+      } else {
+        addItem(cartItem);
+      }
     }
   };
 
-  // Filtrar produtos por categoria
   const filteredProducts = selectedCategory
     ? products.filter(product => product.category === selectedCategory)
     : products;
 
+  const goToCart = () => {
+    router.push(`/restaurant/${slug}/${tableId}/cart`);
+  };
+
+  if (isLoading) return <DelayedLoading />;
+
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-4">Cardápio - {restaurantName}</h1>
+        <div className='flex flex-col gap-2 mb-4'>
+          <h1 className="text-2xl font-bold">{restaurantName}</h1>
+          <p className="text-gray-600">Olá, {guestInfo?.name}! Selecione os produtos que deseja adicionar ao seu pedido.</p>
+        </div>
 
-        {/* Categorias */}
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-row gap-2 overflow-auto">
           <Button
             variant={selectedCategory === null ? 'default' : 'outline'}
             onClick={() => setSelectedCategory(null)}
           >
-            Todos
+            Ver todos
           </Button>
-          {categories.map(category => (
+          {initialCategories.map(category => (
             <Button
               key={category}
               variant={selectedCategory === category ? 'default' : 'outline'}
               onClick={() => setSelectedCategory(category)}
             >
-              {category}
+              {getCategoryName(category)}
             </Button>
           ))}
         </div>
       </div>
 
-      {/* Lista de Produtos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredProducts.map(product => (
-          <div
-            key={product._id}
-            className="border rounded-lg p-4 shadow-sm flex flex-col"
-          >
-            <div className="flex-grow">
-              <h3 className="font-bold text-lg mb-2">{product.name}</h3>
-              <p className="text-gray-600 mb-2">{product.description}</p>
-              <p className="font-semibold text-primary mb-2">
-                {formatCurrency(product.price)}
-              </p>
-            </div>
+      <div className="space-y-6 mb-8">
+        {selectedCategory === null ? (
+          initialCategories.map(category => {
+            const categoryProducts = products.filter(product => product.category === category);
+            if (categoryProducts.length === 0) return null;
 
-            {/* Controles de Quantidade */}
-            <div className="mt-auto flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handleRemoveFromCart(product._id)}
-                  disabled={(product.quantity || 0) <= 0}
-                >
-                  <Minus size={16} />
-                </Button>
-                <span className="w-8 text-center">
-                  {product.quantity || 0}
-                </span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handleAddToCart(product._id)}
-                >
-                  <Plus size={16} />
-                </Button>
+            return (
+              <div key={category} className="mb-8">
+                <h2 className="text-xl font-semibold mb-4">{getCategoryName(category)}</h2>
+                <div className="grid grid-cols-1 gap-3">
+                  {categoryProducts.map(product => {
+                    const cartItem = items.find(item => item.id === product._id);
+                    const quantity = cartItem ? cartItem.quantity : 0;
+
+                    return (
+                      <ProductCard
+                        key={product._id}
+                        product={product}
+                        quantity={quantity}
+                        onQuantityChange={handleQuantityChange}
+                      />
+                    );
+                  })}
+                </div>
               </div>
-              <span
-                className={`px-2 py-1 rounded-full text-xs ${product.isAvailable
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-red-100 text-red-700'
-                  }`}
-              >
-                {product.isAvailable ? 'Disponível' : 'Indisponível'}
-              </span>
-            </div>
+            );
+          })
+        ) : (
+          <div className="grid grid-cols-1 gap-4">
+            {filteredProducts.map(product => {
+              const cartItem = items.find(item => item.id === product._id);
+              const quantity = cartItem ? cartItem.quantity : 0;
+
+              return (
+                <ProductCard
+                  key={product._id}
+                  product={product}
+                  quantity={quantity}
+                  onQuantityChange={handleQuantityChange}
+                />
+              );
+            })}
           </div>
-        ))}
+        )}
       </div>
+
+      {totalItems > 0 && (
+        <Button
+          onClick={goToCart}
+          variant="default"
+          className="fixed bottom-4 left-4 right-4 w-[calc(100%-32px)] bg-black hover:bg-black text-white py-6 flex items-center justify-between"
+        >
+          <div className="flex items-center gap-2">
+            <ShoppingCart className="h-5 w-5" />
+            <span>Ver Carrinho</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-white/80">{totalItems} itens</span>
+            <span className="font-medium">R$ {totalPrice.toFixed(2).replace('.', ',')}</span>
+          </div>
+        </Button>
+      )}
     </div>
   );
 }

@@ -51,12 +51,24 @@ import { useToast } from "@/hooks/useToast";
 import { useProductStore } from '@/stores/products';
 import { Product } from '@/stores/products/types';
 import { useAuthCheck } from '@/hooks/sessionManager';
+import { formatCurrency } from '@/services/restaurant/services';
+import { getCategoryName } from '@/utils/getCategoryName';
+import { extractIdFromSlug } from '@/utils/slugify';
 
 interface ProductsListProps {
-    restaurantId: string;
+    slug: string;
 }
 
-export default function ProductsList({ restaurantId }: ProductsListProps) {
+const CATEGORIES = [
+    { id: 'promotion', name: "Promoções" },
+    { id: "appetizers", name: "Entradas" },
+    { id: "main", name: "Pratos Principais" },
+    { id: "sides", name: "Acompanhamentos" },
+    { id: "desserts", name: "Sobremesas" },
+    { id: "drinks", name: "Bebidas" },
+];
+
+export default function ProductsList({ slug }: ProductsListProps) {
     const router = useRouter();
     const { toast } = useToast();
     const { isAuthenticated, isLoading: isAuthLoading, isAdmin, session, logout } = useAuthCheck();
@@ -76,13 +88,7 @@ export default function ProductsList({ restaurantId }: ProductsListProps) {
     const [showOnlyPromotions, setShowOnlyPromotions] = useState<boolean>(false);
     const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
-    const CATEGORIES = [
-        { id: "appetizers", name: "Entradas" },
-        { id: "main", name: "Pratos Principais" },
-        { id: "desserts", name: "Sobremesas" },
-        { id: "drinks", name: "Bebidas" },
-        { id: "sides", name: "Acompanhamentos" },
-    ];
+    const restaurantId = slug && extractIdFromSlug(String(slug));
 
     // Carregar produtos
     useEffect(() => {
@@ -129,11 +135,6 @@ export default function ProductsList({ restaurantId }: ProductsListProps) {
         }
     });
 
-    const getCategoryName = (categoryId: string) => {
-        const category = CATEGORIES.find(cat => cat.id === categoryId);
-        return category ? category.name : 'Sem categoria';
-    };
-
     // Verificar se uma promoção está ativa
     const isPromotionActive = (product: Product) => {
         if (!product.isOnPromotion) return false;
@@ -149,14 +150,6 @@ export default function ProductsList({ restaurantId }: ProductsListProps) {
         if (!product.isOnPromotion || !product.promotionalPrice) return null;
         const discount = ((product.price - product.promotionalPrice) / product.price) * 100;
         return Math.round(discount);
-    };
-
-    // Formatação de moeda
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL'
-        }).format(value);
     };
 
     // Funções para lidar com exclusão
@@ -188,8 +181,6 @@ export default function ProductsList({ restaurantId }: ProductsListProps) {
                 variant: "destructive",
                 duration: 5000
             });
-
-            // If it's an auth error, it will be handled by the store
         }
     };
 
@@ -247,9 +238,8 @@ export default function ProductsList({ restaurantId }: ProductsListProps) {
     }
 
     return (
-        <div className="w-full space-y-6">
-            {/* Barra de pesquisa e filtros */}
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="w-full space-y-6 p-4">
+            <div className="flex flex-col lg:flex-row gap-4 mb-6">
                 <div className="relative flex-1">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -263,64 +253,79 @@ export default function ProductsList({ restaurantId }: ProductsListProps) {
                     </div>
                 </div>
 
-                <div className="flex gap-2">
-                    <Select
-                        disabled={products.length === 0}
-                        value={selectedCategory}
-                        onValueChange={setSelectedCategory}
-                    >
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Categoria" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {categories.map(category => (
-                                <SelectItem key={category} value={category}>{category}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                <div className="flex max-lg:flex-col gap-2">
+                    <div className="flex gap-2 w-full">
+                        <Select
+                            disabled={products.length === 0}
+                            value={selectedCategory}
+                            onValueChange={setSelectedCategory}
+                        >
+                            <SelectTrigger className="w-[180px] shrink-0">
+                                <SelectValue placeholder="Categoria" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {categories.map(category => (
+                                    <SelectItem key={category} value={category}>{getCategoryName(category)}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
 
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                        disabled={products.length === 0}
-                        title={sortOrder === 'asc' ? 'Ordenar Z-A' : 'Ordenar A-Z'}
-                    >
-                        <ArrowUpDown className="h-4 w-4" />
-                    </Button>
+                        <div className="grid grid-cols-3 gap-2 min-w-[140px] sm:max-w-auto flex-1">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                                disabled={products.length === 0}
+                                title={sortOrder === 'asc' ? 'Ordenar Z-A' : 'Ordenar A-Z'}
+                                className="w-full"
+                            >
+                                <ArrowUpDown className="h-4 w-4" />
+                            </Button>
 
-                    <Button
-                        variant={showOnlyPromotions ? "secondary" : "outline"}
-                        size="icon"
-                        onClick={() => setShowOnlyPromotions(!showOnlyPromotions)}
-                        disabled={products.length === 0}
-                        title={showOnlyPromotions ? 'Ver todos os produtos' : 'Ver apenas produtos em promoção'}
-                    >
-                        <Percent className="h-4 w-4" />
-                    </Button>
+                            <Button
+                                variant={showOnlyPromotions ? "secondary" : "outline"}
+                                size="icon"
+                                onClick={() => setShowOnlyPromotions(!showOnlyPromotions)}
+                                disabled={products.length === 0}
+                                title={showOnlyPromotions ? 'Ver todos os produtos' : 'Ver apenas produtos em promoção'}
+                                className="w-full"
+                            >
+                                <Percent className="h-4 w-4" />
+                            </Button>
 
-                    {/* Add refresh button */}
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={handleRetry}
-                        disabled={isRefreshing}
-                        title="Atualizar produtos"
-                    >
-                        <RefreshCcw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                    </Button>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={handleRetry}
+                                disabled={isRefreshing}
+                                title="Atualizar produtos"
+                                className="w-full"
+                            >
+                                <RefreshCcw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                            </Button>
+                        </div>
+                    </div>
 
-                    <Button onClick={() => router.push(`/restaurant/${restaurantId}/products/add`)}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Adicionar
-                    </Button>
+                    <div className="flex max-lg:flex-col gap-3">
+                        <Button
+                            onClick={() => router.push(`/restaurant/${slug}/products/add`)}
+                            className="w-full lg:w-auto"
+                        >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Adicionar
+                        </Button>
 
-                    <Button variant="secondary" asChild>
-                        <Link href={`/restaurant/${restaurantId}/products/import`}>
-                            <FileText className="h-4 w-4 mr-2" />
-                            Importar
-                        </Link>
-                    </Button>
+                        <Button
+                            variant="secondary"
+                            asChild
+                            className="w-full lg:w-auto"
+                        >
+                            <Link href={`/restaurant/${slug}/products/import`}>
+                                <FileText className="h-4 w-4 mr-2" />
+                                Importar
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
             </div>
 
@@ -387,7 +392,6 @@ export default function ProductsList({ restaurantId }: ProductsListProps) {
                                 <div className="space-y-6">
                                     {/* Agrupar produtos por categoria */}
                                     {selectedCategory === 'Todos' ? (
-                                        // Quando "Todos" está selecionado, agrupe por categoria
                                         Object.entries(
                                             sortedProducts.reduce((acc, product) => {
                                                 const category = product.category || 'Sem categoria';
@@ -398,12 +402,12 @@ export default function ProductsList({ restaurantId }: ProductsListProps) {
                                                 return acc;
                                             }, {} as Record<string, Product[]>)
                                         ).map(([category, categoryProducts]) => (
-                                            <div key={category} className="mb-6">
+                                            <div key={category} className="w-full mb-6">
                                                 <div className="flex items-center mb-3">
                                                     <h2 className="text-lg font-medium text-foreground">{getCategoryName(category || '')}</h2>
                                                     <Separator className="ml-4 flex-1" />
                                                 </div>
-                                                <div className="space-y-3">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                                     {categoryProducts.map(product => (
                                                         <ProductCard
                                                             key={product._id}
@@ -421,7 +425,6 @@ export default function ProductsList({ restaurantId }: ProductsListProps) {
                                             </div>
                                         ))
                                     ) : (
-                                        // Quando uma categoria específica está selecionada, não agrupe
                                         <div className="space-y-3">
                                             {sortedProducts.map(product => (
                                                 <ProductCard
@@ -491,13 +494,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
     onPromotionClick,
     onDeleteClick
 }) => {
+    const getCategoryName = (categoryId: string) => {
+        const category = CATEGORIES.find(cat => cat.id === categoryId);
+        return category ? category.name : 'Sem categoria';
+    };
     const promotionActive = isPromotionActive(product);
     const discountPercentage = getDiscountPercentage(product);
 
     return (
-        <Card className={`${product.isOnPromotion && promotionActive ? 'border-rose-200 bg-rose-50' : ''}`}>
-            <CardContent className="p-4 flex justify-between items-center">
-                <div className="flex items-center gap-4">
+        <Card className={`w-full min-h-36 relative ${product.isOnPromotion && promotionActive ? 'border-rose-200 bg-rose-50' : ''}`}>
+            <CardContent className="p-4">
+                <div className="flex gap-4">
                     <div className="relative h-16 w-16 overflow-hidden rounded-md flex-shrink-0 bg-muted">
                         {product.image ? (
                             <div className="h-full w-full relative">
@@ -518,7 +525,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
                             </div>
                         )}
 
-                        {/* Badge de desconto */}
                         {product.isOnPromotion && promotionActive && discountPercentage && (
                             <div className="absolute top-0 right-0 bg-rose-500 text-white text-xs font-bold px-1 py-0.5 rounded-bl">
                                 -{discountPercentage}%
@@ -526,72 +532,105 @@ const ProductCard: React.FC<ProductCardProps> = ({
                         )}
                     </div>
 
-                    <div>
-                        <h3 className="font-medium">{product.name}</h3>
-                        <p className="text-muted-foreground text-sm">{product.category || 'Sem categoria'}</p>
-
-                        {/* Preço com desconto */}
-                        {product.isOnPromotion && promotionActive && product.promotionalPrice ? (
+                    <div className="flex flex-col flex-1">
+                        <div className="flex items-start justify-between">
                             <div>
-                                <span className="text-muted-foreground line-through text-sm mr-2">
-                                    {formatCurrency(product.price)}
-                                </span>
-                                <span className="text-rose-600 font-medium">
-                                    {formatCurrency(product.promotionalPrice)}
-                                </span>
+                                <h3 className="font-medium">{product.name}</h3>
+                                <p className="text-muted-foreground text-sm">{getCategoryName(product.category)}</p>
+
+                                {product.isOnPromotion && promotionActive && product.promotionalPrice ? (
+                                    <div className="mt-1">
+                                        <span className="text-muted-foreground line-through text-sm mr-2">
+                                            {formatCurrency(product.price)}
+                                        </span>
+                                        <span className="text-rose-600 font-medium">
+                                            {formatCurrency(product.promotionalPrice)}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <span className="text-primary font-medium mt-1 block">
+                                        {formatCurrency(product.price)}
+                                    </span>
+                                )}
                             </div>
-                        ) : (
-                            <span className="text-primary font-medium">
-                                {formatCurrency(product.price)}
-                            </span>
-                        )}
+
+                            {/* Dropdown para telas maiores */}
+                            <div className="lg:block hidden">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                            <span className="sr-only">Abrir menu</span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" side="bottom" className="w-48">
+                                        <DropdownMenuItem asChild>
+                                            <Link href={`/restaurant/${restaurantId}/products/${product._id}`}>
+                                                <Info className="h-4 w-4 mr-2" />
+                                                Ver detalhes
+                                            </Link>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={onEditClick}>
+                                            <Edit className="h-4 w-4 mr-2" />
+                                            Editar produto
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={onPromotionClick}>
+                                            <Percent className="h-4 w-4 mr-2" />
+                                            {product.isOnPromotion ? 'Gerenciar promoção' : 'Adicionar promoção'}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={onDeleteClick}
+                                            className="text-destructive focus:text-destructive"
+                                        >
+                                            <Trash className="h-4 w-4 mr-2" />
+                                            Excluir produto
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+
+                            {/* Botões verticais para telas menores */}
+                            <div className="hidden max-lg:flex flex-col absolute top-2 right-4 gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 px-2"
+                                    onClick={onEditClick}
+                                >
+                                    <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 px-2"
+                                    onClick={onPromotionClick}
+                                >
+                                    <Percent className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 px-2 text-destructive hover:text-destructive"
+                                    onClick={onDeleteClick}
+                                >
+                                    <Trash className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Badges reposicionadas */}
+                        <div className="flex gap-2 mt-4 lg:static absolute bottom-4 left-4">
+                            <Badge variant={product.isAvailable ? "success" : "destructive"}>
+                                {product.isAvailable ? 'Disponível' : 'Indisponível'}
+                            </Badge>
+
+                            {product.isOnPromotion && promotionActive && (
+                                <Badge variant="secondary" className="bg-rose-100 text-rose-800 hover:bg-rose-200">
+                                    Promoção
+                                </Badge>
+                            )}
+                        </div>
                     </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <Badge variant={product.isAvailable ? "success" : "destructive"}>
-                        {product.isAvailable ? 'Disponível' : 'Indisponível'}
-                    </Badge>
-
-                    {/* Badge de promoção */}
-                    {product.isOnPromotion && promotionActive && (
-                        <Badge variant="secondary" className="bg-rose-100 text-rose-800 hover:bg-rose-200">
-                            Promoção
-                        </Badge>
-                    )}
-
-                    {/* Menu de ações */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Abrir menu</span>
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                                <Link href={`/restaurant/${restaurantId}/products/${product._id}`}>
-                                    <Info className="h-4 w-4 mr-2" />
-                                    Ver detalhes
-                                </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={onEditClick}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Editar produto
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={onPromotionClick}>
-                                <Percent className="h-4 w-4 mr-2" />
-                                {product.isOnPromotion ? 'Gerenciar promoção' : 'Adicionar promoção'}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={onDeleteClick}
-                                className="text-destructive focus:text-destructive"
-                            >
-                                <Trash className="h-4 w-4 mr-2" />
-                                Excluir produto
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
                 </div>
             </CardContent>
         </Card>

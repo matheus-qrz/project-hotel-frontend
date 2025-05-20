@@ -19,28 +19,13 @@ export interface CartItem {
     quantity: number;
 }
 
+export interface GuestInfo {
+    name: string;
+}
+
+
 export async function getRestaurantById(id: string) {
     try {
-        console.log(`Tentando buscar restaurante com ID: ${id}`);
-
-        // DADOS MOCK - usamos diretamente os dados que você mostrou
-        if (id === '67da283ca39b629d7b2bf317') {
-            return {
-                _id: '67da283ca39b629d7b2bf317',
-                name: 'Ecaflip Bêbado',
-                cnpj: '20031219000346',
-                address: {}, // objeto vazio para evitar erros
-                specialty: 'Brasileira',
-                phone: '83986192317',
-                admin: {},
-                units: [{}],
-                attendants: [],
-                createdAt: '2025-03-19T02:13:16.900+00:00',
-                updatedAt: '2025-03-19T04:21:19.954+00:00',
-                __v: 0
-            };
-        }
-
         // Se não for o ID específico, ainda tentamos a API
         const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:3333';
         const response = await fetch(`${API_URL}/restaurant/${id}`);
@@ -312,42 +297,6 @@ export function formatCurrency(value: number): string {
 export function clearCart(restaurantName: string): void {
     const cartKey = `cart-${restaurantName}`;
     localStorage.removeItem(cartKey);
-}
-
-// Função para criar pedido
-export async function createOrder(restaurantId: string, orderData: any) {
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('guest_token');
-
-    try {
-        const response = await fetch(`${API_URL}/order/create`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-            },
-            body: JSON.stringify({
-                restaurantUnitId: restaurantId,
-                ...orderData,
-                // Se for convidado, incluir informações de convidado
-                ...(localStorage.getItem('guest_token') && !localStorage.getItem('auth_token') ? {
-                    isGuest: true,
-                    guestInfo: {
-                        name: `Convidado Mesa ${localStorage.getItem(`table-${orderData.restaurantName}`)}`,
-                        // Se tiver mais informações de convidado, inclua aqui
-                    }
-                } : {})
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error('Erro ao criar pedido');
-        }
-
-        return await response.json();
-    } catch (error) {
-        console.error('Erro ao criar pedido:', error);
-        throw error;
-    }
 }
 
 /**

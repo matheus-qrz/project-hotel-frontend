@@ -5,21 +5,32 @@ import { Button } from "../ui/button";
 import { useSidebar } from "../ui/sidebar";
 import { useRestaurantStore } from "@/stores";
 import { useEffect } from "react";
-import { useRestaurantId } from "@/hooks/useRestaurantId";
+import { extractNameFromSlug } from "@/utils/slugify";
+import { useParams } from "next/navigation";
 
 export default function Header() {
     const { toggle, isOpen } = useSidebar();
-    const { restaurantId } = useRestaurantId();
-    const { name, fetchRestaurantName } = useRestaurantStore();
+    const { slug } = useParams();
+    const { restaurant, fetchRestaurantData } = useRestaurantStore();
 
+    console.log('Restaurant Slug:', slug);
+
+    // Seu componente
     useEffect(() => {
-        if (restaurantId) {
-            console.log('Buscando restaurante com ID:', restaurantId); // Debug
-            fetchRestaurantName(restaurantId);
-        }
-    }, [restaurantId]);
+        const loadRestaurant = async () => {
+            try {
+                console.log('Tentando carregar restaurante com slug:', slug);
+                await fetchRestaurantData(String(slug));
+            } catch (error) {
+                console.error('Erro ao carregar restaurante:', error);
+            }
+        };
 
-    console.log('Nome atual do restaurante:', name); // Debug
+        loadRestaurant();
+    }, [/* suas dependências */]);
+
+    // Use o nome do restaurante do store se disponível, senão use o nome extraído do slug
+    const displayName = restaurant?.name || (slug ? extractNameFromSlug(String(slug)) : '');
 
     return (
         <header className="flex items-center justify-between px-6 py-4 bg-background border-b border-border sticky top-0 z-50 h-16 w-full">
@@ -35,7 +46,7 @@ export default function Header() {
                 <span className="sr-only">Toggle Sidebar</span>
             </Button>
 
-            <h2 className="text-xl text-primary font-medium text-center">{name}</h2>
+            <h2 className="text-xl text-primary font-medium text-center">{displayName}</h2>
 
             <Button
                 variant="outline"
