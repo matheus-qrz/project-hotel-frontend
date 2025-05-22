@@ -10,7 +10,7 @@ import { ShoppingCart } from 'lucide-react';
 import { extractNameFromSlug } from '@/utils/slugify';
 import { getCategoryName } from '@/utils/getCategoryName';
 import { DelayedLoading } from '../loading/DelayedLoading';
-import { useAuthStore } from '@/stores';
+import { useAuthStore, useTableStore } from '@/stores';
 
 interface MenuClientProps {
   slug: string;
@@ -27,9 +27,10 @@ export default function MenuClient({
 
   const restaurantName = slug && extractNameFromSlug(String(slug));
 
-  const { items, addItem, updateQuantity, removeItem, getTotal } = useCartStore();
+  const { items, addItem, updateQuantity, removeItem, getTotal, guestInfo } = useCartStore();
   const { products, loading: isLoading } = useProductStore();
-  const { guestInfo } = useAuthStore();
+
+  console.log("Guest info retrieved: ", guestInfo);
 
   const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
   const totalPrice = getTotal();
@@ -74,7 +75,8 @@ export default function MenuClient({
       <div className="mb-6">
         <div className='flex flex-col gap-2 mb-4'>
           <h1 className="text-2xl font-bold">{restaurantName}</h1>
-          <p className="text-gray-600">Olá, {guestInfo?.name}! Selecione os produtos que deseja adicionar ao seu pedido.</p>
+          <p className="text-lg font-semibold">Olá, {guestInfo?.name}!</p>
+          <p className='text-gray-500'> Selecione os produtos que deseja adicionar ao seu pedido.</p>
         </div>
 
         <div className="flex flex-row gap-2 overflow-auto">

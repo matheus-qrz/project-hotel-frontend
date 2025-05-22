@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useAuthCheck } from '@/hooks/sessionManager';
 import { useParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
-import { useCartStore } from '@/stores';
+import { useCartStore, useTableStore } from '@/stores';
 import { extractIdFromSlug, extractNameFromSlug } from '@/utils/slugify';
 import { Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -12,15 +12,24 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-
 export function GuestLogin() {
-    const { setGuestInfo } = useCartStore();
+    const { initializeGuest } = useCartStore();
+    const { addGuest } = useTableStore();
     const { slug, tableId } = useParams();
     const [guestData, setGuestData] = useState({
         name: '',
     });
     const router = useRouter();
     const { authenticateAsGuest, isLoading, error } = useAuthCheck();
+
+
+    const handleGuestEntry = (name: string) => {
+        initializeGuest(name);
+        const guestInfo = useCartStore.getState().guestInfo;
+        if (guestInfo) {
+            addGuest(guestInfo);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -41,20 +50,21 @@ export function GuestLogin() {
             );
 
             if (result.success) {
-                setGuestInfo({ name: guestData.name });
+                handleGuestEntry(guestData.name);
+
+                const guestInfo = useCartStore.getState().guestInfo;
+
+                if (!guestInfo) {
+                    throw new Error('Erro ao inicializar convidado.');
+                }
+
                 router.push(`/restaurant/${slug}/${tableId}/menu`);
             }
         } catch (err: any) {
             console.error('Erro no login como convidado:', err);
         }
-    };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setGuestData(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        console.log("guestInfo saved: ", guestData)
     };
 
     return (
@@ -75,7 +85,7 @@ export function GuestLogin() {
                     type="text"
                     placeholder="Seu nome"
                     value={guestData.name}
-                    onChange={handleInputChange}
+                    onChange={(e) => setGuestData({ name: e.target.value })}
                     required
                 />
             </div>

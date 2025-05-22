@@ -54,6 +54,7 @@ import { useAuthCheck } from '@/hooks/sessionManager';
 import { formatCurrency } from '@/services/restaurant/services';
 import { getCategoryName } from '@/utils/getCategoryName';
 import { extractIdFromSlug } from '@/utils/slugify';
+import { DelayedLoading } from '../loading/DelayedLoading';
 
 interface ProductsListProps {
     slug: string;
@@ -71,7 +72,7 @@ const CATEGORIES = [
 export default function ProductsList({ slug }: ProductsListProps) {
     const router = useRouter();
     const { toast } = useToast();
-    const { isAuthenticated, isLoading: isAuthLoading, isAdmin, session, logout } = useAuthCheck();
+    const { isAuthenticated, isLoading: isAuthLoading, isAdminOrManager, session, logout } = useAuthCheck();
     const {
         products,
         error,
@@ -93,7 +94,7 @@ export default function ProductsList({ slug }: ProductsListProps) {
     // Carregar produtos
     useEffect(() => {
         const loadProducts = async () => {
-            if (restaurantId && isAuthenticated && isAdmin) {
+            if (restaurantId && isAuthenticated && isAdminOrManager) {
                 try {
                     await fetchProducts(restaurantId);
                 } catch (err) {
@@ -212,10 +213,7 @@ export default function ProductsList({ slug }: ProductsListProps) {
     // Renderização condicional para estados de carregamento
     if (isAuthLoading) {
         return (
-            <div className="w-full flex flex-col items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                <p className="text-muted-foreground">Carregando produtos...</p>
-            </div>
+            <DelayedLoading />
         );
     }
 

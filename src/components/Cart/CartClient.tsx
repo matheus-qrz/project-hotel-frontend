@@ -1,10 +1,11 @@
+// components/cart/CartClient.tsx
 'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, ShoppingCart, Minus, Plus, Users, RefreshCw } from "lucide-react";
+import { ArrowLeft, Send, ShoppingCart, RefreshCw } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import {
@@ -19,13 +20,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import CartItem from "@/components/cart/CartItem";
 import { formatCurrency } from "@/services/restaurant/services";
-import { CartItemProps, useCartStore, useOrderStore } from "@/stores";
+import { CartItemProps, Order, useCartStore, useOrderStore, useTableStore } from "@/stores";
 import { extractIdFromSlug } from "@/utils/slugify";
+import { OrderCard } from "../order/OrderCard";
 
 export function CartClient() {
     const router = useRouter();
     const { slug, tableId, unitId } = useParams();
-    const { createOrder, fetchTableOrders } = useOrderStore();
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [observations, setObservations] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,85 +39,92 @@ export function CartClient() {
 
     const restaurantId = slug && extractIdFromSlug(String(slug));
 
-    // Usando o CartStore
     const {
-        guestInfo,
         items,
-        updateQuantity,
-        removeItem,
+        guestInfo,
+        getGuestId,
         getTotal,
         clearCart,
-        restaurantId: storeRestaurantId,
-        updateItemStatus
+        updateItemStatus,
+        setObservations: setCartObservations,
+        setOrderType: setCartOrderType
     } = useCartStore();
 
+    const {
+        order,
+        setOrders,
+        fetchTableOrders,
+        createOrder,
+        requestCheckout
+    } = useOrderStore();
+
+    const guestId = getGuestId();
+
     useEffect(() => {
-        if (restaurantId && tableId) {
-            const syncOrders = async () => {
-                try {
-                    const orders = await fetchTableOrders(restaurantId, String(tableId));
+        if (!guestId || !restaurantId || !tableId) return;
+        handleRefresh();
+    }, [restaurantId, tableId]);
 
-                    // Atualizar status dos itens no carrinho
-                    if (Array.isArray(orders)) {
-                        orders.forEach(order => {
-                            order.items.forEach((item: any) => {
-                                const cartItem = items.find(cartItem => cartItem.id === item.id);
-                                if (cartItem && cartItem.status !== order.status) {
-                                    updateItemStatus(item.id, order.status);
-                                }
-                            });
-                        });
-                    }
-                } catch (error) {
-                    console.error('Erro ao sincronizar pedidos:', error);
-                }
-            };
+    // Sincronização de pedidos
+    useEffect(() => {
+        if (!guestId || !restaurantId || !tableId) return;
 
-            syncOrders(); // Sincronizar imediatamente
-            const interval = setInterval(syncOrders, 5000); // Sincronizar a cada 5 segundos
+        // Fazer apenas uma sincronização inicial
+        const initialSync = async () => {
+            try {
+                await fetchTableOrders(
+                    String(restaurantId),
+                    String(tableId),
+                    guestId
+                );
+            } catch (error) {
+                console.error('Erro na sincronização inicial:', error);
+            }
+        };
 
-            return () => clearInterval(interval);
-        }
-    }, [restaurantId, tableId, fetchTableOrders, items, updateItemStatus]);
+        initialSync();
+    }, [restaurantId, tableId, guestId]);
 
-    const handleQuantityChange = (productId: string, quantity: number) => {
-        if (quantity === 0) {
-            removeItem(productId);
-        } else {
-            updateQuantity(productId, quantity);
-        }
-    };
+    // Filtra pedidos do convidado atual
+    const guestOrders = useMemo(() => {
+        const guestId = getGuestId();
+        return order.filter(order =>
+            order.guestInfo.id === guestId && ['pending', 'processing', 'completed'].includes(order.status)
+        );
+    }, [order, getGuestId]);
 
-    const handleRemove = (productId: string) => {
-        removeItem(productId);
-    };
+    // Calcula total dos pedidos do convidado
+    const guestTotal = useMemo(() => {
+        return guestOrders.reduce((total, order) =>
+            total + order.totalAmount, 0
+        );
+    }, [guestOrders]);
 
     const handleRefresh = async () => {
-        if (!restaurantId) {
-            console.log('Faltam parâmetros para atualização:', { restaurantId, tableId });
+        if (!guestId || !restaurantId || !tableId) {
+            setError('Informações da mesa incompletas');
             return;
         }
 
-        console.log('Iniciando atualização manual com:', { restaurantId, tableId });
-
+        setIsRefreshing(true);
         try {
-            await fetchTableOrders(restaurantId, String(tableId));
-            console.log('Atualização concluída');
+            await fetchTableOrders(
+                String(restaurantId),
+                String(tableId),
+                guestId
+            );
         } catch (error) {
-            console.error('Erro na atualização manual:', error);
+            console.error('Erro na atualização:', error);
+            setError('Falha ao atualizar pedidos');
+        } finally {
+            setIsRefreshing(false);
         }
     };
 
-    const total = getTotal();
-    const totalPerPerson = splitCount > 1 ? total / splitCount : total;
-
-    const goBackToMenu = () => {
-        router.push(`/restaurant/${slug}/${tableId}/menu`);
-    };
-
     const submitOrder = async () => {
-        if (!tableId) {
-            setError("Por favor, escaneie o QR code da mesa para fazer seu pedido.");
+        const guestId = getGuestId();
+        if (!guestId || !guestInfo) {
+            setError("Identificação do convidado não encontrada");
             return;
         }
 
@@ -125,63 +133,78 @@ export function CartClient() {
 
         try {
             const orderData = {
-                restaurantUnitId: restaurantId || unitId,
                 items: items.map(item => ({
                     id: item.id,
                     name: item.name,
                     price: item.price,
                     quantity: item.quantity,
                     image: item.image,
-                    status: item.status,
+                    status: item.status || 'pending'
                 })),
-                totalAmount: total,
+                totalAmount: getTotal(),
                 meta: {
-                    tableId: parseInt(String(tableId)),
-                    splitCount,
-                    observations,
+                    tableId: Number(tableId),
+                    guestId,
                     orderType,
+                    observations,
+                    splitCount,
+                    orderCreatedAt: new Date()
                 },
                 guestInfo: {
-                    name: guestInfo?.name || "",
+                    id: guestId,
+                    name: guestInfo.name,
+                    joinedAt: guestInfo.joinedAt
                 }
             };
 
-            await createOrder(orderData, String(slug), String(tableId));
-            setObservations(observations || "");
-            setIsSubmitting(false);
-            setSubmissionSuccess(true);
+            const newOrder = await createOrder(
+                orderData,
+                String(restaurantId),
+                String(tableId)
+            );
 
+            setOrders([...order, newOrder]);
+
+            setObservations("");
+            setCartObservations("");
+            setCartOrderType(orderType);
+
+            setSubmissionSuccess(true);
             setTimeout(() => {
                 setSubmissionSuccess(false);
                 router.push(`/restaurant/${slug}/${tableId}/menu`);
             }, 3000);
         } catch (error) {
             console.error("Erro ao enviar pedido:", error);
+            setError("Falha ao enviar pedido. Tente novamente.");
+        } finally {
             setIsSubmitting(false);
-            setError("Ocorreu um erro ao enviar seu pedido. Por favor, tente novamente.");
         }
     };
 
     const finalizeOrder = async () => {
-        if (!tableId) {
-            setError("Não foi possível identificar sua mesa.");
+        const guestId = getGuestId();
+        if (!guestId || !tableId) {
+            setError("Informações incompletas para fechamento");
             return;
         }
 
         setIsFinalizingOrder(true);
-
         try {
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await requestCheckout(String(tableId), String(restaurantId), guestId, splitCount);
             setShowFinishDialog(false);
             clearCart();
             router.push(`/restaurant/${slug}/${tableId}/payment-requested`);
         } catch (error) {
             console.error("Erro ao finalizar conta:", error);
-            setError("Ocorreu um erro ao solicitar o fechamento. Por favor, chame um atendente.");
+            setError("Falha ao solicitar fechamento. Chame um atendente.");
         } finally {
             setIsFinalizingOrder(false);
         }
     };
+
+    const total = getTotal();
+    const totalPerPerson = splitCount > 1 ? total / splitCount : total;
 
     if (items.length === 0 && !submissionSuccess && !isSubmitting) {
         return (
@@ -191,7 +214,7 @@ export function CartClient() {
                     <p>Seu carrinho está vazio</p>
                     <Button
                         variant="link"
-                        onClick={goBackToMenu}
+                        onClick={() => router.push(`/restaurant/${slug}/${tableId}/menu`)}
                         className="mt-2"
                     >
                         Adicionar itens
@@ -215,7 +238,11 @@ export function CartClient() {
                     {tableId && (
                         <p className="text-primary font-medium mb-2">Mesa {tableId}</p>
                     )}
-                    <p className="text-gray-500 mb-4">{orderType === 'local' ? 'Um atendente trará seu pedido em breve.' : 'Seu pedido para viagem estará pronto em breve.'}</p>
+                    <p className="text-gray-500 mb-4">
+                        {orderType === 'local'
+                            ? 'Um atendente trará seu pedido em breve.'
+                            : 'Seu pedido para viagem estará pronto em breve.'}
+                    </p>
                     <p className="text-sm text-gray-400">Você pode fazer mais pedidos a qualquer momento!</p>
                 </div>
             </div>
@@ -229,7 +256,7 @@ export function CartClient() {
                     variant="ghost"
                     size="icon"
                     className="mr-2"
-                    onClick={goBackToMenu}
+                    onClick={() => router.push(`/restaurant/${slug}/${tableId}/menu`)}
                 >
                     <ArrowLeft />
                 </Button>
@@ -257,35 +284,34 @@ export function CartClient() {
                 </div>
             )}
 
-            {/* Lista de itens no carrinho */}
-            <div className="space-y-2 mb-6">
-                {items.length > 0 ? (
-                    items.map((item: CartItemProps) => (
-                        <CartItem
-                            key={item.id}
-                            id={item.id}
-                            name={item.name}
-                            imageUrl={item.image}
-                            price={item.price}
-                            quantity={item.quantity || 0}
-                            status={item.status || 'pending'}
-                            onQuantityChange={handleQuantityChange}
-                            onRemove={handleRemove}
+            {/* Pedidos em andamento */}
+            {guestOrders.length > 0 && (
+                <div className="mt-4">
+                    <h2 className="text-lg font-semibold">Pedidos em andamento</h2>
+                    {order.map((order: any, index) => (
+                        <OrderCard
+                            key={`${order._id}-${index}`}
+                            order={order}
+                            onStatusUpdate={handleRefresh}
                         />
-                    ))
-                ) : (
-                    <div className="text-center py-8 text-gray-500">
-                        <ShoppingCart className="mx-auto mb-3 text-gray-300" size={40} />
-                        <p>Seu carrinho está vazio</p>
-                        <Button
-                            variant="link"
-                            onClick={goBackToMenu}
-                            className="mt-2"
-                        >
-                            Adicionar itens
-                        </Button>
-                    </div>
-                )}
+                    ))}
+                </div>
+            )}
+
+            {/* Itens no carrinho */}
+            <div className="space-y-2 mb-6">
+                {items.map((item) => (
+                    <CartItem
+                        key={item.id}
+                        id={item.id}
+                        name={item.name}
+                        image={item.image}
+                        price={item.price}
+                        quantity={item.quantity}
+                        status={item.status || 'pending'}
+                        guestId={getGuestId() || ''}
+                    />
+                ))}
             </div>
 
             {items.length > 0 && (
@@ -300,15 +326,16 @@ export function CartClient() {
                         >
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="local" id="local" />
-                                <Label htmlFor="local" className="cursor-pointer">Consumir no local</Label>
+                                <Label htmlFor="local">Consumir no local</Label>
                             </div>
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="takeaway" id="takeaway" />
-                                <Label htmlFor="takeaway" className="cursor-pointer">Para viagem</Label>
+                                <Label htmlFor="takeaway">Para viagem</Label>
                             </div>
                         </RadioGroup>
                     </div>
 
+                    {/* Observações */}
                     <div className="mb-6">
                         <h3 className="font-medium text-primary mb-2">Observações</h3>
                         <Textarea
@@ -340,9 +367,9 @@ export function CartClient() {
                 </>
             )}
 
-            {/* Botões de ação - fixos na parte inferior */}
+            {/* Botões de ação fixos */}
             <div className="fixed bottom-6 left-0 right-0 flex justify-center px-4 gap-2">
-                {items.length > 0 && (
+                {items.length > 0 ? (
                     <>
                         {orderType === 'local' && (
                             <Button
@@ -356,7 +383,7 @@ export function CartClient() {
 
                         <Button
                             onClick={submitOrder}
-                            disabled={isSubmitting || items.length === 0 || !tableId}
+                            disabled={isSubmitting || items.length === 0}
                             variant="default"
                             className="flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-secondary shadow-lg flex-1"
                         >
@@ -365,16 +392,17 @@ export function CartClient() {
                             ) : (
                                 <>
                                     <Send size={18} />
-                                    <span>{orderType === 'local' ? 'Fazer pedido' : 'Finalizar'} • {formatCurrency(splitCount > 1 ? totalPerPerson : total)}</span>
+                                    <span>
+                                        {orderType === 'local' ? 'Fazer pedido' : 'Finalizar'} •
+                                        {formatCurrency(splitCount > 1 ? totalPerPerson : total)}
+                                    </span>
                                 </>
                             )}
                         </Button>
                     </>
-                )}
-
-                {items.length === 0 && !submissionSuccess && (
+                ) : (
                     <Button
-                        onClick={goBackToMenu}
+                        onClick={() => router.push(`/restaurant/${slug}/${tableId}/menu`)}
                         variant="default"
                         className="flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-secondary shadow-lg w-full max-w-md"
                     >
@@ -383,7 +411,7 @@ export function CartClient() {
                 )}
             </div>
 
-            {/* Diálogo de confirmação para finalizar a conta */}
+            {/* Diálogo de confirmação */}
             <AlertDialog open={showFinishDialog} onOpenChange={setShowFinishDialog}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
@@ -412,4 +440,3 @@ export function CartClient() {
         </div>
     );
 }
-

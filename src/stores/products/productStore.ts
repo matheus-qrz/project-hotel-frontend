@@ -74,7 +74,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         set({ loading: true, error: null });
         const token = useAuthStore.getState().token; // Obtenha o token de autenticação
         try {
-            const response = await fetch(`${API_URL} / product / ${id}`, {
+            const response = await fetch(`${API_URL}/product/${id}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -135,7 +135,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         set({ loading: true, error: null });
         const token = useAuthStore.getState().token; // Obtenha o token de autenticação
         try {
-            const response = await fetch(`${API_URL} / restaurant / ${restaurantId} / products / ${id} / update`, {
+            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products/${id}/update`, {
                 method: 'PATCH',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -170,7 +170,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         set({ loading: true, error: null });
         const token = useAuthStore.getState().token; // Obtenha o token de autenticação
         try {
-            const response = await fetch(`${API_URL} / restaurant / ${restaurantId} / products / ${id} / delete `, {
+            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products/${id}/delete`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -201,7 +201,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         set({ loading: true, error: null });
         const token = useAuthStore.getState().token; // Obtenha o token de autenticação
         try {
-            const response = await fetch(`${API_URL} / restaurant / ${restaurantId} / products / promotional`, {
+            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products/promotional`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -232,12 +232,10 @@ export const useProductStore = create<ProductState>((set, get) => ({
             const formData = new FormData();
             formData.append('file', file);
 
-            const response = await fetch(`${API_URL} / restaurant / ${restaurantId} / products /import`, {
+            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products/import`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                    // Não inclua 'Content-Type' aqui, pois o navegador definirá automaticamente
-                    // para multipart/form-data com o boundary correto
                 },
                 body: formData
             });

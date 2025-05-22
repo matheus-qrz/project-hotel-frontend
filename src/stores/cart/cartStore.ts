@@ -1,6 +1,6 @@
-import { OrderStatus } from '@/components/cart/constants';
+// stores/cartStore.ts
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface CartItemProps {
     id: string;
@@ -13,7 +13,9 @@ export interface CartItemProps {
 }
 
 interface GuestInfo {
+    id: string;
     name: string;
+    joinedAt: string;
 }
 
 interface CartStore {
@@ -25,24 +27,71 @@ interface CartStore {
     orderType: 'local' | 'takeaway';
     observations: string;
 
-    // Ações do carrinho
     addItem: (item: CartItemProps) => void;
     removeItem: (productId: string) => void;
     updateQuantity: (productId: string, quantity: number) => void;
     updateItemObservations: (productId: string, observations: string) => void;
-    updateItemStatus: (productId: string, status: CartItemProps['status']) => void; // Adicionado
+    updateItemStatus: (productId: string, status: CartItemProps['status']) => void;
     setOrderType: (type: 'local' | 'takeaway') => void;
     setObservations: (observations: string) => void;
-    setOrderObservations: (observations: string) => void;
     clearCart: () => void;
-
-    // Ações de identificação
+    initializeGuest: (name: string) => void;
     setTableInfo: (tableId: string, restaurantId: string, unitId?: string) => void;
-    setGuestInfo: (info: GuestInfo) => void;
-
-    // Cálculos
+    getGuestId: () => string | null;
     getTotal: () => number;
 }
+
+type StorageType = {
+    getItem: (name: string) => Promise<string | null>;
+    setItem: (name: string, value: string) => Promise<void>;
+    removeItem: (name: string) => Promise<void>;
+};
+
+const customStorage: StorageType = {
+    getItem: async (name: string) => {
+        try {
+            const value = localStorage.getItem(name);
+            if (!value) return null;
+
+            const parsed = JSON.parse(value);
+            if (JSON.stringify(parsed).length > 5242880) {
+                const trimmedData = {
+                    ...parsed,
+                    items: parsed.items.slice(-20)
+                };
+                await customStorage.setItem(name, JSON.stringify(trimmedData));
+                return JSON.stringify(trimmedData);
+            }
+            return value;
+        } catch (error) {
+            console.error('Erro ao ler do localStorage:', error);
+            return null;
+        }
+    },
+    setItem: async (name: string, value: string) => {
+        try {
+            if (value.length > 5242880) {
+                const parsed = JSON.parse(value);
+                const trimmedData = {
+                    ...parsed,
+                    items: parsed.items.slice(-20)
+                };
+                localStorage.setItem(name, JSON.stringify(trimmedData));
+            } else {
+                localStorage.setItem(name, value);
+            }
+        } catch (error) {
+            console.error('Erro ao salvar no localStorage:', error);
+        }
+    },
+    removeItem: async (name: string) => {
+        try {
+            localStorage.removeItem(name);
+        } catch (error) {
+            console.error('Erro ao remover do localStorage:', error);
+        }
+    }
+};
 
 export const useCartStore = create<CartStore>()(
     persist(
@@ -55,6 +104,17 @@ export const useCartStore = create<CartStore>()(
             orderType: 'local',
             observations: '',
 
+            initializeGuest: (name: string) => {
+                const guestId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                set({
+                    guestInfo: {
+                        id: guestId,
+                        name,
+                        joinedAt: new Date().toISOString()
+                    }
+                });
+            },
+
             addItem: (item) => set((state) => {
                 const existingItem = state.items.find(i => i.id === item.id);
                 if (existingItem) {
@@ -66,7 +126,8 @@ export const useCartStore = create<CartStore>()(
                         )
                     };
                 }
-                return { items: [...state.items, item] };
+                const newItems = [...state.items, item];
+                return { items: newItems.slice(-20) };
             }),
 
             removeItem: (id) => set((state) => ({
@@ -85,26 +146,21 @@ export const useCartStore = create<CartStore>()(
                 )
             })),
 
-            updateItemStatus: (id: string, status: OrderStatus) =>
-                set((state) => ({
-                    items: state.items.map(item => {
-                        if (item.id === id) {
-                            console.log(`Atualizando status do item ${item.name} de ${item.status} para ${status}`);
-                            return { ...item, status };
-                        }
-                        return item;
-                    })
-                })),
+            updateItemStatus: (id, status) => set((state) => ({
+                items: state.items.map(item => {
+                    if (item.id === id) {
+                        return { ...item, status };
+                    }
+                    return item;
+                })
+            })),
 
             setOrderType: (type) => set({ orderType: type }),
 
             setObservations: (observations) => set({ observations }),
 
-            setOrderObservations: (observations) => set({ observations }),
-
             clearCart: () => set({
                 items: [],
-                guestInfo: null,
                 orderType: 'local',
                 observations: ''
             }),
@@ -115,9 +171,10 @@ export const useCartStore = create<CartStore>()(
                 unitId: unitId || null
             }),
 
-            setGuestInfo: (info) => set({
-                guestInfo: info
-            }),
+            getGuestId: () => {
+                const state = get();
+                return state.guestInfo?.id || null;
+            },
 
             getTotal: () => {
                 const state = get();
@@ -128,18 +185,16 @@ export const useCartStore = create<CartStore>()(
         }),
         {
             name: 'cart-storage',
-            storage: {
-                getItem: (name) => {
-                    const item = localStorage.getItem(name);
-                    return item ? JSON.parse(item) : null;
-                },
-                setItem: (name, value) => {
-                    localStorage.setItem(name, JSON.stringify(value));
-                },
-                removeItem: (name) => {
-                    localStorage.removeItem(name);
-                },
-            }
+            storage: createJSONStorage(() => customStorage),
+            partialize: (state: CartStore) => ({
+                items: state.items,
+                tableId: state.tableId,
+                restaurantId: state.restaurantId,
+                unitId: state.unitId,
+                orderType: state.orderType,
+                observations: state.observations,
+                guestInfo: state.guestInfo
+            })
         }
     )
 );

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 
-interface ManagerScreenProps {
+interface OrderHistoryProps {
     slug: string;
 }
 
@@ -23,7 +23,7 @@ const StatusTexts = {
     paid: 'Pago'
 };
 
-export function ManagerScreen({ slug }: ManagerScreenProps) {
+export function OrderHistory({ slug }: OrderHistoryProps) {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const { order, fetchRestaurantUnitOrders, updateOrderStatus } = useOrderStore();
     const { tableId } = useTableStore();
@@ -140,7 +140,7 @@ export function ManagerScreen({ slug }: ManagerScreenProps) {
         <div className="w-full min-h-screen bg-gray-50">
             <div className="w-full mx-auto p-6">
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-2xl font-bold">Gerenciamento de Pedidos</h1>
+                    <h1 className="text-2xl font-bold">Histórico de Pedidos</h1>
                     <Button
                         onClick={handleRefresh}
                         className="flex items-center gap-2"
@@ -152,40 +152,22 @@ export function ManagerScreen({ slug }: ManagerScreenProps) {
                     </Button>
                 </div>
 
-                <div className="grid grid-cols-4 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-2 gap-6">
                     <div className="bg-white p-6 rounded-lg shadow-sm min-h-[calc(100vh-200px)] overflow-y-auto">
                         <h2 className="text-lg font-semibold mb-6 sticky top-0 bg-white py-2">
-                            Pendentes
+                            Pagos
                         </h2>
                         <div className="space-y-4">
-                            {renderOrders(['pending'])}
+                            {renderOrders(['paid'])}
                         </div>
                     </div>
 
                     <div className="bg-white p-6 rounded-lg shadow-sm min-h-[calc(100vh-200px)] overflow-y-auto">
                         <h2 className="text-lg font-semibold mb-6 sticky top-0 bg-white py-2">
-                            Em Preparo
+                            Cancelados
                         </h2>
                         <div className="space-y-4">
-                            {renderOrders(['processing'])}
-                        </div>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-lg shadow-sm min-h-[calc(100vh-200px)] overflow-y-auto">
-                        <h2 className="text-lg font-semibold mb-6 sticky top-0 bg-white py-2">
-                            Concluídos
-                        </h2>
-                        <div className="space-y-4">
-                            {renderOrders(['completed'])}
-                        </div>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-lg shadow-sm min-h-[calc(100vh-200px)] overflow-y-auto">
-                        <h2 className="text-lg font-semibold mb-6 sticky top-0 bg-white py-2">
-                            Pagamentos Solicitados
-                        </h2>
-                        <div className="space-y-4">
-                            {renderOrders(['payment_requested'])}
+                            {renderOrders(['cancelled'])}
                         </div>
                     </div>
                 </div>
@@ -194,4 +176,4 @@ export function ManagerScreen({ slug }: ManagerScreenProps) {
     );
 }
 
-export default ManagerScreen;
+export default OrderHistory;

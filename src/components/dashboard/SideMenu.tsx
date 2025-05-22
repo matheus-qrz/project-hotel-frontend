@@ -75,12 +75,12 @@ export function Sidebar({ className }: SidebarProps) {
             icon: <SquareMenu size={20} />,
             color: "#f3de1f"
         },
-        {
-            title: "Promoções",
-            href: "/promocoes",
-            icon: <BadgePercent size={20} />,
-            color: "#f97316"
-        },
+        // {
+        //     title: "Promoções",
+        //     href: "/promocoes",
+        //     icon: <BadgePercent size={20} />,
+        //     color: "#f97316"
+        // },
         {
             title: "Estatísticas",
             href: `/restaurant/${slug}/statistics`,
@@ -89,7 +89,7 @@ export function Sidebar({ className }: SidebarProps) {
         },
         {
             title: "Histórico de pedidos",
-            href: `/restaurant/${slug}/order-history`,
+            href: `/restaurant/${slug}/order/history`,
             icon: <History size={20} />,
             color: "#10b981"
         }
@@ -142,7 +142,7 @@ export function Sidebar({ className }: SidebarProps) {
                                 <span className="cursor-pointer text-primary">Desconectar</span>
                             </Button>
                         </div>
-                        <div className="flex justify-between items-end gap-2 px-5 py-4">
+                        <div className="flex justify-between items-end gap-2 px-5 py-10">
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="outline" size="icon">
@@ -163,14 +163,6 @@ export function Sidebar({ className }: SidebarProps) {
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
-                        </div>
-                    </div>
-                    <div className="p-5">
-                        <div className="flex items-center justify-between mb-8">
-                            <Link href="/configuracoes" className="flex items-center gap-4 text-primary">
-                                <Cog size={20} className="text-gray-500" />
-                                <span>Configurações</span>
-                            </Link>
                         </div>
                     </div>
                 </div>
