@@ -37,8 +37,7 @@ const handler = NextAuth({
                         },
                         body: JSON.stringify({
                             email: credentials.email,
-                            password: credentials.password,
-                            role: 'ADMIN'
+                            password: credentials.password
                         }),
                         signal: controller.signal
                     });
@@ -55,12 +54,16 @@ const handler = NextAuth({
                     console.log("Dados do login:", JSON.stringify(data));
 
                     // Verifica se é resposta de restaurant ou user
-                    if (data.restaurant) {
+                    if (data.restaurant && data.user) {
+                        if (!["ADMIN", "MANAGER"].includes(data.user.role)) {
+                            throw new Error("Acesso negado. Apenas ADMIN e MANAGER podem acessar.");
+                        }
+
                         return {
                             id: data.restaurant._id,
                             name: data.restaurant.admin.fullName,
                             email: data.restaurant.admin.email,
-                            role: 'ADMIN',
+                            role: data.user.role,
                             token: data.token,
                             restaurantId: data.restaurant._id
                         } as iUser;
@@ -91,34 +94,6 @@ const handler = NextAuth({
             }
         })
     ],
-    callbacks: {
-        async jwt({ token, user, trigger, session }) {
-            // Quando o usuário faz login
-            if (user) {
-                token.id = user.id;
-                token.role = (user as iUser).role || '';
-                token.token = (user as iUser).token || '';
-                token.restaurantId = (user as iUser).restaurantId || '';
-            }
-
-            // Permite atualizar o token quando a sessão for atualizada
-            if (trigger === "update" && session?.token) {
-                token.token = session.token;
-            }
-
-            return token;
-        },
-        async session({ session, token }) {
-            if (token) {
-                session.user = session.user || {};
-                session.user.id = token.id;
-                session.user.role = token.role;
-                session.token = token.token; // Certifique-se de que isso está sendo corretamente definido
-                session.user.restaurantId = token.restaurantId;
-            }
-            return session;
-        }
-    },
     pages: {
         signIn: "/login",
     },
@@ -130,6 +105,44 @@ const handler = NextAuth({
     // Aumentando o tempo de expiração do token
     jwt: {
         maxAge: 30 * 24 * 60 * 60, // 30 dias em segundos
+    },
+    cookies: {
+        sessionToken: {
+            name: `next-auth.session-token`,
+            options: {
+                httpOnly: true,
+                sameSite: "lax",
+                path: "/",
+                secure: process.env.NODE_ENV === "production",
+                maxAge: 30 * 24 * 60 * 60 // 30 dias
+            }
+        }
+    },
+    callbacks: {
+        async jwt({ token, user }) {
+            if (user) {
+                return {
+                    ...token,
+                    id: user.id,
+                    role: user.role,
+                    token: user.token,
+                    restaurantId: user.restaurantId
+                };
+            }
+            return token;
+        },
+        async session({ session, token }) {
+            return {
+                ...session,
+                user: {
+                    ...session.user,
+                    id: token.id,
+                    role: token.role,
+                    restaurantId: token.restaurantId
+                },
+                token: token.token
+            };
+        }
     }
 });
 

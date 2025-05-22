@@ -8,56 +8,33 @@ import { useRouter } from "next/navigation";
 import { Label } from "../ui/label";
 import UnitCard from "./UnitCard";
 import { useState } from "react";
+import { RestaurantUnit } from "@/stores/restaurantUnit/restaurantUnitStore";
 
 interface UnitsListProps {
-  units: Unit[];
+  units: RestaurantUnit[];
   isLoading: boolean;
   restaurantId: string;
 }
 
-interface Unit {
-  id: string;
-  name: string;
-  manager: string;
-  cnpj: string;
-  status: "active" | "outOfHours" | "inactive";
-  isTopSeller?: boolean;
-  isMatrix?: boolean;
-  address?: {
-    street: string;
-    number: string;
-    complement?: string;
-    zipCode: string;
-  };
-  businessHours?: Array<{
-    days: string[];
-    opens: string;
-    closes: string;
-  }>;
-}
-
-export default function UnitsList({ units, isLoading, restaurantId }: UnitsListProps) {
+export default function UnitsList({ units = [], isLoading, restaurantId }: UnitsListProps) {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
 
-  const filteredUnits = units.filter(unit =>
+  const filteredUnits = Array.isArray(units) ? units.filter(unit =>
     unit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     unit.manager.toLowerCase().includes(searchTerm.toLowerCase()) ||
     unit.cnpj.includes(searchTerm)
-  );
+  ) : [];
 
   const toggleSelectAll = () => {
     const newSelectAllState = !selectAll;
     setSelectAll(newSelectAllState);
 
-    // If selectAll is being enabled, select all filtered units
     if (newSelectAllState) {
-      setSelectedUnits(filteredUnits.map(unit => unit.id));
+      setSelectedUnits(filteredUnits.map(unit => unit._id));
     }
-    // We don't clear selections when unchecking "Select All"
-    // This allows units to remain individually selected
   };
 
   const handleUnitToggle = (unitId: string, checked: boolean) => {
@@ -126,12 +103,17 @@ export default function UnitsList({ units, isLoading, restaurantId }: UnitsListP
       <div className="space-y-4">
         {filteredUnits.map(unit => (
           <UnitCard
-            key={unit.id}
-            {...unit}
-            selectAll={selectAll}
+            key={unit._id}
+            _id={unit._id}
+            name={unit.name}
+            manager={unit.manager}
+            cnpj={unit.cnpj}
+            status={unit.status}
             isTopSeller={unit.isTopSeller}
-            isSelected={selectedUnits.includes(unit.id)}
-            onToggleSelection={(checked) => handleUnitToggle(unit.id, checked)}
+            isMatrix={unit.isMatrix}
+            isSelected={selectedUnits.includes(unit._id)}
+            selectAll={selectAll}
+            onToggleSelection={(checked) => handleUnitToggle(unit._id, checked)}
           />
         ))}
       </div>

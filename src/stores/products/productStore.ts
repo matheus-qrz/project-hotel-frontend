@@ -6,16 +6,16 @@ export interface Product {
     _id?: string;
     name: string;
     category: string;
-    description?: string;
+    description: string;
     price: number;
-    image?: string;
+    image: string;
     quantity: number;
     isAvailable: boolean;
-    isOnPromotion?: boolean;
-    promotionalPrice?: string;
-    discountPercentage?: string;
-    promotionStartDate?: string;
-    promotionEndDate?: string;
+    isOnPromotion: boolean;
+    discountPercentage: number | null;
+    promotionalPrice: number | null;
+    promotionStartDate: string | null;
+    promotionEndDate: string | null;
 }
 
 interface ProductState {
@@ -30,9 +30,14 @@ interface ProductState {
     updateProduct: (id: string, product: Partial<Product>, restaurantId: string) => Promise<Product>;
     deleteProduct: (id: string, restaurantId: string) => Promise<void>;
     fetchPromotionalProducts: (restaurantId: string) => Promise<void>;
+    importProducts: (file: File, restaurantId: string) => Promise<{
+        success: boolean;
+        message: string;
+        importedCount?: number;
+    }>
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
 export const useProductStore = create<ProductState>((set, get) => ({
     products: [],
@@ -41,12 +46,11 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
     fetchProducts: async (restaurantId: string) => {
         set({ loading: true, error: null });
-        const token = useAuthStore.getState().token; // Obtenha o token de autenticação
+
         try {
             const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products/`, {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
@@ -96,7 +100,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
     createProduct: async (product: Product, restaurantId: string) => {
         set({ loading: true, error: null });
-        const token = useAuthStore.getState().token; // Obtenha o token de autenticação
+        const token = useAuthStore.getState().token;
         try {
             const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products`, {
                 method: 'POST',
@@ -108,7 +112,8 @@ export const useProductStore = create<ProductState>((set, get) => ({
             });
 
             if (!response.ok) {
-                throw new Error('Erro ao criar produto');
+                const error = await response.json();
+                throw new Error(error.message || 'Erro ao criar produto');
             }
 
             const data = await response.json();
@@ -217,5 +222,53 @@ export const useProductStore = create<ProductState>((set, get) => ({
                 loading: false
             });
         }
+    },
+
+    importProducts: async (file: File, restaurantId: string) => {
+        set({ loading: true, error: null });
+        const token = useAuthStore.getState().token;
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products/import`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Erro ao importar produtos');
+            }
+
+            const data = await response.json();
+
+            // Atualiza a lista de produtos após a importação bem-sucedida
+            await get().fetchProducts(restaurantId);
+
+            set({ loading: false });
+            return {
+                success: true,
+                message: 'Produtos importados com sucesso',
+                importedCount: data.importedCount
+            };
+        } catch (error) {
+            console.error('Error importing products:', error);
+            set({
+                error: error instanceof Error ? error.message : 'Erro ao importar produtos',
+                loading: false
+            });
+            return {
+                success: false,
+                message: error instanceof Error ? error.message : 'Erro ao importar produtos'
+            };
+        }
     }
 }));
+
+
+

@@ -90,8 +90,8 @@ export default function RestaurantScheduleForm() {
                     <Button
                         key={day.id}
                         onClick={() => handleToggleDay(day.id)}
-                        className={`w-10 h-10 rounded-md border flex items-center justify-center text-md font-semibold
-                            ${selectedDays.includes(day.id) ? 'bg-gray-200' : 'bg-white border-gray-300'}`}
+                        className={`w-10 h-10 rounded-md border flex items-center justify-center text-md text-secondary font-semibold
+                            ${selectedDays.includes(day.id) ? 'bg-primary' : 'bg-white border-gray-300 text-primary'}`}
                     >
                         {day.label}
                     </Button>
@@ -134,17 +134,6 @@ export default function RestaurantScheduleForm() {
                         </Button>
                     </div>
                 ))}
-            </div>
-
-            {/* Botão de próximo */}
-            <div className="flex justify-end">
-                <Button
-                    type="button"
-                    variant="default"
-                    className="mt-4"
-                >
-                    Próximo
-                </Button>
             </div>
         </div>
     );

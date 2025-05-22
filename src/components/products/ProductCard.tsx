@@ -1,15 +1,14 @@
-// components/products/ProductCard.tsx
 'use client';
 
 import React from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Minus } from 'lucide-react';
-import { IProduct } from '@/services/restaurant/services';
+import { Plus, Minus, Trash2 } from 'lucide-react';
+import { Product } from '@/stores/products/productStore';
 
 interface ProductCardProps {
-    product: IProduct;
+    product: Product;
     quantity: number;
     onQuantityChange: (productId: string, quantity: number) => void;
 }
@@ -17,14 +16,19 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = ({ product, quantity, onQuantityChange }) => {
     // Função para aumentar a quantidade
     const increaseQuantity = () => {
-        onQuantityChange(product._id, quantity + 1);
+        onQuantityChange(String(product._id), quantity + 1);
     };
 
     // Função para diminuir a quantidade
     const decreaseQuantity = () => {
         if (quantity > 0) {
-            onQuantityChange(product._id, quantity - 1);
+            onQuantityChange(String(product._id), quantity - 1);
         }
+    };
+
+    // Função para zerar quantidade
+    const resetQuantity = () => {
+        onQuantityChange(String(product._id), 0);
     };
 
     // Formatar preço
@@ -57,28 +61,41 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, quantity, onQuantity
                 <div className="flex justify-between items-center mt-auto">
                     <span className="font-bold">{formatPrice(product.price)}</span>
 
-                    <div className="flex items-center">
+                    <div className="flex items-center gap-2">
                         {quantity > 0 ? (
                             <>
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={decreaseQuantity}
-                                >
-                                    <Minus size={14} />
-                                </Button>
+                                {quantity > 1 && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                        onClick={resetQuantity}
+                                    >
+                                        <Trash2 size={14} />
+                                    </Button>
+                                )}
 
-                                <span className="mx-2 w-6 text-center">{quantity}</span>
+                                <div className="flex items-center">
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={decreaseQuantity}
+                                    >
+                                        <Minus size={14} />
+                                    </Button>
 
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={increaseQuantity}
-                                >
-                                    <Plus size={14} />
-                                </Button>
+                                    <span className="mx-2 w-6 text-center">{quantity}</span>
+
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={increaseQuantity}
+                                    >
+                                        <Plus size={14} />
+                                    </Button>
+                                </div>
                             </>
                         ) : (
                             <Button

@@ -204,7 +204,7 @@ export default function RestaurantRegisterContainer() {
                 resetForm();
 
                 // Obter o ID do restaurante do useRestaurantStore
-                const restaurantId = useRestaurantStore.getState().restaurantId;
+                const restaurantId = useRestaurantStore.getState().restaurant?._id;
 
                 if (result.token) {
                     useAuthStore.getState().setToken(result.token);

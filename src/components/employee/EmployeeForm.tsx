@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,12 +23,13 @@ import { useRestaurantUnitStore } from '@/stores';
 
 interface EmployeeFormProps {
     restaurantId: string;
-    employeeId?: string; // Undefined para novo funcionário
+    employeeId?: string;
     isEditMode: boolean;
 }
 
 export default function EmployeeForm({ restaurantId, employeeId, isEditMode }: EmployeeFormProps) {
     const router = useRouter();
+    const { slug } = useParams()
     const { toast } = useToast();
     const { session, isAdminOrManager } = useAuthCheck();
     const { units, setUnits } = useEmployeeStore();
@@ -97,7 +98,7 @@ export default function EmployeeForm({ restaurantId, employeeId, isEditMode }: E
 
                     // Buscar dados do funcionário se estiver em modo de edição
                     if (isEditMode && employeeId) {
-                        const employee = await getEmployeeById(employeeId);
+                        const employee = await getEmployeeById(employeeId, session.token || '');
                         setFormData({
                             firstName: employee.firstName,
                             lastName: employee.lastName,
@@ -106,7 +107,7 @@ export default function EmployeeForm({ restaurantId, employeeId, isEditMode }: E
                             password: '',
                             confirmPassword: '',
                             role: employee.role,
-                            unitId: employee.unitId || ''
+                            unitId: employee.restaurantUnit || ''
                         });
                     }
                 } catch (error) {
@@ -201,6 +202,7 @@ export default function EmployeeForm({ restaurantId, employeeId, isEditMode }: E
     };
 
     // Enviar formulário
+    // Ajuste no handleSubmit para tratar a matriz corretamente
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -209,84 +211,69 @@ export default function EmployeeForm({ restaurantId, employeeId, isEditMode }: E
         setIsSaving(true);
         setError(null);
 
-        if (isAdminOrManager) {
+        if (isAdminOrManager && session?.token) {
             try {
-                const token = session?.token || '';
+                const employeeData = {
+                    firstName: formData.firstName,
+                    lastName: formData.lastName,
+                    email: formData.email,
+                    phone: formData.phone || undefined,
+                    role: formData.role as "ADMIN" | "MANAGER" | "ATTENDANT",
+                    password: formData.role === 'ADMIN' || formData.role === 'MANAGER'
+                        ? formData.password
+                        : undefined,
+                    // Verifica se a unidade selecionada é a matriz
+                    unitId: formData.unitId === restaurantId ? restaurantId : formData.unitId || restaurantId,
+                    // Adiciona o ID do restaurante quando for matriz
+                    id: formData.unitId === restaurantId ? restaurantId : undefined
+                };
 
                 if (isEditMode && employeeId) {
-                    // const createData = {
-                    //     firstName: formData.firstName,
-                    //     lastName: formData.lastName,
-                    //     email: formData.email,
-                    //     phone: formData.phone || undefined,
-                    //     role: formData.role as "ADMIN" | "MANAGER" | "ATTENDANT",
-                    //     unitId: formData.unitId,
-                    //     password: formData.role === 'ADMIN' || formData.role === 'MANAGER'
-                    //         ? formData.password
-                    //         : ""
-                    // };
+                    await useEmployeeStore.getState().updateEmployee(
+                        employeeId,
+                        employeeData,
+                        session.token
+                    );
 
-                    // const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/users/${employeeId}/edit`, {
-                    //     method: 'POST',
-                    //     headers: {
-                    //         'Content-Type': 'application/json',
-                    //         'Authorization': `Bearer ${token}`
-                    //     },
-                    //     body: JSON.stringify(createData)
-                    // });
-
-
-                    // if (!response.ok) {
-                    //     const errorData = await response.json();
-                    //     throw new Error(errorData.message || "Erro ao criar funcionário");
-                    // }
-
-                    // toast({
-                    //     title: "Sucesso",
-                    //     description: "Funcionário criado com sucesso."
-                    // });
-
-                    // router.push(`/admin/units/${formData.unitId}/employees`);
-                } else {
-                    const createData = {
-                        firstName: formData.firstName,
-                        lastName: formData.lastName,
-                        email: formData.email,
-                        phone: formData.phone || undefined,
-                        role: formData.role as "ADMIN" | "MANAGER" | "ATTENDANT",
-                        unitId: formData.unitId,
-                        password: formData.role === 'ADMIN' || formData.role === 'MANAGER'
-                            ? formData.password
-                            : ""
-                    };
-
-                    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/users/${restaurantId}/create`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify(createData)
+                    toast({
+                        title: "Sucesso",
+                        description: "Funcionário atualizado com sucesso."
                     });
 
+                    // Ajusta o redirecionamento baseado se é matriz ou unidade
+                    const redirectPath = formData.unitId === restaurantId
+                        ? `/restaurant/${slug}/employees`
+                        : `/restaurant/${slug}/units/${formData.unitId}/employees`;
 
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.message || "Erro ao criar funcionário");
-                    }
+                    router.push(redirectPath);
+                } else {
+                    await useEmployeeStore.getState().addEmployee(
+                        employeeData,
+                        restaurantId,
+                        session.token
+                    );
 
                     toast({
                         title: "Sucesso",
                         description: "Funcionário criado com sucesso."
                     });
 
-                    router.push(`/restaurant/${restaurantId}/employees`);
+                    // Ajusta o redirecionamento baseado se é matriz ou unidade
+                    const redirectPath = formData.unitId === restaurantId
+                        ? `/restaurant/${slug}/employees`
+                        : `/restaurant/${slug}/units/${formData.unitId}/employees`;
+
+                    router.push(redirectPath);
                 }
-            } catch (error: any) {
-                setError(error.message || 'Ocorreu um erro ao salvar o funcionário.');
+            } catch (error) {
+                const errorMessage = error instanceof Error
+                    ? error.message
+                    : 'Ocorreu um erro ao salvar o funcionário.';
+
+                setError(errorMessage);
                 toast({
                     title: "Erro",
-                    description: error.message || "Não foi possível salvar o funcionário.",
+                    description: errorMessage,
                     variant: "destructive"
                 });
             } finally {
@@ -297,7 +284,7 @@ export default function EmployeeForm({ restaurantId, employeeId, isEditMode }: E
 
     // Voltar para a lista
     const goBack = () => {
-        router.push(`/restaurant/${restaurantId}/employees`);
+        router.push(`/restaurant/${slug}/employees`);
     };
 
     // Obtém a lista completa de unidades com a matriz

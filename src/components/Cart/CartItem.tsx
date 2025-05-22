@@ -1,66 +1,76 @@
+// components/cart/CartItem.tsx
+import { useEffect } from "react";
 import { Plus, Minus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { StatusTexts, StatusColors, OrderStatus } from "@/components/cart/constants";
+import { useCartStore } from "@/stores";
 
 export interface CartItemProps {
     id: string;
     name: string;
-    imageUrl: string;
     price: number;
     quantity: number;
-    onQuantityChange: (id: string, quantity: number) => void;
+    status: OrderStatus;
+    image: string;
+    guestId: string;
 }
 
 export default function CartItem({
     id,
     name,
-    imageUrl,
+    image,
     price,
     quantity,
-    onQuantityChange
+    status,
+    guestId
 }: CartItemProps) {
-    // Formata o preço unitário para o formato de moeda brasileira
+    const { updateQuantity, removeItem, updateItemStatus } = useCartStore();
+
     const formattedPrice = new Intl.NumberFormat('pt-BR', {
         style: 'currency',
         currency: 'BRL'
     }).format(price);
 
-    // Formata o preço total para o formato de moeda brasileira
     const formattedTotal = new Intl.NumberFormat('pt-BR', {
         style: 'currency',
         currency: 'BRL'
     }).format(price * quantity);
 
-    const handleIncrement = () => {
-        onQuantityChange(id, quantity + 1);
-    };
-
-    const handleDecrement = () => {
-        if (quantity > 1) {
-            onQuantityChange(id, quantity - 1);
+    const handleQuantityChange = (newQuantity: number) => {
+        if (newQuantity === 0) {
+            removeItem(id);
+        } else {
+            updateQuantity(id, newQuantity);
         }
     };
 
-    const handleRemove = () => {
-        onQuantityChange(id, 0);
-    };
+    const isEditable = status === 'pending';
 
     return (
         <div className="border-b border-border py-4">
             <div className="flex gap-4">
                 <div className="w-20 h-20 rounded-md overflow-hidden">
                     <img
-                        src={imageUrl}
+                        src={image}
                         alt={name}
                         className="w-full h-full object-cover"
                     />
                 </div>
                 <div className="flex-1">
-                    <div className="flex justify-between">
-                        <h3 className="font-medium text-primary">{name}</h3>
-                        <span className="text-primary font-medium">{formattedTotal}</span>
-                    </div>
-                    <div className="text-gray-500 text-sm mt-1">
-                        {formattedPrice} cada
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <span className="text-primary font-medium">{formattedTotal}</span>
+                            <div className="text-gray-500 text-sm mt-1">
+                                {formattedPrice} cada
+                            </div>
+                        </div>
+                        {status !== 'pending' && (
+                            <span
+                                className={`text-sm px-2 py-1 rounded-full ${StatusColors[status]}`}
+                            >
+                                {StatusTexts[status]}
+                            </span>
+                        )}
                     </div>
                     <div className="flex justify-between items-center mt-2">
                         <div className="flex items-center gap-2">
@@ -68,7 +78,8 @@ export default function CartItem({
                                 variant="outline"
                                 size="icon"
                                 className="h-8 w-8 rounded-full border border-border"
-                                onClick={handleDecrement}
+                                onClick={() => handleQuantityChange(quantity - 1)}
+                                disabled={!isEditable}
                             >
                                 <Minus size={16} />
                             </Button>
@@ -77,7 +88,8 @@ export default function CartItem({
                                 variant="outline"
                                 size="icon"
                                 className="h-8 w-8 rounded-full border border-border"
-                                onClick={handleIncrement}
+                                onClick={() => handleQuantityChange(quantity + 1)}
+                                disabled={!isEditable}
                             >
                                 <Plus size={16} />
                             </Button>
@@ -86,7 +98,8 @@ export default function CartItem({
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-red-500"
-                            onClick={handleRemove}
+                            onClick={() => removeItem(id)}
+                            disabled={!isEditable}
                         >
                             <Trash2 size={16} />
                         </Button>

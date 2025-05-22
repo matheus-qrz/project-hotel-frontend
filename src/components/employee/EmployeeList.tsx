@@ -28,11 +28,11 @@ import { useToast } from '@/hooks/useToast';
 import { formatFullName } from '@/utils/formatFullname';
 import { formatDate } from '@/utils/formatDate';
 import {
-    IEmployee,
     getEmployeesByRestaurant,
     deleteEmployee,
     formatRole,
 } from '@/services/employee/index';
+import { IEmployee } from '@/services/employee/types';
 import { useAuthCheck } from '@/hooks/sessionManager';
 
 interface EmployeeListProps {
@@ -59,12 +59,10 @@ export default function EmployeeList({ restaurantId }: EmployeeListProps) {
 
             if (isAuthenticated && isAdminOrManager) {
                 const data = await getEmployeesByRestaurant(restaurantId, session?.token ?? '');
-                setEmployees(data);
-                setFilteredEmployees(data);
+                setEmployees(Array.isArray(data) ? data : []);
+                setFilteredEmployees(Array.isArray(data) ? data : []);
             }
-        } catch (error: any) {
-            console.error('Erro ao buscar funcionários:', error);
-            setError('Não foi possível carregar a lista de funcionários.');
+        } catch (error) {
             toast({
                 title: "Erro",
                 description: "Não foi possível carregar os funcionários. Tente novamente.",
@@ -109,7 +107,7 @@ export default function EmployeeList({ restaurantId }: EmployeeListProps) {
         if (!employeeToDelete) return;
 
         try {
-            await deleteEmployee(employeeToDelete._id);
+            await deleteEmployee(employeeToDelete._id, session?.token ?? '');
 
             toast({
                 title: "Sucesso",
