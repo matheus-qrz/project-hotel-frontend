@@ -6,12 +6,17 @@ import { extractIdFromSlug, extractNameFromSlug } from '@/utils/slugify';
 import OrderConfirmation from '@/components/order/OrderConfirmation';
 import { useOrderStore, Order } from '@/stores/order/orderStore';
 import { getRestaurantById } from '@/services/restaurant/services';
+import { useCartStore } from '@/stores';
 
 export default function OrderPage() {
     const { slug, tableId, orderId, unitId } = useParams();
     const searchParams = useSearchParams();
     const splitCount = searchParams.get('split') ? parseInt(searchParams.get('split')!) : 1;
     const router = useRouter();
+
+    const {
+        getGuestId,
+    } = useCartStore();
 
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -20,7 +25,9 @@ export default function OrderPage() {
         name: string;
     } | null>(null);
 
-    const { currentOrders, fetchTableOrders } = useOrderStore();
+    const { order, fetchTableOrders } = useOrderStore();
+
+    const guestId = getGuestId();
 
     const restaurantId = slug && extractIdFromSlug(String(slug));
     const restaurantName = slug && extractNameFromSlug(String(slug));
@@ -47,9 +54,9 @@ export default function OrderPage() {
 
                 // Carregar pedidos da mesa
                 if (unitId) {
-                    await fetchTableOrders(restaurantId, String(tableId), String(unitId));
+                    await fetchTableOrders(String(unitId), String(tableId), String(guestId));
                 } else {
-                    await fetchTableOrders(restaurantId, String(tableId));
+                    await fetchTableOrders(restaurantId, String(tableId), String(guestId));
                 }
 
             } catch (err: any) {
@@ -65,10 +72,6 @@ export default function OrderPage() {
 
     const handleBackToMenu = () => {
         router.push(`/restaurant/${slug}/${tableId}/menu`);
-    };
-
-    const handleBackToHome = () => {
-        router.push('/');
     };
 
     if (isLoading) {
@@ -99,7 +102,7 @@ export default function OrderPage() {
     }
 
     // Encontrar o pedido específico nos pedidos carregados
-    const orderData = currentOrders.find((order: Order) => order._id === orderId);
+    const orderData = order.find((order: Order) => order._id === orderId);
 
     if (!orderData) {
         return (
@@ -120,7 +123,6 @@ export default function OrderPage() {
             tableId={String(tableId)}
             splitCount={splitCount}
             onBackToMenu={handleBackToMenu}
-            onBackToHome={handleBackToHome}
         />
     );
 }

@@ -35,7 +35,7 @@ interface CartStore {
     setOrderType: (type: 'local' | 'takeaway') => void;
     setObservations: (observations: string) => void;
     clearCart: () => void;
-    initializeGuest: (name: string) => void;
+    initializeGuest: (guestInfo: GuestInfo) => void; // Armazene o guestInfo completo
     setTableInfo: (tableId: string, restaurantId: string, unitId?: string) => void;
     getGuestId: () => string | null;
     getTotal: () => number;
@@ -104,15 +104,8 @@ export const useCartStore = create<CartStore>()(
             orderType: 'local',
             observations: '',
 
-            initializeGuest: (name: string) => {
-                const guestId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                set({
-                    guestInfo: {
-                        id: guestId,
-                        name,
-                        joinedAt: new Date().toISOString()
-                    }
-                });
+            initializeGuest: (guestInfo: { id: string; name: string; joinedAt: string }) => {
+                set({ guestInfo, items: [] }); // Armazene o guestInfo completo
             },
 
             addItem: (item) => set((state) => {
@@ -198,3 +191,4 @@ export const useCartStore = create<CartStore>()(
         }
     )
 );
+

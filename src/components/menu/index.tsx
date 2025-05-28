@@ -1,56 +1,58 @@
-'use client';
-
-import React, { useState } from 'react';
+// components/menu/MenuClient.tsx
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { CartItemProps, useCartStore } from '@/stores/cart';
+import { useCartStore } from '@/stores/cart';
 import { useProductStore } from '@/stores/products';
+import { useOrderStore } from '@/stores';
 import ProductCard from '@/components/products/ProductCard';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart } from 'lucide-react';
 import { extractNameFromSlug } from '@/utils/slugify';
 import { getCategoryName } from '@/utils/getCategoryName';
 import { DelayedLoading } from '../loading/DelayedLoading';
-import { useAuthStore, useTableStore } from '@/stores';
 
 interface MenuClientProps {
   slug: string;
   initialCategories: string[];
 }
 
-export default function MenuClient({
-  slug,
-  initialCategories
-}: MenuClientProps) {
+export default function MenuClient({ slug, initialCategories }: MenuClientProps) {
   const { tableId } = useParams();
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const { items, addItem, updateQuantity, removeItem, getTotal, guestInfo, getGuestId } = useCartStore();
+  const { products, loading: isLoading } = useProductStore();
+  const { fetchGuestOrders, order } = useOrderStore(); // Adicione a store de pedidos
 
   const restaurantName = slug && extractNameFromSlug(String(slug));
-
-  const { items, addItem, updateQuantity, removeItem, getTotal, guestInfo } = useCartStore();
-  const { products, loading: isLoading } = useProductStore();
-
-  console.log("Guest info retrieved: ", guestInfo);
-
   const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
   const totalPrice = getTotal();
+
+  // useEffect para buscar pedidos ao montar o componente
+  useEffect(() => {
+    const guestId = getGuestId(); // Obtenha o guestId do cartStore
+
+    if (guestId) {
+      fetchGuestOrders(guestId, String(tableId));
+    }
+  }, [slug, tableId]);
 
   const handleQuantityChange = (id: string, newQuantity: number) => {
     const product = products.find(p => p._id === id);
     if (!product) return;
 
+    const cartItem = {
+      id: product._id ?? '',
+      name: product.name,
+      price: product.price,
+      quantity: newQuantity,
+      image: product.image ?? '',
+      status: "pending" as "pending",
+    };
+
     if (newQuantity === 0) {
       removeItem(id);
     } else {
-      const cartItem: CartItemProps = {
-        id: product._id ?? '',
-        name: product.name,
-        price: product.price,
-        quantity: newQuantity,
-        image: product.image ?? '',
-        status: 'pending',
-      };
-
       const existingItem = items.find(item => item.id === id);
       if (existingItem) {
         updateQuantity(id, newQuantity);
@@ -68,34 +70,36 @@ export default function MenuClient({
     router.push(`/restaurant/${slug}/${tableId}/cart`);
   };
 
+  const goToOrders = () => {
+    router.push(`/restaurant/${slug}/${tableId}/order`);
+  };
+
   if (isLoading) return <DelayedLoading />;
 
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="mb-6">
         <div className='flex flex-col gap-2 mb-4'>
-          <h1 className="text-2xl font-bold">{restaurantName}</h1>
+          <div className='flex flex-row items-center justify-between'>
+            <h1 className="text-2xl font-bold">{restaurantName}</h1>
+            <Button onClick={goToOrders} variant="default" className="ml-4" disabled={order.length === 0}>
+              Meus Pedidos
+            </Button>
+          </div>
           <p className="text-lg font-semibold">Olá, {guestInfo?.name}!</p>
           <p className='text-gray-500'> Selecione os produtos que deseja adicionar ao seu pedido.</p>
         </div>
+      </div>
 
-        <div className="flex flex-row gap-2 overflow-auto">
-          <Button
-            variant={selectedCategory === null ? 'default' : 'outline'}
-            onClick={() => setSelectedCategory(null)}
-          >
-            Ver todos
+      <div className="flex flex-row gap-2 overflow-auto mb-6">
+        <Button variant={selectedCategory === null ? 'default' : 'outline'} onClick={() => setSelectedCategory(null)}>
+          Ver todos
+        </Button>
+        {initialCategories.map(category => (
+          <Button key={category} variant={selectedCategory === category ? 'default' : 'outline'} onClick={() => setSelectedCategory(category)}>
+            {getCategoryName(category)}
           </Button>
-          {initialCategories.map(category => (
-            <Button
-              key={category}
-              variant={selectedCategory === category ? 'default' : 'outline'}
-              onClick={() => setSelectedCategory(category)}
-            >
-              {getCategoryName(category)}
-            </Button>
-          ))}
-        </div>
+        ))}
       </div>
 
       <div className="space-y-6 mb-8">
@@ -145,11 +149,7 @@ export default function MenuClient({
       </div>
 
       {totalItems > 0 && (
-        <Button
-          onClick={goToCart}
-          variant="default"
-          className="fixed bottom-4 left-4 right-4 w-[calc(100%-32px)] bg-black hover:bg-black text-white py-6 flex items-center justify-between"
-        >
+        <Button onClick={goToCart} variant="default" className="fixed bottom-4 left-4 right-4 w-[calc(100%-32px)] bg-black hover:bg-black text-white py-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ShoppingCart className="h-5 w-5" />
             <span>Ver Carrinho</span>

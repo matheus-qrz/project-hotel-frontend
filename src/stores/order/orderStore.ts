@@ -68,6 +68,7 @@ interface OrderStore {
 
     setOrders: (orders: Order[]) => void;
     createOrder: (orderData: CreateOrderData, restaurantId: string, tableId: string, unitId?: string) => Promise<Order>;
+    fetchGuestOrders: (guestId: string, tableId: string) => Promise<void>;
     fetchTableOrders: (restaurantId: string, tableId: string, guestId: string) => Promise<void>;
     fetchOrderStats: (unitId: string) => Promise<void>;
     fetchRestaurantUnitOrders: (restaurantId: string, unitId?: string) => Promise<void>;
@@ -105,13 +106,18 @@ export const useOrderStore = create(
                         ...orderData,
                         status: 'pending',
                         isPaid: false,
-                        restaurantId: unitId ? undefined : restaurantId, // Adiciona restaurantId se não houver unitId
-                        restaurantUnitId: unitId, // Adiciona unitId se existir
+                        restaurantId: unitId ? undefined : restaurantId,
+                        restaurantUnitId: unitId,
                         meta: {
                             ...orderData.meta,
                             tableId: Number(tableId),
                             guestId: orderData.guestInfo.id,
                             orderCreatedAt: new Date()
+                        },
+                        guestInfo: {
+                            id: orderData.guestInfo.id,
+                            name: orderData.guestInfo.name,
+                            joinedAt: orderData.guestInfo.joinedAt
                         }
                     };
 
@@ -147,15 +153,15 @@ export const useOrderStore = create(
                 }
             },
 
-            fetchTableOrders: async (restaurantId, tableId, guestId) => {
+            fetchTableOrders: async (restaurantId: string, tableId: string, guestId: string) => {
                 try {
                     const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/orders?guestId=${guestId}`);
-                    console.log("URL chamada:", response.url);
+                    console.log("URL chamada:", response.url); // Verifique se a URL está correta
 
                     if (!response.ok) throw new Error('Erro ao buscar pedidos');
 
                     const data = await response.json();
-                    console.log("Dados recebidos:", data);
+                    console.log("Dados recebidos:", data); // Verifique os dados recebidos
 
                     set(state => ({
                         ...state,
@@ -163,6 +169,19 @@ export const useOrderStore = create(
                     }));
                 } catch (error) {
                     console.error('Erro ao buscar pedidos:', error);
+                    throw error;
+                }
+            },
+
+            fetchGuestOrders: async (guestId: string, tableId: string) => {
+                try {
+                    const response = await fetch(`${API_URL}/${tableId}/guest-orders/${guestId}`);
+                    if (!response.ok) throw new Error('Erro ao buscar pedidos do convidado');
+
+                    const data = await response.json();
+                    set({ order: data.orders || [] });
+                } catch (error) {
+                    console.error('Erro ao buscar pedidos do convidado:', error);
                     throw error;
                 }
             },
@@ -318,7 +337,7 @@ export const useOrderStore = create(
 
             updateOrderStatus: async (restaurantId, tableId, orderId, newStatus) => {
                 set({ isLoading: true, error: null });
-                const token = useAuthStore.getState().token;
+                const token = localStorage.getItem('auth_token') || localStorage.getItem('guest_token');
                 try {
                     const response = await fetch(
                         `${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/update`,

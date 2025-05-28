@@ -11,28 +11,33 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { v4 as uuidv4 } from 'uuid';
 
 export function GuestLogin() {
     const { initializeGuest } = useCartStore();
     const { addGuest } = useTableStore();
     const { slug, tableId } = useParams();
-    const [guestData, setGuestData] = useState({
-        name: '',
-    });
+    const [guestData, setGuestData] = useState({ name: '' });
     const router = useRouter();
     const { authenticateAsGuest, isLoading, error } = useAuthCheck();
 
-
     const handleGuestEntry = (name: string) => {
-        initializeGuest(name);
-        const guestInfo = useCartStore.getState().guestInfo;
-        if (guestInfo) {
-            addGuest(guestInfo);
-        }
+        const guestId = uuidv4();
+        const joinedAt = new Date().toISOString();
+        const guestInfo = { id: guestId, name, joinedAt };
+
+        initializeGuest(guestInfo);
+        addGuest(guestInfo);
+        console.log("Guest added:", guestInfo);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!guestData.name.trim()) {
+            console.error("Por favor, forneça um nome válido.");
+            return;
+        }
 
         try {
             const restaurantName = slug && extractNameFromSlug(String(slug));
@@ -50,21 +55,16 @@ export function GuestLogin() {
             );
 
             if (result.success) {
-                handleGuestEntry(guestData.name);
-
-                const guestInfo = useCartStore.getState().guestInfo;
-
-                if (!guestInfo) {
-                    throw new Error('Erro ao inicializar convidado.');
-                }
-
+                handleGuestEntry(guestData.name); // Armazenar guestInfo
                 router.push(`/restaurant/${slug}/${tableId}/menu`);
+            } else {
+                console.error('Falha na autenticação:', result);
             }
         } catch (err: any) {
             console.error('Erro no login como convidado:', err);
         }
 
-        console.log("guestInfo saved: ", guestData)
+        console.log("guestInfo saved: ", guestData);
     };
 
     return (

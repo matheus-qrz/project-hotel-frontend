@@ -26,7 +26,7 @@ export default function ManagerPage() {
     }
 
     return (
-        <div className="flex flex-col h-screen bg-background w-full">
+        <div className="flex flex-col h-screen bg-background w-full overflow-y-hidden">
             <Header />
             <div className={cn("flex flex-col w-full transition-all duration-300", isOpen ? "ml-64" : "ml-0")}>
                 <Sidebar />

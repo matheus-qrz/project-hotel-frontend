@@ -53,17 +53,12 @@ export function CartClient() {
     const {
         order,
         setOrders,
-        fetchTableOrders,
+        fetchGuestOrders,
         createOrder,
         requestCheckout
     } = useOrderStore();
 
     const guestId = getGuestId();
-
-    useEffect(() => {
-        if (!guestId || !restaurantId || !tableId) return;
-        handleRefresh();
-    }, [restaurantId, tableId]);
 
     // Sincronização de pedidos
     useEffect(() => {
@@ -72,10 +67,8 @@ export function CartClient() {
         // Fazer apenas uma sincronização inicial
         const initialSync = async () => {
             try {
-                await fetchTableOrders(
-                    String(restaurantId),
-                    String(tableId),
-                    guestId
+                await fetchGuestOrders(
+                    guestId, String(tableId)
                 );
             } catch (error) {
                 console.error('Erro na sincronização inicial:', error);
@@ -93,34 +86,6 @@ export function CartClient() {
         );
     }, [order, getGuestId]);
 
-    // Calcula total dos pedidos do convidado
-    const guestTotal = useMemo(() => {
-        return guestOrders.reduce((total, order) =>
-            total + order.totalAmount, 0
-        );
-    }, [guestOrders]);
-
-    const handleRefresh = async () => {
-        if (!guestId || !restaurantId || !tableId) {
-            setError('Informações da mesa incompletas');
-            return;
-        }
-
-        setIsRefreshing(true);
-        try {
-            await fetchTableOrders(
-                String(restaurantId),
-                String(tableId),
-                guestId
-            );
-        } catch (error) {
-            console.error('Erro na atualização:', error);
-            setError('Falha ao atualizar pedidos');
-        } finally {
-            setIsRefreshing(false);
-        }
-    };
-
     const submitOrder = async () => {
         const guestId = getGuestId();
         if (!guestId || !guestInfo) {
@@ -130,6 +95,8 @@ export function CartClient() {
 
         setIsSubmitting(true);
         setError(null);
+
+        console.log("guestInfo antes de enviar o pedido:", guestInfo);
 
         try {
             const orderData = {
@@ -169,7 +136,10 @@ export function CartClient() {
             setCartObservations("");
             setCartOrderType(orderType);
 
+            console.log("Dados do pedido a serem enviados:", orderData);
+
             setSubmissionSuccess(true);
+            clearCart();
             setTimeout(() => {
                 setSubmissionSuccess(false);
                 router.push(`/restaurant/${slug}/${tableId}/menu`);
@@ -263,38 +233,9 @@ export function CartClient() {
                 <h1 className="text-xl font-bold text-primary">Seu pedido</h1>
             </div>
 
-            {tableId && (
-                <div className="flex flex-row justify-between items-center mb-6">
-                    <p className="text-gray-500 text-md mb-2">Mesa {tableId}</p>
-                    <Button
-                        onClick={handleRefresh}
-                        className="flex items-center gap-2"
-                        variant="outline"
-                        disabled={isRefreshing}
-                    >
-                        <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                        {isRefreshing ? 'Atualizando...' : 'Atualizar Pedidos'}
-                    </Button>
-                </div>
-            )}
-
             {error && (
                 <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-md mb-6">
                     {error}
-                </div>
-            )}
-
-            {/* Pedidos em andamento */}
-            {guestOrders.length > 0 && (
-                <div className="mt-4">
-                    <h2 className="text-lg font-semibold">Pedidos em andamento</h2>
-                    {order.map((order: any, index) => (
-                        <OrderCard
-                            key={`${order._id}-${index}`}
-                            order={order}
-                            onStatusUpdate={handleRefresh}
-                        />
-                    ))}
                 </div>
             )}
 
@@ -352,17 +293,6 @@ export function CartClient() {
                             <span className="text-gray-500">Subtotal</span>
                             <span className="text-primary">{formatCurrency(total)}</span>
                         </div>
-
-                        <div className="flex justify-between font-medium text-lg mt-4">
-                            <span className="text-primary">
-                                {splitCount > 1 ? `Total (por pessoa)` : `Total`}
-                            </span>
-                            <span className="text-primary">
-                                {splitCount > 1
-                                    ? `${formatCurrency(totalPerPerson)} × ${splitCount}`
-                                    : formatCurrency(total)}
-                            </span>
-                        </div>
                     </div>
                 </>
             )}
@@ -371,16 +301,6 @@ export function CartClient() {
             <div className="fixed bottom-6 left-0 right-0 flex justify-center px-4 gap-2">
                 {items.length > 0 ? (
                     <>
-                        {orderType === 'local' && (
-                            <Button
-                                onClick={() => setShowFinishDialog(true)}
-                                variant="outline"
-                                className="px-4 py-3 rounded-full shadow-sm w-2/5"
-                            >
-                                Pedir a conta
-                            </Button>
-                        )}
-
                         <Button
                             onClick={submitOrder}
                             disabled={isSubmitting || items.length === 0}
@@ -440,3 +360,4 @@ export function CartClient() {
         </div>
     );
 }
+

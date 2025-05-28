@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, Home, Clock } from 'lucide-react';
 import { formatCurrency } from '@/services/restaurant/services';
 import { useOrderStore, Order } from '@/stores/order/orderStore';
+import { useCartStore } from '@/stores';
 
 interface OrderConfirmationProps {
     orderId: string;
@@ -12,7 +13,6 @@ interface OrderConfirmationProps {
     splitCount?: number;
     unitId?: string;
     onBackToMenu: () => void;
-    onBackToHome: () => void;
 }
 
 export default function OrderConfirmation({
@@ -23,15 +23,17 @@ export default function OrderConfirmation({
     unitId,
     splitCount = 1,
     onBackToMenu,
-    onBackToHome,
 }: OrderConfirmationProps) {
-    const { currentOrders, fetchTableOrders, getTableTotal, getAmountPerPerson } = useOrderStore();
+    const { order: orders, fetchGuestOrders, getAmountPerPerson } = useOrderStore();
+    const { getGuestId } = useCartStore();
     const [isLoading, setIsLoading] = useState(true);
+
+    const guestId = getGuestId();
 
     useEffect(() => {
         const loadOrder = async () => {
             try {
-                await fetchTableOrders(restaurantId, tableId, unitId ?? '');
+                await fetchGuestOrders(String(guestId), String(tableId));
                 setIsLoading(false);
             } catch (error) {
                 console.error('Erro ao carregar pedido:', error);
@@ -40,10 +42,10 @@ export default function OrderConfirmation({
         };
 
         loadOrder();
-    }, [restaurantId, tableId, fetchTableOrders]);
+    }, [restaurantId, tableId, fetchGuestOrders]);
 
     // Encontrar o pedido específico
-    const order = currentOrders.find((order: Order) => order._id === orderId) as Order | undefined;
+    const order = orders.find((order: Order) => order._id === orderId) as Order | undefined;
 
     if (isLoading) {
         return <div>Carregando...</div>;
@@ -150,15 +152,6 @@ export default function OrderConfirmation({
                     className="w-full bg-primary text-white py-2 h-12"
                 >
                     Fazer Outro Pedido
-                </Button>
-
-                <Button
-                    onClick={onBackToHome}
-                    variant="outline"
-                    className="w-full py-2 h-12 flex items-center justify-center"
-                >
-                    <Home size={18} className="mr-2" />
-                    Voltar para a Página Inicial
                 </Button>
             </div>
         </div>
