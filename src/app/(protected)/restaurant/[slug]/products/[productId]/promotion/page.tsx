@@ -1,8 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { extractIdFromSlug } from '@/utils/slugify';
+import { useRouter } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { useAuthCheck } from '@/hooks/sessionManager';
 import { cn } from '@/lib/utils';
@@ -10,9 +9,9 @@ import Header from '@/components/header/Header';
 import { Sidebar } from '@/components/dashboard/SideMenu';
 import { useSidebar } from '@/components/ui/sidebar';
 import { DelayedLoading } from '@/components/loading/DelayedLoading';
-import ProductDetails from '@/components/products/ProductDetails';
+import CreatePromotion from '@/components/products/CreatePromotion';
 
-export default function ProductDetailsPage() {
+export default function PromotionPage() {
     const { isAuthenticated, isLoading } = useAuthCheck();
     const router = useRouter();
     const { isOpen } = useSidebar();
@@ -40,10 +39,10 @@ export default function ProductDetailsPage() {
                         >
                             <ChevronLeft size={24} />
                         </button>
-                        <h1 className="text-2xl font-bold">Detalhes do produto</h1>
+                        <h1 className="text-2xl font-bold">Editar produto</h1>
                     </div>
 
-                    <ProductDetails />
+                    <CreatePromotion />
                 </div>
             </div>
         </div>

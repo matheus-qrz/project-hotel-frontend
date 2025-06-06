@@ -11,6 +11,11 @@ export interface Order {
     status: 'pending' | 'processing' | 'completed' | 'cancelled' | 'payment_requested' | 'paid';
     createdAt: string;
     totalAmount: number;
+    guestInfo?: {
+        id: string;
+        name: string;
+        joinedAt: string;
+    };
     meta: {
         tableId: number;
         observations?: string;

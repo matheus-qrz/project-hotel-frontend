@@ -25,7 +25,7 @@ const StatusTexts = {
 
 export function OrderHistory({ slug }: OrderHistoryProps) {
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const { order, fetchRestaurantUnitOrders, updateOrderStatus } = useOrderStore();
+    const { order, fetchRestaurantUnitOrders, updateOrder } = useOrderStore();
     const { tableId } = useTableStore();
     const { currentUnitId } = useRestaurantUnitStore();
 
@@ -78,7 +78,7 @@ export function OrderHistory({ slug }: OrderHistoryProps) {
     };
 
     const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
-        updateOrderStatus(restaurantId, String(tableId), orderId, newStatus);
+        updateOrder(restaurantId, String(tableId), orderId, { status: newStatus });
     };
 
     const renderOrders = (statuses: OrderStatus[]) => {
@@ -115,7 +115,7 @@ export function OrderHistory({ slug }: OrderHistoryProps) {
                             <p><strong>Itens:</strong></p>
                             <ul>
                                 {order.items.map(item => (
-                                    <li key={item.id}>
+                                    <li key={item._id}>
                                         {item.quantity}x {item.name}
                                     </li>
                                 ))}

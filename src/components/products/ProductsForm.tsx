@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { useToast } from '@/hooks/useToast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,12 +32,15 @@ import { useProductStore } from '@/stores/products';
 import { Separator } from '@/components/ui/separator';
 import { useAuthCheck } from '@/hooks/sessionManager';
 import { extractIdFromSlug } from '@/utils/slugify';
-import { Product } from '@/stores/products/productStore';
 
 const formSchema = z.object({
     name: z.string().min(2, { message: 'Nome deve ter pelo menos 2 caracteres' }),
     category: z.string().min(1, { message: 'Selecione uma categoria' }),
-    price: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
+    price: z.string().refine((val) => {
+        const numericString = val.replace(/[^\d.,]/g, '').replace(',', '.');
+        const number = parseFloat(numericString);
+        return !isNaN(number) && number > 0;
+    }, {
         message: 'Preço deve ser um número positivo',
     }),
     description: z.string().optional(),
@@ -57,16 +60,54 @@ const formSchema = z.object({
     promotionEndDate: z.string().optional().refine((val) => !val || !isNaN(Date.parse(val)), {
         message: 'Data de término inválida',
     }),
+    isCombo: z.boolean().optional(), // Indica se é um combo
+    comboOptions: z.array(z.object({
+        name: z.string(),
+        products: z.array(z.string())
+    })).optional(), // Opções de combo
+    isAdditional: z.boolean().default(false), // Indica se é um adicional
+    hasAddons: z.boolean().default(false), // Indica se o produto tem adicionais
+    additionalOptions: z.array(z.string()).optional().default([]), // Lista de adicionais
+    hasAccompaniments: z.boolean().default(false), // Indica se o produto tem acompanhamentos
+    accompaniments: z.array(z.object({
+        id: z.string(), // ID do acompanhamento
+        name: z.string(),
+    })).optional(), // Acompanhamentos
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 const CATEGORIES = [
+    { id: 'addOns', name: 'Adicionais' },
+    { id: 'accompaniments', name: 'Acompanhamentos' },
     { id: 'appetizers', name: 'Entradas' },
     { id: 'main', name: 'Pratos Principais' },
     { id: 'desserts', name: 'Sobremesas' },
     { id: 'drinks', name: 'Bebidas' },
     { id: 'sides', name: 'Acompanhamentos' },
+    { id: 'specials', name: 'Especiais' },
+    { id: 'vegan', name: 'Vegano' },
+    { id: 'gluten-free', name: 'Sem Glúten' },
+    { id: 'breakfast', name: 'Café da Manhã' },
+    { id: 'snacks', name: 'Lanches' },
+    { id: 'salads', name: 'Saladas' },
+    { id: 'soups', name: 'Sopas' },
+    { id: 'pizzas', name: 'Pizzas' },
+    { id: 'burgers', name: 'Hambúrgueres' },
+    { id: 'pastas', name: 'Massas' },
+    { id: 'seafood', name: 'Frutos do Mar' },
+    { id: 'grills', name: 'Grelhados' },
+    { id: 'international', name: 'Internacional' },
+    { id: 'kids', name: 'Menu Infantil' },
+    { id: 'healthy', name: 'Saudável' },
+    { id: 'snacks2', name: 'Petiscos' },
+    { id: 'cocktails', name: 'Coquetéis' },
+    { id: 'smoothies', name: 'Smoothies' },
+    { id: 'teas', name: 'Chás' },
+    { id: 'coffees', name: 'Cafés' },
+    { id: 'wines', name: 'Vinhos' },
+    { id: 'beers', name: 'Cervejas' },
+    { id: 'spirits', name: 'Destilados' },
 ];
 
 interface ProductFormProps {
@@ -76,8 +117,8 @@ interface ProductFormProps {
 export default function ProductForm({ slug }: ProductFormProps) {
     const router = useRouter();
     const { session } = useAuthCheck();
-    const { createProduct } = useProductStore();
-    const [loading, setLoading] = React.useState(false);
+    const { createProduct, products } = useProductStore();
+    const [loading, setLoading] = useState(false);
     const { toast } = useToast();
 
     const restaurantId = slug && extractIdFromSlug(String(slug));
@@ -93,16 +134,31 @@ export default function ProductForm({ slug }: ProductFormProps) {
             image: '',
             isAvailable: true,
             isOnPromotion: false,
+            isCombo: false,
             discountPercentage: '',
             promotionalPrice: '',
             promotionStartDate: '',
             promotionEndDate: '',
+            isAdditional: false,
+            hasAddons: false,
+            additionalOptions: [],
+            hasAccompaniments: false,
+            accompaniments: [],
         },
+        mode: 'onSubmit',
+        reValidateMode: 'onChange'
+    });
+
+    const { fields: accompanimentFields, append: appendAccompaniment } = useFieldArray({
+        control: form.control,
+        name: 'accompaniments',
     });
 
     const isOnPromotion = form.watch('isOnPromotion');
     const price = form.watch('price');
     const discountPercentage = form.watch('discountPercentage');
+    const addons = form.watch('hasAddons');
+    const selectedAccompaniments = form.watch('hasAccompaniments');
 
     useEffect(() => {
         if (isOnPromotion && price && discountPercentage) {
@@ -128,28 +184,64 @@ export default function ProductForm({ slug }: ProductFormProps) {
         }
     };
 
-    // Ajuste o onSubmit para converter os valores corretamente:
     const onSubmit = async (values: FormValues) => {
-        if (!restaurantId || !session?.token) return;
+        console.log('Iniciando submit:', { restaurantId, sessionToken: session?.token });
+        if (!restaurantId || !session?.token) {
+            console.log('Submit bloqueado:', { restaurantId, sessionToken: session?.token });
+            return;
+        }
 
         setLoading(true);
         try {
-            // Garantindo que os tipos correspondam exatamente ao esperado pelo createProduct
-            const formattedData: Omit<Product, '_id'> = {
+            console.log('Valores do formulário:', values);
+
+            const formattedPrice = parseFloat(values.price.replace(/[^\d.,]/g, '').replace(',', '.'));
+
+            if (isNaN(formattedPrice) || formattedPrice <= 0) {
+                throw new Error('Preço inválido');
+            }
+
+            const selectedAddons = Array.isArray(values.additionalOptions)
+                ? values.additionalOptions.map((addon) => {
+                    const addonId = typeof addon === 'string' ? addon : addon;
+                    const addonProduct = products.find(p => p._id === addonId);
+                    return addonProduct
+                        ? {
+                            id: addonProduct._id,
+                            name: addonProduct.name,
+                            price: addonProduct.price,
+                            isAvailable: addonProduct.isAvailable,
+                        }
+                        : undefined;
+                }).filter(addon => addon !== undefined)
+                : [];
+
+            const formattedData: any = {
+                restaurant: restaurantId,
                 name: values.name,
                 category: values.category,
-                price: Number(values.price),
+                price: formattedPrice,
                 quantity: Number(values.quantity),
                 description: values.description ?? '',
                 image: values.image ?? '',
                 isAvailable: values.isAvailable,
                 isOnPromotion: values.isOnPromotion,
-                // Campos promocionais com valores padrão quando não em promoção
-                discountPercentage: values.isOnPromotion ? Number(values.discountPercentage) : 0,
-                promotionalPrice: values.isOnPromotion ? Number(values.promotionalPrice) : 0,
-                promotionStartDate: values.isOnPromotion ? values.promotionStartDate ?? '' : '',
-                promotionEndDate: values.isOnPromotion ? values.promotionEndDate ?? '' : ''
+                discountPercentage: values.isOnPromotion ? Number(values.discountPercentage) : null,
+                promotionalPrice: values.isOnPromotion ? Number(values.promotionalPrice) : null,
+                promotionStartDate: values.isOnPromotion && values.promotionStartDate ? values.promotionStartDate : null,
+                promotionEndDate: values.isOnPromotion && values.promotionEndDate ? values.promotionEndDate : null,
+                isAdditional: values.isAdditional,
+                hasAddons: values.hasAddons,
+                additionalOptions: selectedAddons,
+                hasAccompaniments: values.hasAccompaniments,
+                accompaniments: (values.accompaniments ?? []).map((a, idx) => ({
+                    id: `${a.name}-${idx}`,
+                    name: a.name,
+                    isAvailable: true,
+                })),
             };
+
+            console.log('Submitting product data:', formattedData);
 
             await createProduct(formattedData, restaurantId);
 
@@ -176,7 +268,7 @@ export default function ProductForm({ slug }: ProductFormProps) {
             <Card>
                 <CardContent className="pt-6">
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                        <form onSubmit={(e) => { e.preventDefault(); console.log("Form submetido"); console.log("Valores atuais:", form.getValues()); console.log("Erros:", form.formState.errors); form.handleSubmit(async (data) => { console.log("Dados validados:", data); await onSubmit(data); })(e); }} className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormField
                                     control={form.control}
@@ -228,9 +320,7 @@ export default function ProductForm({ slug }: ProductFormProps) {
                                             <FormLabel>Preço *</FormLabel>
                                             <FormControl>
                                                 <Input
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0"
+                                                    type="currency"
                                                     placeholder="0,00"
                                                     {...field}
                                                 />
@@ -429,6 +519,126 @@ export default function ProductForm({ slug }: ProductFormProps) {
                                 </div>
                             )}
 
+                            {/* Switch and Section for Add-ons */}
+                            <FormField
+                                control={form.control}
+                                name="hasAddons"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                        <div className="space-y-0.5">
+                                            <FormLabel className="text-base">Adicionais</FormLabel>
+                                            <FormDescription>
+                                                Ativar opcionais com preço adicional
+                                            </FormDescription>
+                                        </div>
+                                        <FormControl>
+                                            <Switch
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                            />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+
+                            {addons && (
+                                <div className="space-y-6 mt-4 p-4 border rounded-lg bg-muted/20">
+                                    <h3 className="font-medium">Adicionais Disponíveis</h3>
+                                    <Separator />
+                                    {products.filter(p => p.category === 'addOns').length > 0 ? (
+                                        products.filter(p => p.category === 'addOns').map((addon) => (
+                                            addon._id && ( // Certifique-se de que addon._id existe
+                                                <FormField
+                                                    key={addon._id}
+                                                    control={form.control}
+                                                    name="additionalOptions"
+                                                    render={({ field }) => (
+                                                        <div className="flex items-center space-x-4">
+                                                            <input
+                                                                type="checkbox"
+                                                                value={addon._id}
+                                                                checked={((field.value ?? []).map((item: any) => typeof item === 'string' ? item : item?.id)).includes(addon._id)}
+                                                                onChange={() => {
+                                                                    const exists = (field.value ?? [])
+                                                                        .map((item: any) => typeof item === 'string' ? item : item?.id)
+                                                                        .includes(addon._id);
+                                                                    const newValue = exists
+                                                                        ? (field.value ?? []).filter((item: any) =>
+                                                                            (typeof item === 'string' ? item : item?.id) !== addon._id
+                                                                        )
+                                                                        : [...(field.value ?? []), addon._id];
+                                                                    field.onChange(newValue);
+                                                                }}
+                                                            />
+                                                            <div className='flex flex-row w-full justify-between items-center border border-gray-300 p-2 rounded-lg'>
+                                                                <span>{addon.name}</span>
+                                                                <span className="text-sm text-gray-600">+ R$ {addon.price.toFixed(2)}</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                />
+                                            )
+                                        ))
+                                    ) : (
+                                        <p>Não há produtos adicionais cadastrados.</p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Switch and Section for Accompaniments */}
+                            <FormField
+                                control={form.control}
+                                name="hasAccompaniments"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                        <div className="space-y-0.5">
+                                            <FormLabel className="text-base">Acompanhamentos</FormLabel>
+                                            <FormDescription>
+                                                Ativar opções de acompanhamento
+                                            </FormDescription>
+                                        </div>
+                                        <FormControl>
+                                            <Switch
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                            />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+
+                            {selectedAccompaniments && (
+                                <div className="space-y-6 mt-4 p-4 border rounded-lg bg-muted/20">
+                                    <h3 className="font-medium">Acompanhamentos</h3>
+                                    <Separator />
+
+                                    {accompanimentFields.map((accompaniment, index) => (
+                                        <div key={accompaniment.id} className="flex space-x-4">
+                                            <FormField
+                                                control={form.control}
+                                                name={`accompaniments.${index}.name`}
+                                                render={({ field }) => (
+                                                    <FormItem className="flex-grow">
+                                                        <FormLabel>Nome do Acompanhamento</FormLabel>
+                                                        <FormControl>
+                                                            <Input placeholder="Ex: Arroz branco" {...field} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+                                    ))}
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => appendAccompaniment({ name: '', id: crypto.randomUUID() })}
+                                    >
+                                        Adicionar Acompanhamento
+                                    </Button>
+                                </div>
+                            )}
+
                             <div className="flex justify-end space-x-4 pt-4">
                                 <Button
                                     type="button"
@@ -437,7 +647,7 @@ export default function ProductForm({ slug }: ProductFormProps) {
                                 >
                                     Cancelar
                                 </Button>
-                                <Button type="submit" disabled={loading}>
+                                <Button type="submit" disabled={loading} onClick={() => console.log('Botão clicado')}>
                                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                     Salvar produto
                                 </Button>

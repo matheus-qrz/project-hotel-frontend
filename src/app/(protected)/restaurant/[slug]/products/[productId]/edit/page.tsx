@@ -10,9 +10,9 @@ import Header from '@/components/header/Header';
 import { Sidebar } from '@/components/dashboard/SideMenu';
 import { useSidebar } from '@/components/ui/sidebar';
 import { DelayedLoading } from '@/components/loading/DelayedLoading';
-import ProductDetails from '@/components/products/ProductDetails';
+import EditProduct from '@/components/products/EditProduct';
 
-export default function ProductDetailsPage() {
+export default function EditProductsPage() {
     const { isAuthenticated, isLoading } = useAuthCheck();
     const router = useRouter();
     const { isOpen } = useSidebar();
@@ -40,10 +40,10 @@ export default function ProductDetailsPage() {
                         >
                             <ChevronLeft size={24} />
                         </button>
-                        <h1 className="text-2xl font-bold">Detalhes do produto</h1>
+                        <h1 className="text-2xl font-bold">Editar produto</h1>
                     </div>
 
-                    <ProductDetails />
+                    <EditProduct />
                 </div>
             </div>
         </div>

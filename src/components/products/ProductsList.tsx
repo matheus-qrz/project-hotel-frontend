@@ -18,8 +18,6 @@ import {
     Loader2,
     RefreshCcw
 } from 'lucide-react';
-
-// ShadcnUI components
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -61,12 +59,36 @@ interface ProductsListProps {
 }
 
 const CATEGORIES = [
-    { id: 'promotion', name: "Promoções" },
-    { id: "appetizers", name: "Entradas" },
-    { id: "main", name: "Pratos Principais" },
-    { id: "sides", name: "Acompanhamentos" },
-    { id: "desserts", name: "Sobremesas" },
-    { id: "drinks", name: "Bebidas" },
+    { id: 'accompaniments', name: 'Acompanhamentos' },
+    { id: 'appetizers', name: 'Entradas' },
+    { id: 'main', name: 'Pratos Principais' },
+    { id: 'desserts', name: 'Sobremesas' },
+    { id: 'drinks', name: 'Bebidas' },
+    { id: 'sides', name: 'Acompanhamentos' },
+    { id: 'specials', name: 'Especiais' },
+    { id: 'vegan', name: 'Vegano' },
+    { id: 'gluten-free', name: 'Sem Glúten' },
+    { id: 'breakfast', name: 'Café da Manhã' },
+    { id: 'snacks', name: 'Lanches' },
+    { id: 'salads', name: 'Saladas' },
+    { id: 'soups', name: 'Sopas' },
+    { id: 'pizzas', name: 'Pizzas' },
+    { id: 'burgers', name: 'Hambúrgueres' },
+    { id: 'pastas', name: 'Massas' },
+    { id: 'seafood', name: 'Frutos do Mar' },
+    { id: 'grills', name: 'Grelhados' },
+    { id: 'international', name: 'Internacional' },
+    { id: 'kids', name: 'Menu Infantil' },
+    { id: 'healthy', name: 'Saudável' },
+    { id: 'snacks2', name: 'Petiscos' },
+    { id: 'cocktails', name: 'Coquetéis' },
+    { id: 'smoothies', name: 'Smoothies' },
+    { id: 'teas', name: 'Chás' },
+    { id: 'coffees', name: 'Cafés' },
+    { id: 'wines', name: 'Vinhos' },
+    { id: 'beers', name: 'Cervejas' },
+    { id: 'spirits', name: 'Destilados' },
+    { id: 'addOns', name: 'Adicionais' },
 ];
 
 export default function ProductsList({ slug }: ProductsListProps) {
@@ -129,7 +151,7 @@ export default function ProductsList({ slug }: ProductsListProps) {
 
     // Ordenar produtos
     const sortedProducts = [...filteredProducts].sort((a, b) => {
-        if (sortOrder === 'asc') {
+        if (sortOrder === 'desc') {
             return a.name.localeCompare(b.name);
         } else {
             return b.name.localeCompare(a.name);
@@ -563,7 +585,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" side="bottom" className="w-48">
                                         <DropdownMenuItem asChild>
-                                            <Link href={`/restaurant/${restaurantId}/products/${product._id}`}>
+                                            <Link href={`/restaurant/${restaurantId}/products/${product._id}/details`}>
                                                 <Info className="h-4 w-4 mr-2" />
                                                 Ver detalhes
                                             </Link>

@@ -2,7 +2,7 @@
 
 import { SidebarProvider } from "@/components/ui/sidebar"
 
-export default function ProductDetailsLayout({
+export default function AddInPromotionLayout({
     children,
 }: {
     children: React.ReactNode

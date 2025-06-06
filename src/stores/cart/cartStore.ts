@@ -2,14 +2,21 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
-export interface CartItemProps {
+interface Addon {
     id: string;
+    name: string;
+    price: number;
+}[];
+
+export interface CartItemProps {
+    _id: string;
     name: string;
     price: number;
     quantity: number;
     status: 'pending' | 'processing' | 'completed' | 'cancelled' | 'payment_requested' | 'paid';
     observations?: string;
     image: string;
+    addons?: Addon[];
 }
 
 interface GuestInfo {
@@ -17,6 +24,11 @@ interface GuestInfo {
     name: string;
     joinedAt: string;
 }
+
+const calculateTotalPrice = (basePrice: number, addons: Addon[]): number => {
+    const addonsPrice = addons.reduce((total, addon) => total + addon.price, 0);
+    return basePrice + addonsPrice;
+};
 
 interface CartStore {
     items: CartItemProps[];
@@ -32,10 +44,11 @@ interface CartStore {
     updateQuantity: (productId: string, quantity: number) => void;
     updateItemObservations: (productId: string, observations: string) => void;
     updateItemStatus: (productId: string, status: CartItemProps['status']) => void;
+    updateItemAddons: (productId: string, addons: Addon[]) => void;
     setOrderType: (type: 'local' | 'takeaway') => void;
     setObservations: (observations: string) => void;
     clearCart: () => void;
-    initializeGuest: (name: string) => void;
+    initializeGuest: (guestInfo: GuestInfo) => void; // Armazene o guestInfo completo
     setTableInfo: (tableId: string, restaurantId: string, unitId?: string) => void;
     getGuestId: () => string | null;
     getTotal: () => number;
@@ -50,15 +63,14 @@ type StorageType = {
 const customStorage: StorageType = {
     getItem: async (name: string) => {
         try {
+            if (typeof window === 'undefined') {
+                return null;
+            }
             const value = localStorage.getItem(name);
             if (!value) return null;
-
             const parsed = JSON.parse(value);
             if (JSON.stringify(parsed).length > 5242880) {
-                const trimmedData = {
-                    ...parsed,
-                    items: parsed.items.slice(-20)
-                };
+                const trimmedData = { ...parsed, items: parsed.items.slice(-20) };
                 await customStorage.setItem(name, JSON.stringify(trimmedData));
                 return JSON.stringify(trimmedData);
             }
@@ -70,12 +82,12 @@ const customStorage: StorageType = {
     },
     setItem: async (name: string, value: string) => {
         try {
+            if (typeof window === 'undefined') {
+                return;
+            }
             if (value.length > 5242880) {
                 const parsed = JSON.parse(value);
-                const trimmedData = {
-                    ...parsed,
-                    items: parsed.items.slice(-20)
-                };
+                const trimmedData = { ...parsed, items: parsed.items.slice(-20) };
                 localStorage.setItem(name, JSON.stringify(trimmedData));
             } else {
                 localStorage.setItem(name, value);
@@ -86,6 +98,9 @@ const customStorage: StorageType = {
     },
     removeItem: async (name: string) => {
         try {
+            if (typeof window === 'undefined') {
+                return;
+            }
             localStorage.removeItem(name);
         } catch (error) {
             console.error('Erro ao remover do localStorage:', error);
@@ -104,56 +119,64 @@ export const useCartStore = create<CartStore>()(
             orderType: 'local',
             observations: '',
 
-            initializeGuest: (name: string) => {
-                const guestId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                set({
-                    guestInfo: {
-                        id: guestId,
-                        name,
-                        joinedAt: new Date().toISOString()
-                    }
-                });
+            initializeGuest: (guestInfo: { id: string; name: string; joinedAt: string }) => {
+                set({ guestInfo, items: [] }); // Armazene o guestInfo completo
             },
 
             addItem: (item) => set((state) => {
-                const existingItem = state.items.find(i => i.id === item.id);
+                const existingItem = state.items.find(i => i._id === item._id);
+                const totalPrice = calculateTotalPrice(item.price, item.addons || []);
+
                 if (existingItem) {
                     return {
                         items: state.items.map(i =>
-                            i.id === item.id
-                                ? { ...i, quantity: i.quantity + item.quantity }
+                            i._id === item._id
+                                ? { ...i, quantity: i.quantity + item.quantity, price: totalPrice }
                                 : i
                         )
                     };
                 }
-                const newItems = [...state.items, item];
+                const newItem = { ...item, price: totalPrice };
+                const newItems = [...state.items, newItem];
                 return { items: newItems.slice(-20) };
             }),
 
-            removeItem: (id) => set((state) => ({
-                items: state.items.filter(i => i.id !== id)
+            removeItem: (_id) => set((state) => ({
+                items: state.items.filter(i => i._id !== _id)
             })),
 
-            updateQuantity: (id, quantity) => set((state) => ({
+            updateQuantity: (_id, quantity) => set((state) => ({
                 items: state.items.map(i =>
-                    i.id === id ? { ...i, quantity } : i
+                    i._id === _id ? { ...i, quantity } : i
                 )
             })),
 
-            updateItemObservations: (id, observations) => set((state) => ({
+            updateItemObservations: (_id, observations) => set((state) => ({
                 items: state.items.map(i =>
-                    i.id === id ? { ...i, observations } : i
+                    i._id === _id ? { ...i, observations } : i
                 )
             })),
 
-            updateItemStatus: (id, status) => set((state) => ({
+            updateItemStatus: (_id, status) => set((state) => ({
                 items: state.items.map(item => {
-                    if (item.id === id) {
+                    if (item._id === _id) {
                         return { ...item, status };
                     }
                     return item;
                 })
             })),
+
+            updateItemAddons: (_id, addons) => set((state) => {
+                return {
+                    items: state.items.map(item => {
+                        if (item._id === _id) {
+                            const newPrice = calculateTotalPrice(item.price, addons);
+                            return { ...item, addons, price: newPrice };
+                        }
+                        return item;
+                    })
+                };
+            }),
 
             setOrderType: (type) => set({ orderType: type }),
 
@@ -198,3 +221,4 @@ export const useCartStore = create<CartStore>()(
         }
     )
 );
+

@@ -1,5 +1,4 @@
 // components/cart/CartItem.tsx
-import { useEffect } from "react";
 import { Plus, Minus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusTexts, StatusColors, OrderStatus } from "@/components/cart/constants";
