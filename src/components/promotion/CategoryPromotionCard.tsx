@@ -23,7 +23,17 @@ export const CategoryPromotionCard: React.FC<CategoryPromotionCardProps> = ({
     products,
     onApplyPromotion,
 }) => {
-    const [isOpen, setIsOpen] = useState(false);
+    // Usar o ID da categoria no estado para torná-lo único
+    const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
+
+    const toggleCategory = (categoryId: string) => {
+        setOpenCategories(prev => ({
+            ...prev,
+            [categoryId]: !prev[categoryId]
+        }));
+    };
+
+    const isOpenCategory = openCategories[category] || false;
 
     const activePromotions = products.filter(p => p.isOnPromotion);
     const totalProducts = products.length;
@@ -31,7 +41,10 @@ export const CategoryPromotionCard: React.FC<CategoryPromotionCardProps> = ({
 
     return (
         <Card>
-            <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+            <Collapsible
+                open={isOpenCategory}
+                onOpenChange={() => toggleCategory(category)}
+            >
                 <CardHeader className="p-4">
                     <div className="flex items-center justify-between">
                         <div>
@@ -44,14 +57,21 @@ export const CategoryPromotionCard: React.FC<CategoryPromotionCardProps> = ({
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={onApplyPromotion}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onApplyPromotion?.();
+                                }}
                             >
                                 <Plus size={16} className="mr-1" />
                                 Promoção
                             </Button>
                             <CollapsibleTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                    {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    {isOpenCategory ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                 </Button>
                             </CollapsibleTrigger>
                         </div>
