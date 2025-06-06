@@ -75,12 +75,12 @@ export function Sidebar({ className }: SidebarProps) {
             icon: <SquareMenu size={20} />,
             color: "#f3de1f"
         },
-        // {
-        //     title: "Promoções",
-        //     href: "/promocoes",
-        //     icon: <BadgePercent size={20} />,
-        //     color: "#f97316"
-        // },
+        {
+            title: "Promoções",
+            href: `/restaurant/${slug}/promotions`,
+            icon: <BadgePercent size={20} />,
+            color: "#f97316"
+        },
         {
             title: "Estatísticas",
             href: `/restaurant/${slug}/statistics`,

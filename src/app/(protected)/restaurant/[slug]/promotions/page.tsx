@@ -3,33 +3,34 @@
 
 import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import EmployeeList from '@/components/employee/EmployeeList';
 import Header from '@/components/header/Header';
 import { Sidebar } from '@/components/dashboard/SideMenu';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useAuthCheck } from '@/hooks/sessionManager';
 import { cn } from '@/lib/utils';
+import { DelayedLoading } from '@/components/loading/DelayedLoading';
 import { extractIdFromSlug } from '@/utils/slugify';
+import PromotionsPage from '@/components/promotion/PromotionsPage';
 
-export default function EmployeesFromIdPage() {
+export default function EmployeesPage() {
     const router = useRouter();
-    const { slug, unitId } = useParams();
-    const { isAuthenticated, isLoading } = useAuthCheck();
+    const { slug } = useParams();
+    const { isAuthenticated, isLoading, isAdminOrManager } = useAuthCheck();
     const { isOpen } = useSidebar();
 
-    const restaraurantId = slug && extractIdFromSlug(String(slug));
+    const restaurantId = extractIdFromSlug(String(slug)) as string;
 
     if (isLoading) {
-        return <div>Loading...</div>; // Ou algum componente de carregamento
+        return <DelayedLoading />;
     }
 
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !isAdminOrManager) {
         router.push('/login');
-        return null; // Evita renderizar o componente até o redirecionamento
+        return null;
     }
 
     return (
-        <div className="container mx-auto px-4 py-8">
+        <div className="w-full flex flex-col h-screen">
             <Header />
 
             <div className={cn(
@@ -39,8 +40,8 @@ export default function EmployeesFromIdPage() {
                 <Sidebar />
 
                 <div className="flex-1 w-full overflow-auto">
-                    <div className="max-w-5xl mx-auto px-6 py-4">
-                        <EmployeeList restaurantId={String(restaraurantId)} />
+                    <div className="w-full mx-auto px-6 py-4">
+                        <PromotionsPage />
                     </div>
                 </div>
             </div>

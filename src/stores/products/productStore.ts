@@ -1,9 +1,27 @@
 import { create } from 'zustand';
 import { useAuthStore } from '../auth';
+import { PromotionData } from './types';
 
 // Define product interface based on backend models
+interface ComboOption {
+    name: string; // Nome da opção (ex: tipo de hambúrguer)
+    products: string[]; // IDs dos produtos que fazem parte desta opção
+}
+
+// Add to Product interface
+interface PromotionHistory {
+    _id: string;
+    discountPercentage: number;
+    promotionalPrice: number;
+    promotionStartDate: string;
+    promotionEndDate: string;
+    isActive: boolean;
+    createdAt: string;
+}
+
 export interface Product {
     _id?: string;
+    restaurant: string;
     name: string;
     category: string;
     description: string;
@@ -16,33 +34,64 @@ export interface Product {
     promotionalPrice: number | null;
     promotionStartDate: string | null;
     promotionEndDate: string | null;
+    promotionHistory?: PromotionHistory[];
+    isCombo?: boolean;
+    comboOptions?: ComboOption[];
+    isAdditional?: boolean;
+    hasAddons?: boolean;
+    additionalOptions?: {
+        id: string;
+        name: string;
+        price: number;
+        isAvailable: boolean;
+    }[];
+    hasAccompaniments?: boolean;
+    accompaniments?: {
+        id: string;
+        name: string;
+        isAvailable: boolean;
+    }[];
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 interface ProductState {
     products: Product[];
     loading: boolean;
     error: string | null;
+    selectedProduct: Product | null;
+    setSelectedProduct: (product: Product) => void;
 
     // Actions
     fetchProducts: (restaurantId: string) => Promise<void>;
-    fetchProductById: (id: string) => Promise<Product | undefined>;
+    fetchProductById: (productId: string, restaurantId: string) => Promise<Product | undefined>;
     createProduct: (product: Omit<Product, '_id'>, restaurantId: string) => Promise<Product>;
     updateProduct: (id: string, product: Partial<Product>, restaurantId: string) => Promise<Product>;
     deleteProduct: (id: string, restaurantId: string) => Promise<void>;
     fetchPromotionalProducts: (restaurantId: string) => Promise<void>;
+    applyPromotionToCategory: (categoryId: string, promotionData: PromotionData, restaurantId: string) => Promise<void>;
+    getPromotionHistory: (productId: string, restaurantId: string) => Promise<PromotionHistory[]>;
+    reactivatePromotion: (productId: string, promotionId: string, restaurantId: string) => Promise<void>;
+    deactivatePromotion: (productId: string, restaurantId: string) => Promise<void>;
+    editPromotion: (productId: string, promotionData: Partial<PromotionData>, restaurantId: string) => Promise<void>;
     importProducts: (file: File, restaurantId: string) => Promise<{
         success: boolean;
         message: string;
         importedCount?: number;
     }>
+    createCombo: (comboData: Omit<Product, '_id'>, restaurantId: string) => Promise<Product>;
+    updateCombo: (id: string, comboData: Partial<Product>, restaurantId: string) => Promise<Product>;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+const token = useAuthStore.getState().token;
 
 export const useProductStore = create<ProductState>((set, get) => ({
     products: [],
     loading: false,
     error: null,
+    selectedProduct: null,
+    setSelectedProduct: (product: Product) => set({ selectedProduct: product }),
 
     fetchProducts: async (restaurantId: string) => {
         set({ loading: true, error: null });
@@ -70,11 +119,11 @@ export const useProductStore = create<ProductState>((set, get) => ({
         }
     },
 
-    fetchProductById: async (id: string) => {
+    fetchProductById: async (productId: string, restaurantId: string) => {
         set({ loading: true, error: null });
-        const token = useAuthStore.getState().token; // Obtenha o token de autenticação
+        // Obtenha o token de autenticação
         try {
-            const response = await fetch(`${API_URL}/product/${id}`, {
+            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products/${productId}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -98,9 +147,9 @@ export const useProductStore = create<ProductState>((set, get) => ({
         }
     },
 
-    createProduct: async (product: Product, restaurantId: string) => {
+    createProduct: async (product: Omit<Product, '_id'>, restaurantId: string) => {
         set({ loading: true, error: null });
-        const token = useAuthStore.getState().token;
+
         try {
             const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products`, {
                 method: 'POST',
@@ -133,7 +182,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
     updateProduct: async (id: string, product: Partial<Product>, restaurantId: string) => {
         set({ loading: true, error: null });
-        const token = useAuthStore.getState().token; // Obtenha o token de autenticação
+
         try {
             const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products/${id}/update`, {
                 method: 'PATCH',
@@ -168,7 +217,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
     deleteProduct: async (id: string, restaurantId: string) => {
         set({ loading: true, error: null });
-        const token = useAuthStore.getState().token; // Obtenha o token de autenticação
+        // Obtenha o token de autenticação
         try {
             const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products/${id}/delete`, {
                 method: 'DELETE',
@@ -199,7 +248,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
     fetchPromotionalProducts: async (restaurantId: string) => {
         set({ loading: true, error: null });
-        const token = useAuthStore.getState().token; // Obtenha o token de autenticação
+        // Obtenha o token de autenticação
         try {
             const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products/promotional`, {
                 method: 'GET',
@@ -224,9 +273,80 @@ export const useProductStore = create<ProductState>((set, get) => ({
         }
     },
 
+    applyPromotionToCategory: async (categoryId, promotionData, restaurantId) => {
+        set({ loading: true });
+
+        try {
+            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/promotions/category`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    categoryId,
+                    ...promotionData,
+                }),
+            });
+
+            if (!response.ok) throw new Error('Failed to apply category promotion');
+
+            await get().fetchProducts(restaurantId);
+            set({ loading: false });
+        } catch (error) {
+            set({ error: error instanceof Error ? error.message : 'Erro ao aplicar promoção à categoria', loading: false });
+            throw error;
+        }
+    },
+
+    getPromotionHistory: async (productId, restaurantId) => {
+
+        try {
+            const response = await fetch(
+                `${API_URL}/restaurant/${restaurantId}/products/${productId}/promotions/history`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    },
+                }
+            );
+
+            if (!response.ok) throw new Error('Failed to fetch promotion history');
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching promotion history:', error);
+            return [];
+        }
+    },
+
+    reactivatePromotion: async (productId, promotionId, restaurantId) => {
+        set({ loading: true });
+
+        try {
+            const response = await fetch(
+                `${API_URL}/restaurant/${restaurantId}/products/${productId}/promotions/${promotionId}/reactivate`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    },
+                }
+            );
+
+            if (!response.ok) throw new Error('Failed to reactivate promotion');
+
+            await get().fetchProducts(restaurantId);
+            set({ loading: false });
+        } catch (error) {
+            set({ error: error instanceof Error ? error.message : 'Erro ao reativar promoção', loading: false });
+            throw error;
+        }
+    },
+
     importProducts: async (file: File, restaurantId: string) => {
         set({ loading: true, error: null });
-        const token = useAuthStore.getState().token;
+
 
         try {
             const formData = new FormData();
@@ -267,8 +387,149 @@ export const useProductStore = create<ProductState>((set, get) => ({
                 message: error instanceof Error ? error.message : 'Erro ao importar produtos'
             };
         }
-    }
+    },
+
+    deactivatePromotion: async (productId: string, restaurantId: string) => {
+        set({ loading: true });
+        try {
+            const response = await fetch(
+                `${API_URL}/restaurant/${restaurantId}/products/${productId}/promotion/deactivate`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error('Falha ao desativar promoção');
+            }
+
+            const products = get().products.map(product =>
+                product._id === productId
+                    ? {
+                        ...product,
+                        isOnPromotion: false,
+                        promotionalPrice: null,
+                        discountPercentage: null,
+                        promotionStartDate: null,
+                        promotionEndDate: null,
+                    }
+                    : product
+            );
+
+            set({ products, loading: false });
+        } catch (error) {
+            set({ error: error instanceof Error ? error.message : 'Falha ao desativar promoção', loading: false });
+            throw error;
+        }
+    },
+
+    editPromotion: async (productId: string, promotionData: Partial<PromotionData>, restaurantId: string) => {
+        set({ loading: true });
+        try {
+            const response = await fetch(
+                `${API_URL}/restaurant/${restaurantId}/products/${productId}/promotion`,
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(promotionData),
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error('Falha ao editar promoção');
+            }
+
+            const updatedProduct = await response.json();
+            const products = get().products.map(product =>
+                product._id === productId ? { ...product, ...updatedProduct } : product
+            );
+
+            set({ products, loading: false });
+        } catch (error) {
+            set({ error: error instanceof Error ? error.message : 'Falha ao editar promoção', loading: false });
+            throw error;
+        }
+    },
+
+    createCombo: async (comboData: Omit<Product, '_id'>, restaurantId: string) => {
+        set({ loading: true, error: null });
+
+        try {
+            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/combos`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(comboData)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Erro ao criar combo');
+            }
+
+            const data = await response.json();
+            const products = get().products;
+            set({ products: [...products, data], loading: false });
+
+            return data;
+        } catch (error) {
+            console.error('Error creating combo:', error);
+            set({
+                error: error instanceof Error ? error.message : 'Erro ao criar combo',
+                loading: false
+            });
+            throw error;
+        }
+    },
+
+    updateCombo: async (id: string, comboData: Partial<Product>, restaurantId: string) => {
+        set({ loading: true, error: null });
+
+        try {
+            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/combos/${id}/update`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(comboData)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Erro ao atualizar combo');
+            }
+
+            const data = await response.json();
+            const products = get().products;
+            const updatedProducts = products.map(p =>
+                p._id === id ? { ...p, ...data } : p
+            );
+
+            set({ products: updatedProducts, loading: false });
+            return data;
+        } catch (error) {
+            console.error('Error updating combo:', error);
+            set({
+                error: error instanceof Error ? error.message : 'Erro ao atualizar combo',
+                loading: false
+            });
+            throw error;
+        }
+    },
 }));
+
+
+
 
 
 

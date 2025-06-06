@@ -9,17 +9,20 @@ import { DelayedLoading } from '@/components/loading/DelayedLoading';
 
 const getCategoryOrder = (category: string): number => {
     const orderMap: { [key: string]: number } = {
-        'promotion': 0,     // Promoções
-        'appetizers': 1,     // Entradas
-        'main': 2,          // Pratos Principais
-        'sides': 3,          // Acompanhamentos
-        'drinks': 4,      // Bebidas
-        'desserts': 5,       // Sobremesas
-        'other': 6          // Outras categorias
+        'promotion': 0,
+        'combos': 1,
+        // Promoções
+        'appetizers': 2,     // Entradas
+        'main': 3,          // Pratos Principais
+        'sides': 4,          // Acompanhamentos
+        'drinks': 5,      // Bebidas
+        'desserts': 6,       // Sobremesas
+        'other': 7          // Outras categorias
     };
 
     return orderMap[category] ?? 999;
 };
+
 export default function MenuPage() {
     const { slug } = useParams();
     const { products, loading, fetchProducts } = useProductStore();

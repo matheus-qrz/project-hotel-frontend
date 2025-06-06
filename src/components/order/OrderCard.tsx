@@ -31,7 +31,7 @@ export function OrderCard({ order, className, onStatusUpdate }: OrderCardProps) 
     const { slug } = useParams();
     const [isUpdating, setIsUpdating] = useState(false);
     const [itemToCancel, setItemToCancel] = useState<string | null>(null);
-    const { updateOrderStatus, cancelOrderItem } = useOrderStore();
+    const { updateOrder, cancelOrderItem } = useOrderStore();
     const [previousItems, setPreviousItems] = useState<OrderItem[]>(order.items);
     const restaurantId = slug && extractIdFromSlug(String(slug));
 
@@ -44,7 +44,7 @@ export function OrderCard({ order, className, onStatusUpdate }: OrderCardProps) 
 
         setIsUpdating(true);
         try {
-            await updateOrderStatus(String(restaurantId), String(order.meta.tableId), order._id, 'cancelled');
+            await updateOrder(String(restaurantId), String(order.meta.tableId), order._id, 'cancelled');
             onStatusUpdate?.();
         } catch (error) {
             console.error('Erro ao cancelar pedido:', error);

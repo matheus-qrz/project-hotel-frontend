@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, ShoppingCart, RefreshCw } from "lucide-react";
+import { ArrowLeft, Send, ShoppingCart } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import {
@@ -20,14 +20,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import CartItem from "@/components/cart/CartItem";
 import { formatCurrency } from "@/services/restaurant/services";
-import { CartItemProps, Order, useCartStore, useOrderStore, useTableStore } from "@/stores";
+import { useCartStore, useOrderStore } from "@/stores";
 import { extractIdFromSlug } from "@/utils/slugify";
-import { OrderCard } from "../order/OrderCard";
 
 export function CartClient() {
     const router = useRouter();
-    const { slug, tableId, unitId } = useParams();
-    const [isRefreshing, setIsRefreshing] = useState(false);
+    const { slug, tableId } = useParams();
     const [observations, setObservations] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submissionSuccess, setSubmissionSuccess] = useState(false);
@@ -55,7 +53,9 @@ export function CartClient() {
         setOrders,
         fetchGuestOrders,
         createOrder,
-        requestCheckout
+        requestCheckout,
+        updateOrder,
+        deleteOldOrders
     } = useOrderStore();
 
     const guestId = getGuestId();
@@ -96,12 +96,40 @@ export function CartClient() {
         setIsSubmitting(true);
         setError(null);
 
-        console.log("guestInfo antes de enviar o pedido:", guestInfo);
-
         try {
+            // Limpar pedidos antigos antes de adicionar novos
+            deleteOldOrders();
+
+            // Verifique se há um pedido ativo existente
+            const existingOrder = order.find(o => o.guestInfo.id === guestId && o.status === 'pending');
+
+            if (existingOrder) {
+                // Atualize o pedido existente
+                const updatedItems = [...existingOrder.items, ...items];
+                const updatedTotal = existingOrder.totalAmount + getTotal();
+
+                await updateOrder(String(restaurantId), String(tableId), existingOrder._id, { items: updatedItems, totalAmount: updatedTotal }); // Função para atualizar itens no backend
+
+                setOrders(
+                    order.map(o =>
+                        o._id === existingOrder._id ? { ...o, items: updatedItems, totalAmount: updatedTotal } : o
+                    )
+                );
+
+                setSubmissionSuccess(true);
+                clearCart();
+                setTimeout(() => {
+                    setSubmissionSuccess(false);
+                    router.push(`/restaurant/${slug}/${tableId}/menu`);
+                }, 3000);
+
+                return;
+            }
+
+            // Se não houver um pedido existente, crie um novo
             const orderData = {
                 items: items.map(item => ({
-                    id: item.id,
+                    _id: item._id,
                     name: item.name,
                     price: item.price,
                     quantity: item.quantity,
@@ -135,8 +163,6 @@ export function CartClient() {
             setObservations("");
             setCartObservations("");
             setCartOrderType(orderType);
-
-            console.log("Dados do pedido a serem enviados:", orderData);
 
             setSubmissionSuccess(true);
             clearCart();
@@ -243,8 +269,8 @@ export function CartClient() {
             <div className="space-y-2 mb-6">
                 {items.map((item) => (
                     <CartItem
-                        key={item.id}
-                        id={item.id}
+                        key={item._id}
+                        id={item._id}
                         name={item.name}
                         image={item.image}
                         price={item.price}

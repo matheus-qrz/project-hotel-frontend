@@ -1,4 +1,3 @@
-// stores/orderStore.ts
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { CartItemProps } from '../cart';
@@ -81,9 +80,10 @@ interface OrderStore {
     }) => Promise<void>;
     cancelOrder: (orderId: string, restaurantId: string, tableId: string) => Promise<void>;
     cancelOrderItem: (orderId: string, itemId: string, restaurantId: string, tableId: string) => Promise<void>;
-    updateOrderStatus: (restaurantId: string, tableId: string, orderId: string, newStatus: Order['status']) => Promise<void>;
+    updateOrder: (restaurantId: string, tableId: string, orderId: string, updatedData: Partial<Order>) => Promise<void>;
     getTableTotal: (guestId?: string) => number;
     getAmountPerPerson: (splitCount: number, guestId?: string) => number;
+    deleteOldOrders: () => void;  // Função para limpar pedidos antigos
 }
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
@@ -92,15 +92,17 @@ export const useOrderStore = create(
     persist<OrderStore>(
         (set, get) => ({
             order: [],
-            setOrders: (orders) => set({ order: orders }),
             isLoading: false,
             error: null,
             stats: null,
+
+            setOrders: (orders) => set({ order: orders }),
 
             createOrder: async (orderData: CreateOrderData, restaurantId: string, tableId: string, unitId?: string) => {
                 set({ isLoading: true, error: null });
                 try {
                     const token = localStorage.getItem('auth_token') || localStorage.getItem('guest_token');
+                    const establishmentId = restaurantId || unitId;
 
                     const payload = {
                         ...orderData,
@@ -114,18 +116,9 @@ export const useOrderStore = create(
                             guestId: orderData.guestInfo.id,
                             orderCreatedAt: new Date()
                         },
-                        guestInfo: {
-                            id: orderData.guestInfo.id,
-                            name: orderData.guestInfo.name,
-                            joinedAt: orderData.guestInfo.joinedAt
-                        }
                     };
 
-                    const endpoint = unitId
-                        ? `${API_URL}/restaurant/${unitId}/${tableId}/order/new`
-                        : `${API_URL}/restaurant/${restaurantId}/${tableId}/order/new`;
-
-                    const response = await fetch(endpoint, {
+                    const response = await fetch(`${API_URL}/restaurant/${establishmentId}/${tableId}/order/new`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -140,7 +133,6 @@ export const useOrderStore = create(
                     }
 
                     const newOrder = await response.json();
-
                     set(state => ({
                         order: [...state.order, newOrder],
                         isLoading: false
@@ -156,15 +148,10 @@ export const useOrderStore = create(
             fetchTableOrders: async (restaurantId: string, tableId: string, guestId: string) => {
                 try {
                     const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/orders?guestId=${guestId}`);
-                    console.log("URL chamada:", response.url); // Verifique se a URL está correta
-
                     if (!response.ok) throw new Error('Erro ao buscar pedidos');
 
                     const data = await response.json();
-                    console.log("Dados recebidos:", data); // Verifique os dados recebidos
-
                     set(state => ({
-                        ...state,
                         order: data.orders || []
                     }));
                 } catch (error) {
@@ -189,7 +176,13 @@ export const useOrderStore = create(
             fetchRestaurantUnitOrders: async (restaurantId, unitId) => {
                 const token = useAuthStore.getState().token;
                 try {
-                    const endpoint = `${API_URL}/restaurant/${restaurantId ?? unitId}/orders`;
+                    if (!unitId && !restaurantId) {
+                        throw new Error("ID da unidade ou do restaurante é obrigatório.");
+                    }
+
+                    const endpoint = unitId
+                        ? `${API_URL}/restaurant-unit/${unitId}/orders`
+                        : `${API_URL}/restaurant/${restaurantId}/orders`;
 
                     const response = await fetch(endpoint, {
                         headers: {
@@ -335,33 +328,32 @@ export const useOrderStore = create(
                 }
             },
 
-            updateOrderStatus: async (restaurantId, tableId, orderId, newStatus) => {
-                set({ isLoading: true, error: null });
-                const token = localStorage.getItem('auth_token') || localStorage.getItem('guest_token');
+            updateOrder: async (restaurantId, tableId, orderId, updatedData) => {
                 try {
-                    const response = await fetch(
-                        `${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/update`,
-                        {
-                            method: 'PATCH',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                            },
-                            body: JSON.stringify({ status: newStatus })
-                        }
-                    );
+                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/update`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(updatedData),
+                    });
 
-                    if (!response.ok) throw new Error('Erro ao atualizar status do pedido');
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.message || 'Erro ao atualizar pedido');
+                    }
 
-                    set(state => ({
-                        order: state.order.map(order =>
-                            order._id === orderId ? { ...order, status: newStatus } : order
+                    const updatedOrder = await response.json();
+
+                    // Atualiza o estado local
+                    set((state: OrderStore) => ({
+                        order: state.order.map((order: Order) =>
+                            order._id === updatedOrder._id ? updatedOrder : order
                         ),
-                        isLoading: false
                     }));
-                } catch (error: any) {
-                    set({ error: error.message, isLoading: false });
-                    throw error;
+                } catch (error) {
+                    console.error("Erro ao atualizar pedido:", error);
+                    // Aqui você pode lidar com erros, por exemplo, definir um estado de erro
                 }
             },
 
@@ -378,13 +370,31 @@ export const useOrderStore = create(
                 const total = get().getTableTotal(guestId);
                 return total / (splitCount || 1);
             },
+
+            deleteOldOrders: () => {
+                const newOrders = get().order.filter(order => {
+                    const createdAt = new Date(order.createdAt);
+                    const now = new Date();
+                    const diffInDays = (now.getTime() - createdAt.getTime()) / (1000 * 3600 * 24);
+                    return diffInDays < 30; // Mantém apenas pedidos dos últimos 30 dias
+                });
+                set({ order: newOrders });
+            },
+
+            partialize: (state: OrderStore) => ({
+                order: state.order.map(order => ({
+                    _id: order._id,
+                    totalAmount: order.totalAmount,
+                    status: order.status,
+                })),
+                isLoading: false,
+                error: null,
+                stats: null,
+            }),
         }),
         {
             name: 'order-storage',
             storage: createJSONStorage(() => localStorage),
-            partialize: (state: OrderStore) => ({
-                order: state.order,
-            }) as OrderStore,
         }
-    ));
-
+    )
+);

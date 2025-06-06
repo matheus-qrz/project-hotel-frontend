@@ -7,10 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { OrderItem } from '../order/types';
+import { Order, OrderItem } from '../order/types';
+import { CartItemProps } from '../cart';
 
 interface ManagerScreenProps {
     slug: string;
+}
+
+interface OrderItemState {
+    id: string;
+    name: string;
+    quantity: number;
+    status: 'added' | 'removed' | 'updated';
 }
 
 type OrderStatus = 'pending' | 'processing' | 'completed' | 'cancelled' | 'payment_requested' | 'paid';
@@ -26,7 +34,7 @@ const StatusTexts = {
 
 export function ManagerScreen({ slug }: ManagerScreenProps) {
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const { order, fetchRestaurantUnitOrders, updateOrderStatus } = useOrderStore();
+    const { order, fetchRestaurantUnitOrders, updateOrder } = useOrderStore();
     const { tableId } = useTableStore();
     const { currentUnitId } = useRestaurantUnitStore();
     const [previousOrders, setPreviousOrders] = useState<{ [key: string]: OrderItem[] }>({});
@@ -36,12 +44,6 @@ export function ManagerScreen({ slug }: ManagerScreenProps) {
     useEffect(() => {
         if (restaurantId || currentUnitId) {
             fetchRestaurantUnitOrders(restaurantId, String(currentUnitId));
-
-            const interval = setInterval(() => {
-                fetchRestaurantUnitOrders(restaurantId, String(currentUnitId));
-            }, 30000);
-
-            return () => clearInterval(interval);
         }
     }, [restaurantId, currentUnitId]);
 
@@ -49,18 +51,96 @@ export function ManagerScreen({ slug }: ManagerScreenProps) {
         const newPreviousOrders: { [key: string]: OrderItem[] } = {};
         order.forEach(orderItem => {
             const key = `${orderItem.meta.tableId}-${orderItem.guestInfo.id}`;
-            newPreviousOrders[key] = orderItem.items.map(item => ({ ...item, guestId: orderItem.guestInfo?.id }));
+            newPreviousOrders[key] = orderItem.items.map(item => ({
+                ...item,
+                id: item._id, // Ensure 'id' is present
+                guestId: orderItem.guestInfo?.id
+            }));
         });
         setPreviousOrders(newPreviousOrders);
     }, [order]);
 
+    const calculateItemDifferences = (
+        previousOrderSnapshot: Order[],
+        currentOrders: Order[]
+    ): { [key: string]: OrderItemState[] } => {
+        const differences: { [key: string]: OrderItemState[] } = {};
+
+        currentOrders.forEach(currentOrder => {
+            const previousOrder = previousOrderSnapshot.find(po => po._id === currentOrder._id);
+            const itemDiff: OrderItemState[] = [];
+
+            if (previousOrder) {
+                const previousItemsMap = new Map<string, CartItemProps>();
+                previousOrder.items.forEach(item => previousItemsMap.set(item.id, item));
+
+                currentOrder.items.forEach(currentItem => {
+                    const previousItem = previousItemsMap.get(currentItem.id);
+                    const quantityChange = currentItem.quantity - (previousItem?.quantity || 0);
+
+                    if (quantityChange !== 0) {
+                        itemDiff.push({
+                            id: currentItem.id,
+                            name: currentItem.name,
+                            quantity: Math.abs(quantityChange),
+                            status: quantityChange > 0 ? 'added' : 'removed',
+                        });
+                    } else {
+                        itemDiff.push({
+                            id: currentItem.id,
+                            name: currentItem.name,
+                            quantity: currentItem.quantity,
+                            status: 'updated',
+                        });
+                    }
+                });
+
+                previousOrder.items.forEach(previousItem => {
+                    if (!currentOrder.items.find(item => item.id === previousItem.id)) {
+                        itemDiff.push({
+                            id: previousItem.id,
+                            name: previousItem.name,
+                            quantity: previousItem.quantity,
+                            status: 'removed',
+                        });
+                    }
+                });
+            }
+
+            differences[currentOrder._id] = itemDiff;
+        });
+
+        return differences;
+    };
+
     const handleRefresh = async () => {
         if (!restaurantId) return;
-
+        setIsRefreshing(true);
         try {
+            // Snapshot dos pedidos atuais
+            const previousOrderSnapshot: Order[] = JSON.parse(JSON.stringify(order));
+
             await fetchRestaurantUnitOrders(restaurantId, currentUnitId ? String(currentUnitId) : '');
+
+            // Use a estrutura correta para calcular as diferenças
+            const currentOrders: Order[] = JSON.parse(JSON.stringify(order));
+            const differences = calculateItemDifferences(previousOrderSnapshot, currentOrders);
+
+            setPreviousOrders(() => {
+                const newPreviousOrders: { [key: string]: CartItemProps[] } = {};
+                currentOrders.forEach((orderItem: Order) => {
+                    const key = `${orderItem.meta.tableId}-${orderItem.guestInfo?.id}`;
+                    newPreviousOrders[key] = orderItem.items.map(item => ({ ...item }));
+                });
+                return newPreviousOrders;
+            });
+
+            console.log('Atualização concluída: ', order);
+            console.log('Diferenças calculadas: ', differences);
         } catch (error) {
             console.error('Erro na atualização manual:', error);
+        } finally {
+            setIsRefreshing(false);
         }
     };
 
@@ -80,8 +160,57 @@ export function ManagerScreen({ slug }: ManagerScreenProps) {
         return StatusTexts[status];
     };
 
+    const processOrderItems = (
+        currentItems: OrderItem[],
+        previousItems: OrderItem[]
+    ): OrderItemState[] => {
+        const itemState: OrderItemState[] = [];
+
+        // Mapeia itens anteriores por ID para fácil acesso
+        const previousItemsMap = new Map<string, OrderItem>();
+        previousItems.forEach(item => previousItemsMap.set(item.id, item));
+
+        // Processa itens atuais
+        currentItems.forEach(currentItem => {
+            const previousItem = previousItemsMap.get(currentItem.id);
+            const quantityChange = currentItem.quantity - (previousItem?.quantity || 0);
+
+            if (quantityChange > 0) {
+                // Item adicionado ou incrementado
+                itemState.push({
+                    id: currentItem.id,
+                    name: currentItem.name,
+                    quantity: quantityChange,
+                    status: 'added',
+                });
+            } else if (quantityChange < 0) {
+                // Item decrementado
+                itemState.push({
+                    id: currentItem.id,
+                    name: currentItem.name,
+                    quantity: -quantityChange,
+                    status: 'removed',
+                });
+            }
+        });
+
+        // Verifica itens removidos completamente
+        previousItems.forEach(previousItem => {
+            if (!currentItems.find(item => item.id === previousItem.id)) {
+                itemState.push({
+                    id: previousItem.id,
+                    name: previousItem.name,
+                    quantity: previousItem.quantity,
+                    status: 'removed',
+                });
+            }
+        });
+
+        return itemState;
+    };
+
     const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
-        updateOrderStatus(restaurantId, String(tableId), orderId, newStatus);
+        updateOrder(restaurantId, String(tableId), orderId, { status: newStatus });
     };
 
     const groupOrders = () => {
@@ -90,45 +219,44 @@ export function ManagerScreen({ slug }: ManagerScreenProps) {
         order.forEach(orderItem => {
             const key = `${orderItem.meta.tableId}-${orderItem.guestInfo.id}`;
 
+            // Se for o primeiro pedido, inicialize
             if (!groupedOrders[key]) {
                 groupedOrders[key] = { ...orderItem, items: [...orderItem.items] };
             } else {
                 orderItem.items.forEach(item => {
-                    const existingItem = groupedOrders[key].items.find((i: OrderItem) => i.id === item.id);
+                    const existingItem = groupedOrders[key].items.find((i: OrderItem) => i.id === item._id);
                     if (existingItem) {
-                        existingItem.quantity += item.quantity;
+                        existingItem.quantity += item.quantity; // Acumula a quantidade
                     } else {
-                        groupedOrders[key].items.push(item);
+                        groupedOrders[key].items.push(item); // Adiciona novo item
                     }
                 });
-                groupedOrders[key].totalAmount += orderItem.totalAmount;
+                groupedOrders[key].totalAmount += orderItem.totalAmount; // Atualiza o total
+                groupedOrders[key].status = 'pending'; // Retorna ao status pendente
             }
         });
 
         return Object.values(groupedOrders);
     };
+    const renderOrderItems = (orderId: string, differences: { [key: string]: OrderItemState[] }) => {
+        const items = differences[orderId] || []; // Garante que sempre há uma lista para iterar
 
-    const renderOrderItems = (items: OrderItem[], previousItems: OrderItem[] = []) => {
-        const itemMap = new Map<string, OrderItem>();
-
-        items.forEach(item => itemMap.set(item.id, { ...item }));
-
-        previousItems.forEach(prevItem => {
-            if (itemMap.has(prevItem.id)) {
-                const currentItem = itemMap.get(prevItem.id)!;
-                currentItem.quantity -= prevItem.quantity;
-            } else {
-                itemMap.set(prevItem.id, { ...prevItem, quantity: -prevItem.quantity });
+        return items.map(item => {
+            let colorClass;
+            switch (item.status) {
+                case 'removed':
+                    colorClass = 'text-red-600';
+                    break;
+                case 'added':
+                    colorClass = 'text-green-600';
+                    break;
+                default:
+                    colorClass = 'text-gray-600';
             }
-        });
-
-        return Array.from(itemMap.values()).map(item => {
-            const colorClass = item.quantity > 0 ? 'text-green-600' : (item.quantity < 0 ? 'text-red-600' : '');
-            const sign = item.quantity > 0 ? '+' : (item.quantity < 0 ? '-' : '');
 
             return (
-                <li key={item.id} className={colorClass || 'text-black'}>
-                    {sign}{Math.abs(item.quantity)}x {item.name}
+                <li key={item.id} className={colorClass}>
+                    {item.status === 'removed' ? '-' : '+'}{Math.abs(item.quantity)}x {item.name}
                 </li>
             );
         });
@@ -142,6 +270,7 @@ export function ManagerScreen({ slug }: ManagerScreenProps) {
             .map(order => {
                 const key = `${order.meta.tableId}-${order.guestInfo.id}`;
                 const previousItems = previousOrders[key] || [];
+                const processedItems = processOrderItems(order.items, previousItems);
 
                 return (
                     <Card key={order._id} className="mb-4">
@@ -173,7 +302,7 @@ export function ManagerScreen({ slug }: ManagerScreenProps) {
                                 <p><strong>Cliente:</strong> {order.guestInfo?.name || 'Anônimo'}</p>
                                 <p><strong>Itens:</strong></p>
                                 <ul>
-                                    {renderOrderItems(order.items, previousItems)}
+                                    {renderOrderItems(order._id, { [order._id]: processedItems })} {/* Renderiza itens processados */}
                                 </ul>
                                 <p><strong>Total:</strong> R$ {order.totalAmount.toFixed(2)}</p>
                                 {order.meta?.observations && (

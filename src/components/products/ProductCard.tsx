@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,24 +12,20 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, quantity, onQuantityChange }) => {
-    // Função para aumentar a quantidade
     const increaseQuantity = () => {
         onQuantityChange(String(product._id), quantity + 1);
     };
 
-    // Função para diminuir a quantidade
     const decreaseQuantity = () => {
         if (quantity > 0) {
             onQuantityChange(String(product._id), quantity - 1);
         }
     };
 
-    // Função para zerar quantidade
     const resetQuantity = () => {
         onQuantityChange(String(product._id), 0);
     };
 
-    // Formatar preço
     const formatPrice = (price: number) => {
         return new Intl.NumberFormat('pt-BR', {
             style: 'currency',
@@ -59,7 +53,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, quantity, onQuantity
                 </div>
 
                 <div className="flex justify-between items-center mt-auto">
-                    <span className="font-bold">{formatPrice(product.price)}</span>
+                    <span className="font-bold">
+                        {product.isCombo ? 'Combo: ' : ''}
+                        {formatPrice(product.price)}
+                    </span>
 
                     <div className="flex items-center gap-2">
                         {quantity > 0 ? (

@@ -1,5 +1,4 @@
-const CATEGORIES = [
-    { id: 'addOns', name: 'Adicionais' },
+export const MENU_CATEGORIES = [
     { id: 'accompaniments', name: 'Acompanhamentos' },
     { id: 'appetizers', name: 'Entradas' },
     { id: 'main', name: 'Pratos Principais' },
@@ -29,9 +28,5 @@ const CATEGORIES = [
     { id: 'wines', name: 'Vinhos' },
     { id: 'beers', name: 'Cervejas' },
     { id: 'spirits', name: 'Destilados' },
+    { id: 'addOns', name: 'Adicionais' },
 ];
-
-export const getCategoryName = (categoryId: string) => {
-    const category = CATEGORIES.find(cat => cat.id === categoryId);
-    return category ? category.name : 'Sem categoria';
-};

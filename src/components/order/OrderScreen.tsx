@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useOrderStore, useCartStore } from "@/stores";
+import { useOrderStore, useCartStore, CartItemProps } from "@/stores";
 import { OrderCard } from "../order/OrderCard";
 import {
     AlertDialog,
@@ -102,9 +102,10 @@ const OrdersScreen = () => {
                             key={order._id}
                             order={{
                                 ...order,
-                                items: order.items.map((item) => ({
+                                items: order.items.map((item: CartItemProps) => ({
                                     ...item,
-                                    imageUrl: item.image ?? item.image ?? "",
+                                    id: item._id ?? "",
+                                    imageUrl: item.image ?? "",
                                     guestId: order.guestInfo?.id ?? "",
                                 })),
                                 createdAt:

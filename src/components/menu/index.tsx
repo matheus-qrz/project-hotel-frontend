@@ -1,4 +1,3 @@
-// components/menu/MenuClient.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useCartStore } from '@/stores/cart';
@@ -21,17 +20,15 @@ export default function MenuClient({ slug, initialCategories }: MenuClientProps)
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const { items, addItem, updateQuantity, removeItem, getTotal, guestInfo, getGuestId } = useCartStore();
-  const { products, loading: isLoading } = useProductStore();
-  const { fetchGuestOrders, order } = useOrderStore(); // Adicione a store de pedidos
+  const { products, loading: isLoading, setSelectedProduct } = useProductStore();
+  const { fetchGuestOrders, order } = useOrderStore();
 
   const restaurantName = slug && extractNameFromSlug(String(slug));
   const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
   const totalPrice = getTotal();
 
-  // useEffect para buscar pedidos ao montar o componente
   useEffect(() => {
-    const guestId = getGuestId(); // Obtenha o guestId do cartStore
-
+    const guestId = getGuestId();
     if (guestId) {
       fetchGuestOrders(guestId, String(tableId));
     }
@@ -42,7 +39,7 @@ export default function MenuClient({ slug, initialCategories }: MenuClientProps)
     if (!product) return;
 
     const cartItem = {
-      id: product._id ?? '',
+      _id: product._id ?? '',
       name: product.name,
       price: product.price,
       quantity: newQuantity,
@@ -53,7 +50,7 @@ export default function MenuClient({ slug, initialCategories }: MenuClientProps)
     if (newQuantity === 0) {
       removeItem(id);
     } else {
-      const existingItem = items.find(item => item.id === id);
+      const existingItem = items.find(item => item._id === id);
       if (existingItem) {
         updateQuantity(id, newQuantity);
       } else {
@@ -63,11 +60,25 @@ export default function MenuClient({ slug, initialCategories }: MenuClientProps)
   };
 
   const filteredProducts = selectedCategory
-    ? products.filter(product => product.category === selectedCategory)
+    ? products.filter(product => product.category === selectedCategory || (product.isCombo && selectedCategory === 'Combos'))
     : products;
 
   const goToCart = () => {
-    router.push(`/restaurant/${slug}/${tableId}/cart`);
+    // Verifica se algum item no carrinho possui adicionais ou acompanhamentos
+    const itemWithExtras = items.find(item => {
+      const product = products.find(p => p._id === item._id);
+      return product && ((product.additionalOptions?.length ?? 0) > 0 || (product.accompaniments?.length ?? 0) > 0);
+    });
+
+    if (itemWithExtras) {
+      const product = products.find(p => p._id === itemWithExtras._id);
+      if (product) {
+        setSelectedProduct(product);
+        router.push(`/restaurant/${slug}/${tableId}/pre-order`);
+      }
+    } else {
+      router.push(`/restaurant/${slug}/${tableId}/cart`);
+    }
   };
 
   const goToOrders = () => {
@@ -100,12 +111,15 @@ export default function MenuClient({ slug, initialCategories }: MenuClientProps)
             {getCategoryName(category)}
           </Button>
         ))}
+        <Button variant={selectedCategory === 'Combos' ? 'default' : 'outline'} onClick={() => setSelectedCategory('Combos')}>
+          Combos
+        </Button>
       </div>
 
       <div className="space-y-6 mb-8">
         {selectedCategory === null ? (
           initialCategories.map(category => {
-            const categoryProducts = products.filter(product => product.category === category);
+            const categoryProducts = products.filter(product => product.category === category || (product.isCombo && category === 'Combos'));
             if (categoryProducts.length === 0) return null;
 
             return (
@@ -113,7 +127,7 @@ export default function MenuClient({ slug, initialCategories }: MenuClientProps)
                 <h2 className="text-xl font-semibold mb-4">{getCategoryName(category)}</h2>
                 <div className="grid grid-cols-1 gap-3">
                   {categoryProducts.map(product => {
-                    const cartItem = items.find(item => item.id === product._id);
+                    const cartItem = items.find(item => item._id === product._id);
                     const quantity = cartItem ? cartItem.quantity : 0;
 
                     return (
@@ -132,7 +146,7 @@ export default function MenuClient({ slug, initialCategories }: MenuClientProps)
         ) : (
           <div className="grid grid-cols-1 gap-4">
             {filteredProducts.map(product => {
-              const cartItem = items.find(item => item.id === product._id);
+              const cartItem = items.find(item => item._id === product._id);
               const quantity = cartItem ? cartItem.quantity : 0;
 
               return (
