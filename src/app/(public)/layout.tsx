@@ -14,10 +14,8 @@ export default function PublicLayout({
     params: { locale: string }
 }) {
     return (
-        <html lang={params.locale}>
-            <RootLayout>
-                {children}
-            </RootLayout>
-        </html>
+        <RootLayout params={params}>
+            {children}
+        </RootLayout>
     );
 }
