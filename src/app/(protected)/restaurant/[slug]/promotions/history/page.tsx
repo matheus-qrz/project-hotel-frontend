@@ -11,14 +11,15 @@ import { cn } from '@/lib/utils';
 import { DelayedLoading } from '@/components/loading/DelayedLoading';
 import { extractIdFromSlug } from '@/utils/slugify';
 import PromotionsPage from '@/components/promotion/PromotionsPage';
+import PromotionHistory from '@/components/promotion/PromotionHistory';
 
-export default function PromotionsManagementPage() {
+export default function PromotionHistoryPage() {
     const router = useRouter();
     const { slug } = useParams();
     const { isAuthenticated, isLoading, isAdminOrManager } = useAuthCheck();
     const { isOpen } = useSidebar();
 
-    const restaurantId = extractIdFromSlug(String(slug)) as string;
+    const restaurantId = extractIdFromSlug(String(slug));
 
     if (isLoading) {
         return <DelayedLoading />;
@@ -30,7 +31,7 @@ export default function PromotionsManagementPage() {
     }
 
     return (
-        <div className="w-full flex flex-col h-screen">
+        <div className="w-full flex flex-col h-screen overflow-x-hidden">
             <Header />
 
             <div className={cn(
@@ -41,7 +42,7 @@ export default function PromotionsManagementPage() {
 
                 <div className="flex-1 w-full overflow-auto">
                     <div className="w-full mx-auto px-6 py-4">
-                        <PromotionsPage />
+                        <PromotionHistory restaurantId={restaurantId} />
                     </div>
                 </div>
             </div>

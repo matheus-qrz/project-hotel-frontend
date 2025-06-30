@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthCheck } from '@/hooks/sessionManager';
 import { DelayedLoading } from '../loading/DelayedLoading';
+import { useAuthStore } from '@/stores';
 
 interface AuthGuardProps {
     children: React.ReactNode;
@@ -14,6 +15,7 @@ interface AuthGuardProps {
 
 export default function AuthGuard({ children, requireAuth = true, allowedRoles = [] }: AuthGuardProps) {
     const { isAuthenticated, isLoading, session } = useAuthCheck();
+    const { isTokenExpired, clear } = useAuthStore();
     const router = useRouter();
 
     useEffect(() => {

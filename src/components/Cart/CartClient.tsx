@@ -22,6 +22,7 @@ import CartItem from "@/components/cart/CartItem";
 import { formatCurrency } from "@/services/restaurant/services";
 import { useCartStore, useOrderStore } from "@/stores";
 import { extractIdFromSlug } from "@/utils/slugify";
+import { OrderItemStatus, OrderStatus } from "@/stores/order/types/order.types";
 
 export function CartClient() {
     const router = useRouter();
@@ -55,7 +56,9 @@ export function CartClient() {
         createOrder,
         requestCheckout,
         updateOrder,
-        deleteOldOrders
+        deleteOldOrders,
+        cleanUpOrders,
+        addItemsToOrder
     } = useOrderStore();
 
     const guestId = getGuestId();
@@ -78,14 +81,6 @@ export function CartClient() {
         initialSync();
     }, [restaurantId, tableId, guestId]);
 
-    // Filtra pedidos do convidado atual
-    const guestOrders = useMemo(() => {
-        const guestId = getGuestId();
-        return order.filter(order =>
-            order.guestInfo.id === guestId && ['pending', 'processing', 'completed'].includes(order.status)
-        );
-    }, [order, getGuestId]);
-
     const submitOrder = async () => {
         const guestId = getGuestId();
         if (!guestId || !guestInfo) {
@@ -97,79 +92,88 @@ export function CartClient() {
         setError(null);
 
         try {
-            // Limpar pedidos antigos antes de adicionar novos
             deleteOldOrders();
 
-            // Verifique se há um pedido ativo existente
-            const existingOrder = order.find(o => o.guestInfo.id === guestId && o.status === 'pending');
-
-            if (existingOrder) {
-                // Atualize o pedido existente
-                const updatedItems = [...existingOrder.items, ...items];
-                const updatedTotal = existingOrder.totalAmount + getTotal();
-
-                await updateOrder(String(restaurantId), String(tableId), existingOrder._id, { items: updatedItems, totalAmount: updatedTotal }); // Função para atualizar itens no backend
-
-                setOrders(
-                    order.map(o =>
-                        o._id === existingOrder._id ? { ...o, items: updatedItems, totalAmount: updatedTotal } : o
-                    )
-                );
-
-                setSubmissionSuccess(true);
-                clearCart();
-                setTimeout(() => {
-                    setSubmissionSuccess(false);
-                    router.push(`/restaurant/${slug}/${tableId}/menu`);
-                }, 3000);
-
-                return;
-            }
-
-            // Se não houver um pedido existente, crie um novo
-            const orderData = {
-                items: items.map(item => ({
-                    _id: item._id,
-                    name: item.name,
-                    price: item.price,
-                    quantity: item.quantity,
-                    image: item.image,
-                    status: item.status || 'pending'
-                })),
-                totalAmount: getTotal(),
-                meta: {
-                    tableId: Number(tableId),
-                    guestId,
-                    orderType,
-                    observations,
-                    splitCount,
-                    orderCreatedAt: new Date()
-                },
-                guestInfo: {
-                    id: guestId,
-                    name: guestInfo.name,
-                    joinedAt: guestInfo.joinedAt
-                }
-            };
-
-            const newOrder = await createOrder(
-                orderData,
-                String(restaurantId),
-                String(tableId)
+            await fetchGuestOrders(guestId, String(tableId));
+            const refreshedOrders = order;
+            const existingOrder = refreshedOrders.find(o =>
+                o.guestInfo.id === guestId &&
+                ['processing', 'payment_requested'].includes(o.status) &&
+                !o.isPaid
             );
 
-            setOrders([...order, newOrder]);
+            if (existingOrder) {
+                // Só adiciona os novos itens, sem sobrescrever os antigos
+                const newItems = items.map(item => ({
+                    ...item,
+                    status: OrderItemStatus.ADDED,
+                    createdAt: new Date(),
+                    addons: item.addons?.map(addon => ({
+                        ...addon,
+                        status: OrderItemStatus.ADDED,
+                        createdAt: new Date()
+                    }))
+                }));
 
-            setObservations("");
-            setCartObservations("");
-            setCartOrderType(orderType);
+                // ✅ Usando a função correta da store
+                await addItemsToOrder(String(restaurantId), String(tableId), existingOrder._id, newItems, getTotal());
+
+                await fetchGuestOrders(guestId, String(tableId));
+
+                console.log("caiu corretamente");
+            } else {
+                // Cria um novo pedido
+                const orderData = {
+                    items: items.map(item => ({
+                        _id: item._id,
+                        name: item.name,
+                        price: item.price,
+                        quantity: item.quantity,
+                        status: OrderItemStatus.ADDED,
+                        createdAt: new Date(),
+                        addons: item.addons?.map(addon => ({
+                            ...addon,
+                            status: OrderItemStatus.ADDED,
+                            createdAt: new Date()
+                        })),
+                        observations: item.observations
+                    })),
+                    totalAmount: getTotal(),
+                    status: OrderStatus.PROCESSING,
+                    meta: {
+                        tableId: Number(tableId),
+                        guestId,
+                        orderType,
+                        observations,
+                        splitCount,
+                        orderCreatedAt: new Date()
+                    },
+                    guestInfo: {
+                        id: guestId,
+                        name: guestInfo.name,
+                        joinedAt: guestInfo.joinedAt
+                    }
+                };
+
+                const newOrder = await createOrder(
+                    orderData,
+                    String(restaurantId),
+                    String(tableId)
+                );
+
+                setOrders([...order, newOrder]);
+
+                await fetchGuestOrders(guestId, String(tableId));
+            }
 
             setSubmissionSuccess(true);
             clearCart();
+            cleanUpOrders();
             setTimeout(() => {
                 setSubmissionSuccess(false);
                 router.push(`/restaurant/${slug}/${tableId}/menu`);
-            }, 3000);
+            }, 2000);
+
         } catch (error) {
             console.error("Erro ao enviar pedido:", error);
             setError("Falha ao enviar pedido. Tente novamente.");
@@ -178,7 +182,22 @@ export function CartClient() {
         }
     };
 
+
+    useEffect(() => {
+        const guestId = getGuestId();
+        if (guestId && tableId) {
+            fetchGuestOrders(guestId, String(tableId));
+
+            const syncInterval = setInterval(() => {
+                fetchGuestOrders(guestId, String(tableId));
+            }, 30000); // Sincroniza a cada 30 segundos
+
+            return () => clearInterval(syncInterval);
+        }
+    }, [tableId, getGuestId]);
+
     const finalizeOrder = async () => {
+        const orderId = order[0]._id
         const guestId = getGuestId();
         if (!guestId || !tableId) {
             setError("Informações incompletas para fechamento");
@@ -187,7 +206,7 @@ export function CartClient() {
 
         setIsFinalizingOrder(true);
         try {
-            await requestCheckout(String(tableId), String(restaurantId), guestId, splitCount);
+            await requestCheckout([String(orderId)], String(guestId), String(restaurantId), String(tableId), splitCount);
             setShowFinishDialog(false);
             clearCart();
             router.push(`/restaurant/${slug}/${tableId}/payment-requested`);
@@ -275,7 +294,7 @@ export function CartClient() {
                         image={item.image}
                         price={item.price}
                         quantity={item.quantity}
-                        status={item.status || 'pending'}
+                        itemStatus={item.status || OrderItemStatus.PROCESSING}
                         guestId={getGuestId() || ''}
                     />
                 ))}
@@ -331,7 +350,7 @@ export function CartClient() {
                             onClick={submitOrder}
                             disabled={isSubmitting || items.length === 0}
                             variant="default"
-                            className="flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-secondary shadow-lg flex-1"
+                            className="flexx items-center gap-2 px-6 py-3 rounded-full bg-primary text-secondary shadow-lg flex-1"
                         >
                             {isSubmitting ? (
                                 "Enviando..."
@@ -386,4 +405,6 @@ export function CartClient() {
         </div>
     );
 }
+
+
 

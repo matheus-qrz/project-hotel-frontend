@@ -48,8 +48,8 @@ export default function Dashboard() {
                 </Button>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <ChartCard icon="circle-dollar-sign" percentValue="10,8" totalReceipt="1.531,40" />
-                <InformativeCard icon="shopping-bag" canceled={8} quantity={9} inProduction={4} />
+                <ChartCard />
+                <InformativeCard />
               </div>
             </section>
           </div>

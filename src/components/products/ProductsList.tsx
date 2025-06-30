@@ -436,8 +436,8 @@ export default function ProductsList({ slug }: ProductsListProps) {
                                                             formatCurrency={formatCurrency}
                                                             isPromotionActive={isPromotionActive}
                                                             getDiscountPercentage={getDiscountPercentage}
-                                                            onEditClick={() => router.push(`/restaurant/${restaurantId}/products/${product._id}/edit`)}
-                                                            onPromotionClick={() => router.push(`/restaurant/${restaurantId}/products/${product._id}/promotion`)}
+                                                            onEditClick={() => router.push(`/restaurant/${slug}/products/${product._id}/edit`)}
+                                                            onPromotionClick={() => router.push(`/restaurant/${slug}/products/${product._id}/promotion`)}
                                                             onDeleteClick={() => handleDeleteClick(product)}
                                                         />
                                                     ))}
@@ -454,8 +454,8 @@ export default function ProductsList({ slug }: ProductsListProps) {
                                                     formatCurrency={formatCurrency}
                                                     isPromotionActive={isPromotionActive}
                                                     getDiscountPercentage={getDiscountPercentage}
-                                                    onEditClick={() => router.push(`/restaurant/${restaurantId}/products/${product._id}/edit`)}
-                                                    onPromotionClick={() => router.push(`/restaurant/${restaurantId}/products/${product._id}/promotion`)}
+                                                    onEditClick={() => router.push(`/restaurant/${slug}/products/${product._id}/edit`)}
+                                                    onPromotionClick={() => router.push(`/restaurant/${slug}/products/${product._id}/promotion`)}
                                                     onDeleteClick={() => handleDeleteClick(product as Product)}
                                                 />
                                             ))}

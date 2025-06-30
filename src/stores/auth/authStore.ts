@@ -36,6 +36,8 @@ interface AuthState {
     createGuestToken: () => string;
 }
 
+const SESSION_DURATION = 14 * 60 * 60 * 1000; // 14 horas em milissegundos
+
 export const useAuthStore = create<AuthState>()(
     persist(
         (set, get) => ({
@@ -62,7 +64,7 @@ export const useAuthStore = create<AuthState>()(
 
             setToken: (token, expiry) => set({
                 token,
-                tokenExpiry: expiry || Date.now() + 24 * 60 * 60 * 1000,
+                tokenExpiry: expiry || Date.now() + SESSION_DURATION,
                 isGuest: token.startsWith('guest_')
             }),
 
@@ -70,10 +72,7 @@ export const useAuthStore = create<AuthState>()(
 
             updateFromSession: (session) => {
                 if (session) {
-                    let expiry = null;
-                    if (session.expires) {
-                        expiry = new Date(session.expires).getTime();
-                    }
+                    const expiry = Date.now() + SESSION_DURATION;
 
                     set({
                         restaurantId: session.user?.restaurantId || null,

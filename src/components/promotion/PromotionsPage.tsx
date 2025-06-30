@@ -6,7 +6,7 @@ import { Product, useProductStore } from '@/stores/products';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { PromotionCard } from './PromotionCard';
-import { CategoryPromotionCard } from './CategoryPromotionCard';
+import { CategoryPromotionSection } from './CategoryPromotionSession';
 import { useParams, useRouter } from 'next/navigation';
 import { extractIdFromSlug } from '@/utils/slugify';
 import { useToast } from '@/hooks/useToast';
@@ -104,8 +104,8 @@ export default function PromotionsPage() {
         <div className="container mx-auto p-6">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold">Gerenciar Promoções</h1>
-                <Button onClick={() => router.push(`/restaurant/${slug}/promotions/category`)}>
-                    Nova Promoção por Categoria
+                <Button onClick={() => router.push(`/restaurant/${slug}/promotions/history`)}>
+                    Histórico de Promoções
                 </Button>
             </div>
 
@@ -140,14 +140,19 @@ export default function PromotionsPage() {
                 </TabsContent>
 
                 <TabsContent value="categories">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {categories.map(category => (
-                            <CategoryPromotionCard
-                                key={category}
-                                category={category}
-                                products={products.filter(p => p.category === category)}
-                            />
-                        ))}
+                    <div className="container mx-auto p-6">
+                        <div className="space-y-6">
+                            {categories.map(category => (
+                                <CategoryPromotionSection
+                                    key={category}
+                                    category={category}
+                                    products={products.filter(p => p.category === category)}
+                                    onApplyPromotion={() => {
+                                        router.push(`/restaurant/${slug}/promotions/category/${category}`);
+                                    }}
+                                />
+                            ))}
+                        </div>
                     </div>
                 </TabsContent>
             </Tabs>

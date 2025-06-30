@@ -38,6 +38,8 @@ const OrdersScreen = () => {
     }, [guestId, tableId]);
 
     const handleCheckout = async () => {
+        const orderId = order[0]._id;
+
         if (!guestId || !tableId) {
             console.error("Informações incompletas para fechamento");
             return;
@@ -45,7 +47,7 @@ const OrdersScreen = () => {
 
         setIsFinalizingOrder(true);
         try {
-            await requestCheckout(String(tableId), String(restaurantId), String(guestId));
+            await requestCheckout([String(orderId)], String(guestId), String(restaurantId), String(tableId), splitCount);
             router.push(`/restaurant/${slug}/${tableId}/payment-requested`);
         } catch (error) {
             console.error("Erro ao solicitar fechamento:", error);

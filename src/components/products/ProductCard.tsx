@@ -11,7 +11,7 @@ interface ProductCardProps {
     onQuantityChange: (productId: string, quantity: number) => void;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, quantity, onQuantityChange }) => {
+export const ProductCard: React.FC<ProductCardProps> = ({ product, quantity, onQuantityChange }) => {
     const increaseQuantity = () => {
         onQuantityChange(String(product._id), quantity + 1);
     };
@@ -34,7 +34,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, quantity, onQuantity
     };
 
     return (
-        <Card className="overflow-hidden h-full flex flex-col border border-gray-300 shadow-md">
+        <Card className={`overflow-hidden h-full flex flex-col border border-gray-300 shadow-md ${product.isOnPromotion ? 'bg-red-50' : ''}`}>
             {product.image && (
                 <div className="relative h-24 w-full">
                     <Image
@@ -53,10 +53,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, quantity, onQuantity
                 </div>
 
                 <div className="flex justify-between items-center mt-auto">
-                    <span className="font-bold">
-                        {product.isCombo ? 'Combo: ' : ''}
-                        {formatPrice(product.price)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                        {product.isOnPromotion && product.price && (
+                            <span className="text-gray-500 line-through">
+                                {formatPrice(product.price)}
+                            </span>
+                        )}
+                        <span className={`font-bold ${product.isOnPromotion ? 'text-red-600' : ''}`}>
+                            {formatPrice(product.price)}
+                        </span>
+                    </div>
 
                     <div className="flex items-center gap-2">
                         {quantity > 0 ? (
@@ -71,7 +77,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, quantity, onQuantity
                                         <Trash2 size={14} />
                                     </Button>
                                 )}
-
                                 <div className="flex items-center">
                                     <Button
                                         variant="outline"
@@ -81,9 +86,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, quantity, onQuantity
                                     >
                                         <Minus size={14} />
                                     </Button>
-
                                     <span className="mx-2 w-6 text-center">{quantity}</span>
-
                                     <Button
                                         variant="outline"
                                         size="icon"
@@ -109,5 +112,3 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, quantity, onQuantity
         </Card>
     );
 };
-
-export default ProductCard;

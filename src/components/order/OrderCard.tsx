@@ -20,6 +20,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useParams } from 'next/navigation';
+import Image from 'next/image';
 
 interface OrderCardProps {
     order: Order;
@@ -44,7 +45,12 @@ export function OrderCard({ order, className, onStatusUpdate }: OrderCardProps) 
 
         setIsUpdating(true);
         try {
-            await updateOrder(String(restaurantId), String(order.meta.tableId), order._id, 'cancelled');
+            await updateOrder(
+                String(restaurantId),
+                String(order.meta.tableId),
+                order._id,
+                { status: 'cancelled' }
+            );
             onStatusUpdate?.();
         } catch (error) {
             console.error('Erro ao cancelar pedido:', error);
@@ -68,7 +74,7 @@ export function OrderCard({ order, className, onStatusUpdate }: OrderCardProps) 
         }
     };
 
-    const canCancel = order.status === 'pending' || order.status === 'processing';
+    const canCancel = order.status === 'processing';
 
     const renderOrderItems = (items: OrderItem[]) => {
         return items.map(item => {
@@ -79,12 +85,7 @@ export function OrderCard({ order, className, onStatusUpdate }: OrderCardProps) 
             return (
                 <div key={item.id} className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
-                        <img
-                            src={item.image}
-                            alt={item.name}
-                            className="w-16 h-16 rounded object-cover"
-                        />
-                        <div>
+                        <div className='flex flex-col items-start justify-start py-4'>
                             <h3 className={`font-medium ${colorClass}`}>{item.name}</h3>
                             <p className="text-sm text-gray-500">
                                 {new Intl.NumberFormat('pt-BR', {
@@ -94,7 +95,7 @@ export function OrderCard({ order, className, onStatusUpdate }: OrderCardProps) 
                             </p>
                         </div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center justify-center space-x-2">
                         <span className={`text-sm font-medium ${colorClass}`}>
                             Quantidade: {item.quantity}
                         </span>
@@ -141,7 +142,6 @@ export function OrderCard({ order, className, onStatusUpdate }: OrderCardProps) 
                     {new Date(order.createdAt).toLocaleTimeString()}
                 </div>
                 <Badge variant="secondary" className={cn(
-                    order.status === 'pending' && "bg-yellow-200 text-yellow-800",
                     order.status === 'processing' && "bg-blue-200 text-blue-800",
                     order.status === 'completed' && "bg-green-200 text-green-800",
                     order.status === 'cancelled' && "bg-red-200 text-red-800"

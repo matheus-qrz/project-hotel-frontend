@@ -6,9 +6,10 @@ import { useSidebar } from "../ui/sidebar";
 import { useRestaurantStore } from "@/stores";
 import { useEffect } from "react";
 import { extractNameFromSlug } from "@/utils/slugify";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 export default function Header() {
+    const route = useRouter();
     const { toggle, isOpen } = useSidebar();
     const { slug } = useParams();
     const { restaurant, fetchRestaurantData } = useRestaurantStore();
@@ -46,7 +47,7 @@ export default function Header() {
                 <span className="sr-only">Toggle Sidebar</span>
             </Button>
 
-            <h2 className="text-xl text-primary font-medium text-center">{displayName}</h2>
+            <h2 className="text-xl text-primary font-medium text-center cursor-pointer" onClick={() => route.push(`/restaurant/${slug}/dashboard`)}>{displayName}</h2>
 
             <Button
                 variant="outline"

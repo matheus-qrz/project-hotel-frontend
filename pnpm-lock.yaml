@@ -104,6 +104,9 @@ importers:
       html-to-image:
         specifier: ^1.11.13
         version: 1.11.13
+      idb:
+        specifier: ^8.0.3
+        version: 8.0.3
       jose:
         specifier: ^5.9.6
         version: 5.10.0
@@ -2221,6 +2224,9 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  idb@8.0.3:
+    resolution: {integrity: sha512-LtwtVyVYO5BqRvcsKuB2iUMnHwPVByPCXFXOpuU96IZPPoPN6xjOGxZQ74pgSVVLQWtUOYgyeL4GE98BY5D3wg==}
 
   ignore@5.3.2:
     resolution: {integrity: sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g==}
@@ -5592,6 +5598,8 @@ snapshots:
       '@babel/runtime': 7.27.0
     optionalDependencies:
       typescript: 5.8.3
+
+  idb@8.0.3: {}
 
   ignore@5.3.2: {}
 

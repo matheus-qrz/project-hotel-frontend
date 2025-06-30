@@ -1,4 +1,7 @@
-import React from 'react'
+// InformativeCard.tsx
+'use client';
+
+import React, { useEffect } from 'react'
 import { ShoppingBag, TrendingUp } from 'lucide-react';
 import {
     Card,
@@ -7,29 +10,26 @@ import {
     CardTitle,
 } from "../ui/card"
 import { Chart } from '../charts';
-import { chartConfig } from './ChartCard';
+import { useDashboardStore } from '@/stores';
+import { extractIdFromSlug } from '@/utils/slugify';
+import { useParams } from 'next/navigation';
 
-interface InformativeCardProps {
-    icon: string;
-    canceled: number;
-    quantity: number;
-    inProduction: number;
-}
+export default function InformativeCard() {
+    const { slug } = useParams();
+    const { orders, fetchOrdersData } = useDashboardStore();
+    const restaurantId = slug && extractIdFromSlug(String(slug));
 
-export default function InformativeCard({
-    icon,
-    canceled,
-    quantity,
-    inProduction,
-}: InformativeCardProps) {
-    const pedidosData = [
-        { name: "Abr", value: 140 },
-        { name: "Mai", value: 5 },
-        { name: "Jun", value: 100 },
-        { name: "Jul", value: 93 },
-        { name: "Ago", value: 74 },
-        { name: "Set", value: 5 }
-    ];
+    useEffect(() => {
+        if (restaurantId) {
+            fetchOrdersData(restaurantId);
+        }
+    }, [restaurantId]);
+
+    // Formatando dados para o formato esperado pelo Chart
+    const chartData = orders.ordersByMonth?.map(item => ({
+        name: item.month,
+        value: item.value
+    })) || [];
 
     return (
         <Card className="overflow-hidden border border-border bg-background">
@@ -50,7 +50,7 @@ export default function InformativeCard({
                         <p className="text-sm text-gray-500">Realizados hoje</p>
                         <p className="flex items-center justify-center gap-1 text-green-500 font-medium">
                             <TrendingUp size={16} />
-                            {quantity}
+                            {orders.inProgress + orders.approved}
                         </p>
                     </div>
                     <div className="h-8 border-r border-border"></div>
@@ -58,7 +58,7 @@ export default function InformativeCard({
                         <p className="text-sm text-gray-500">Cancelados</p>
                         <p className="flex items-center justify-center gap-1 text-red-600 font-medium">
                             <TrendingUp size={16} />
-                            {canceled}
+                            {orders.cancelled}
                         </p>
                     </div>
                     <div className="h-8 border-r border-border"></div>
@@ -66,14 +66,20 @@ export default function InformativeCard({
                         <p className="text-sm text-gray-500">Em produção</p>
                         <p className="flex items-center justify-center gap-1 text-yellow-600 font-medium">
                             <TrendingUp size={16} />
-                            {inProduction}
+                            {orders.inProgress}
                         </p>
                     </div>
                 </div>
                 <div className="p-4">
                     <p className="text-sm font-medium mb-4">Quantidade de pedidos realizados nos últimos 6 meses</p>
                     <div className="h-56 w-full">
-                        <Chart data={pedidosData} barColor='#274754' highlightColor='#E8C468' currentMonth='Mar' valuePrefix='' />
+                        <Chart
+                            data={chartData}
+                            barColor='#274754'
+                            highlightColor='#E8C468'
+                            currentMonth={new Date().toLocaleString('pt-BR', { month: 'short' })}
+                            valuePrefix=''
+                        />
                     </div>
                 </div>
             </CardContent>

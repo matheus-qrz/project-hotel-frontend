@@ -3,7 +3,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useCartStore } from '@/stores/cart';
 import { useProductStore } from '@/stores/products';
 import { useOrderStore } from '@/stores';
-import ProductCard from '@/components/products/ProductCard';
+import { ProductCard } from '@/components/products/ProductCard';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart } from 'lucide-react';
 import { extractNameFromSlug } from '@/utils/slugify';
@@ -14,6 +14,39 @@ interface MenuClientProps {
   slug: string;
   initialCategories: string[];
 }
+
+const CATEGORIES = [
+  { id: 'accompaniments', name: 'Acompanhamentos' },
+  { id: 'appetizers', name: 'Entradas' },
+  { id: 'main', name: 'Pratos Principais' },
+  { id: 'pizzas', name: 'Pizzas' },
+  { id: 'burgers', name: 'Hambúrgueres' },
+  { id: 'pastas', name: 'Massas' },
+  { id: 'grills', name: 'Grelhados' },
+  { id: 'seafood', name: 'Frutos do Mar' },
+  { id: 'healthy', name: 'Saudável' },
+  { id: 'sides', name: 'Acompanhamentos' },
+  { id: 'specials', name: 'Especiais' },
+  { id: 'vegan', name: 'Vegano' },
+  { id: 'gluten-free', name: 'Sem Glúten' },
+  { id: 'breakfast', name: 'Café da Manhã' },
+  { id: 'snacks', name: 'Lanches' },
+  { id: 'snacks2', name: 'Petiscos' },
+  { id: 'salads', name: 'Saladas' },
+  { id: 'addOns', name: 'Adicionais' },
+  { id: 'soups', name: 'Sopas' },
+  { id: 'international', name: 'Internacional' },
+  { id: 'kids', name: 'Menu Infantil' },
+  { id: 'cocktails', name: 'Coquetéis' },
+  { id: 'smoothies', name: 'Smoothies' },
+  { id: 'teas', name: 'Chás' },
+  { id: 'coffees', name: 'Cafés' },
+  { id: 'wines', name: 'Vinhos' },
+  { id: 'beers', name: 'Cervejas' },
+  { id: 'spirits', name: 'Destilados' },
+  { id: 'drinks', name: 'Bebidas' },
+  { id: 'desserts', name: 'Sobremesas' },
+];
 
 export default function MenuClient({ slug, initialCategories }: MenuClientProps) {
   const { tableId } = useParams();
@@ -44,7 +77,7 @@ export default function MenuClient({ slug, initialCategories }: MenuClientProps)
       price: product.price,
       quantity: newQuantity,
       image: product.image ?? '',
-      status: "pending" as "pending",
+      status: "processing" as "processing",
     };
 
     if (newQuantity === 0) {
@@ -118,13 +151,13 @@ export default function MenuClient({ slug, initialCategories }: MenuClientProps)
 
       <div className="space-y-6 mb-8">
         {selectedCategory === null ? (
-          initialCategories.map(category => {
-            const categoryProducts = products.filter(product => product.category === category || (product.isCombo && category === 'Combos'));
+          CATEGORIES.map(category => {
+            const categoryProducts = products.filter(product => product.category === category.id || (product.isCombo && category.id === 'Combos'));
             if (categoryProducts.length === 0) return null;
 
             return (
-              <div key={category} className="mb-8">
-                <h2 className="text-xl font-semibold mb-4">{getCategoryName(category)}</h2>
+              <div key={category.id} className="mb-8">
+                <h2 className="text-xl font-semibold mb-4">{getCategoryName(category.id)}</h2>
                 <div className="grid grid-cols-1 gap-3">
                   {categoryProducts.map(product => {
                     const cartItem = items.find(item => item._id === product._id);

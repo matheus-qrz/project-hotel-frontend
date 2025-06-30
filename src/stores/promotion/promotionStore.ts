@@ -1,5 +1,6 @@
 // stores/promotionStore.ts
 import { create } from 'zustand';
+import { useAuthStore } from '../auth';
 
 interface Promotion {
     _id: string;
@@ -55,6 +56,7 @@ interface PromotionStore {
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const token = useAuthStore.getState().token;
 
 export const usePromotionStore = create<PromotionStore>((set, get) => ({
     promotions: [],
@@ -93,7 +95,10 @@ export const usePromotionStore = create<PromotionStore>((set, get) => ({
         try {
             const response = await fetch(`${API_URL}/promotions`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify(promotionData)
             });
 
@@ -114,7 +119,10 @@ export const usePromotionStore = create<PromotionStore>((set, get) => ({
         try {
             const response = await fetch(`${API_URL}/promotions/${id}`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify(updates)
             });
 
