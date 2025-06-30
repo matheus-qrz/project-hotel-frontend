@@ -89,10 +89,37 @@ export function AdminLogin() {
     };
 
     return (
-        <div className="flex min-h-screen w-full">
-            {/* Lado esquerdo - formulário */}
+        <div className="flex flex-col md:flex-row min-h-screen w-full">
+            {/* Lado esquerdo - logo */}
+            <div className="flex flex-col h-64 md:min-h-screen md:w-2/3 bg-black items-center justify-center p-8 relative">
+                <div className="text-center">
+                    <Image
+                        src="/Logo.svg"
+                        alt="SR. GARÇOM"
+                        width={400}
+                        height={150}
+                        className="mx-auto"
+                    />
+                </div>
+
+                <div className="absolute bottom-4 text-center text-white text-xs px-8 space-y-8">
+                    <p>
+                        Ao entrar você concorda com os {' '}
+                        <Link href="/termos" className="underline">
+                            Termos de uso
+                        </Link>
+                        {' '}e as{' '}
+                        <Link href="/privacidade" className="underline">
+                            Política de privacidade
+                        </Link>
+                    </p>
+                </div>
+            </div>
+
+
+            {/* Lado direito - formulário */}
             <div className="w-full md:w-1/3 p-8 flex items-center justify-center bg-white">
-                <div className="w-full max-w-md space-y-6">
+                <div className="w-full max-w-md space-y-10">
                     <form onSubmit={handleSubmit} className="space-y-4">
                         {error && (
                             <div className="p-3 text-sm bg-red-50 border border-red-200 text-red-600 rounded">
@@ -158,32 +185,6 @@ export function AdminLogin() {
                             Criar uma conta agora
                         </Link>
                     </div>
-                </div>
-            </div>
-
-            {/* Lado direito - logo */}
-            <div className="hidden md:flex md:w-2/3 bg-black items-center justify-center p-8 relative">
-                <div className="text-center">
-                    <Image
-                        src="/Logo.svg"
-                        alt="SR. GARÇOM"
-                        width={400}
-                        height={150}
-                        className="mx-auto"
-                    />
-                </div>
-
-                <div className="absolute bottom-4 text-center text-white text-xs px-8">
-                    <p>
-                        Ao entrar você concorda com os {' '}
-                        <Link href="/termos" className="underline">
-                            Termos de uso
-                        </Link>
-                        {' '}e as{' '}
-                        <Link href="/privacidade" className="underline">
-                            Política de privacidade
-                        </Link>
-                    </p>
                 </div>
             </div>
         </div>

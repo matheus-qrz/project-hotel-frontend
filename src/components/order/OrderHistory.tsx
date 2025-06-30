@@ -12,7 +12,7 @@ interface OrderHistoryProps {
     slug: string;
 }
 
-type OrderStatus = 'pending' | 'processing' | 'completed' | 'cancelled' | 'payment_requested' | 'paid';
+type OrderStatus = 'processing' | 'completed' | 'cancelled' | 'payment_requested' | 'paid';
 
 const StatusTexts = {
     pending: 'Pendente',

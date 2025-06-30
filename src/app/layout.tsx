@@ -9,6 +9,7 @@ export default function AppLayout({
 }: {
     children: ReactNode
 }) {
+
     return (
         <Providers>
             {children}

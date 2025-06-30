@@ -97,7 +97,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         set({ loading: true, error: null });
 
         try {
-            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products/`, {
+            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
@@ -182,6 +182,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
     updateProduct: async (id: string, product: Partial<Product>, restaurantId: string) => {
         set({ loading: true, error: null });
+        console.log("token>", token)
 
         try {
             const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products/${id}/update`, {

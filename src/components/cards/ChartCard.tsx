@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { CircleDollarSign, TrendingUp } from 'lucide-react';
 import {
     Card,
@@ -9,34 +9,38 @@ import {
     CardTitle,
 } from "../ui/card";
 import { Chart } from '../charts';
+import { useDashboardStore } from '@/stores';
+import { useParams } from 'next/navigation';
+import { extractIdFromSlug } from '@/utils/slugify';
+import { formatCurrency } from '@/services/restaurant/services';
+import { DelayedLoading } from '../loading/DelayedLoading';
 
-// Configuração do gráfico
-export const chartConfig = {
-    month: {
-        label: "Mês anterior",
-        color: "#3b82f6", // blue-500
-    },
-};
+export default function ChartCard() {
+    const { slug } = useParams();
+    const { financial, fetchFinancialData, isLoading, error } = useDashboardStore();
+    const restaurantId = slug && extractIdFromSlug(String(slug));
 
-interface ChartCardProps {
-    icon: string;
-    percentValue: string;
-    totalReceipt: string;
-}
+    useEffect(() => {
+        if (restaurantId) {
+            fetchFinancialData(restaurantId);
+        }
+    }, [restaurantId, fetchFinancialData]);
 
-export default function ChartCard({
-    icon,
-    percentValue,
-    totalReceipt,
-}: ChartCardProps) {
-    const faturamentoData = [
-        { name: "Abr", value: 437.90 },
-        { name: "Mai", value: 100.98 },
-        { name: "Jun", value: 387.79 },
-        { name: "Jul", value: 303.75 },
-        { name: "Ago", value: 200.00 },
-        { name: "Set", value: 100.98 }
-    ];
+    // Calcular variação percentual
+    const currentRevenue = financial.revenue;
+    const previousRevenue = financial.monthlyRevenue[financial.monthlyRevenue.length - 2]?.value || 0;
+    const percentageChange = previousRevenue ?
+        ((currentRevenue - previousRevenue) / previousRevenue * 100) :
+        0;
+
+    // Formatando dados para o Chart
+    const chartData = financial.monthlyRevenue?.map(item => ({
+        name: item.month,
+        value: item.value
+    })) || [];
+
+    if (isLoading) return <DelayedLoading />;
+    if (error) return <div>Erro ao carregar dados: {error}</div>;
 
     return (
         <Card className="overflow-hidden border h-full border-border bg-background">
@@ -55,23 +59,29 @@ export default function ChartCard({
                 <div className="flex justify-between items-center p-2 border-y border-border">
                     <div>
                         <p className="text-sm text-gray-500">Em relação ao mês passado</p>
-                        <p className="flex items-center gap-1 text-green-500 font-medium">
+                        <p className={`flex items-center gap-1 font-medium ${percentageChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                             <TrendingUp size={16} />
-                            {percentValue}%
+                            {percentageChange.toFixed(1)}%
                         </p>
                     </div>
                     <div className="h-8 border-r border-border"></div>
                     <div>
-                        <p className="text-sm text-gray-500 text-right">Receita total (R$)</p>
+                        <p className="text-sm text-gray-500 text-right">Receita total</p>
                         <p className="text-green-500 font-medium text-right">
-                            R$ {totalReceipt}
+                            {formatCurrency(currentRevenue)}
                         </p>
                     </div>
                 </div>
                 <div className="p-4">
                     <p className="text-sm font-medium mb-2">Faturamento dos últimos 6 meses</p>
                     <div className="h-56 w-full">
-                        <Chart data={faturamentoData} barColor="#14b8a6" highlightColor="#f97316" valuePrefix='R$' />
+                        <Chart
+                            data={chartData}
+                            barColor="#14b8a6"
+                            highlightColor="#f97316"
+                            valuePrefix='R$ '
+                            currentMonth={new Date().toLocaleString('pt-BR', { month: 'short' })}
+                        />
                     </div>
                 </div>
             </CardContent>

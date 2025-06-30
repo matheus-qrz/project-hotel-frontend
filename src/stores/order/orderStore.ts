@@ -2,11 +2,12 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { CartItemProps } from '../cart';
 import { useAuthStore } from '../auth';
+import { OrderItemStatus, OrderItemStatusType, OrderStatus, OrderStatusType, OrderType } from './types/order.types';
 
-interface OrderMetadata {
+export interface OrderMetadata {
     tableId: number;
     guestId: string;
-    orderType: 'local' | 'takeaway';
+    orderType: OrderType;
     observations?: string;
     splitCount?: number;
     paymentMethod?: string;
@@ -15,11 +16,25 @@ interface OrderMetadata {
     orderCreatedAt: Date;
 }
 
+// Interface para métricas financeiras (opcional para clientes)
+export interface FinancialMetrics {
+    costPrice?: number;
+    profit?: number;
+    promotionalDiscount?: number;
+}
+
+export interface OrderItem extends CartItemProps {
+    itemStatus?: OrderItemStatusType;
+    createdAt?: Date;
+    _id: string;
+}
+
+// Interface base do Order
 export interface Order {
     _id: string;
-    items: CartItemProps[];
+    items: OrderItem[];
     totalAmount: number;
-    status: 'pending' | 'processing' | 'completed' | 'cancelled' | 'payment_requested' | 'paid';
+    status: OrderStatusType;
     isPaid: boolean;
     meta: OrderMetadata;
     guestInfo: {
@@ -29,9 +44,11 @@ export interface Order {
     };
     createdAt: Date;
     updatedAt: Date;
+    financialMetrics?: FinancialMetrics; // Opcional para clientes
 }
 
-interface CreateOrderData {
+// Interface para criação de pedido (mantém a estrutura original)
+export interface CreateOrderData {
     items: CartItemProps[];
     totalAmount: number;
     meta: OrderMetadata;
@@ -42,7 +59,7 @@ interface CreateOrderData {
     };
 }
 
-interface OrderStats {
+export interface OrderStats {
     inProgress: number;
     approved: {
         count: number;
@@ -71,7 +88,7 @@ interface OrderStore {
     fetchTableOrders: (restaurantId: string, tableId: string, guestId: string) => Promise<void>;
     fetchOrderStats: (unitId: string) => Promise<void>;
     fetchRestaurantUnitOrders: (restaurantId: string, unitId?: string) => Promise<void>;
-    requestCheckout: (tableId: string, restaurantId: string, guestId: string, splitCount?: number) => Promise<void>;
+    requestCheckout: (orderIds: string[], guestId: string, restaurantId: string, tableId: string, splitCount?: number) => Promise<void>;
     processPayment: (orderId: string, paymentData: {
         paymentMethod: string;
         processedBy?: string;
@@ -80,13 +97,94 @@ interface OrderStore {
     }) => Promise<void>;
     cancelOrder: (orderId: string, restaurantId: string, tableId: string) => Promise<void>;
     cancelOrderItem: (orderId: string, itemId: string, restaurantId: string, tableId: string) => Promise<void>;
+    addItemsToOrder: (restaurantId: string, tableId: string, orderId: string, items: CartItemProps[], totalAmount: number) => Promise<void>;
+    updateOrderItem: (
+        restaurantId: string,
+        tableId: string,
+        orderId: string,
+        itemId: string,
+        updates: {
+            quantity?: number;
+            observations?: string;
+        }
+    ) => Promise<void>;
     updateOrder: (restaurantId: string, tableId: string, orderId: string, updatedData: Partial<Order>) => Promise<void>;
     getTableTotal: (guestId?: string) => number;
     getAmountPerPerson: (splitCount: number, guestId?: string) => number;
-    deleteOldOrders: () => void;  // Função para limpar pedidos antigos
+    deleteOldOrders: () => void;
+    cleanUpOrders: () => void;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+const token = useAuthStore.getState().token
+
+const customStorage = {
+    getItem: async (name: string) => {
+        try {
+            // Pega apenas pedidos ativos (não pagos e não cancelados)
+            const value = sessionStorage.getItem(name);
+            if (!value) return null;
+
+            const data = JSON.parse(value);
+            const activeOrders = data.state.order.filter((order: Order) =>
+                !order.isPaid &&
+                order.status !== OrderStatus.CANCELLED &&
+                order.status !== OrderStatus.COMPLETED
+            );
+
+            return JSON.stringify({
+                ...data,
+                state: { ...data.state, order: activeOrders }
+            });
+        } catch (error) {
+            console.warn('Erro ao ler storage:', error);
+            return null;
+        }
+    },
+
+    setItem: async (name: string, value: string) => {
+        try {
+            // Armazena apenas dados essenciais dos pedidos ativos
+            const data = JSON.parse(value);
+            const activeOrders = data.state.order.filter((order: Order) =>
+                !order.isPaid &&
+                order.status !== OrderStatus.CANCELLED &&
+                order.status !== OrderStatus.COMPLETED
+            ).map((order: Order) => ({
+                _id: order._id,
+                items: order.items,
+                totalAmount: order.totalAmount,
+                status: order.status,
+                isPaid: order.isPaid,
+                meta: {
+                    tableId: order.meta.tableId,
+                    guestId: order.meta.guestId,
+                    orderType: order.meta.orderType,
+                    orderCreatedAt: order.meta.orderCreatedAt
+                },
+                guestInfo: {
+                    id: order.guestInfo.id,
+                    name: order.guestInfo.name
+                }
+            }));
+
+            sessionStorage.setItem(name, JSON.stringify({
+                ...data,
+                state: { ...data.state, order: activeOrders }
+            }));
+        } catch (error) {
+            console.warn('Erro ao salvar no storage:', error);
+        }
+    },
+
+    removeItem: async (name: string) => {
+        try {
+            sessionStorage.removeItem(name);
+        } catch (error) {
+            console.warn('Erro ao remover do storage:', error);
+        }
+    }
+};
 
 export const useOrderStore = create(
     persist<OrderStore>(
@@ -96,33 +194,53 @@ export const useOrderStore = create(
             error: null,
             stats: null,
 
-            setOrders: (orders) => set({ order: orders }),
+
+            setOrders: (orders) => {
+                const activeOrders = orders.filter(order =>
+                    !order.isPaid &&
+                    order.status !== OrderStatus.CANCELLED)
+                    .sort((a, b) => new Date(b.createdAt)
+                        .getTime() - new Date(a.createdAt)
+                            .getTime());
+
+                set({ order: activeOrders });
+            },
+
+            cleanCompletedOrders: () => {
+                set(state => ({
+                    order: state.order.filter(order =>
+                        order.status !== OrderStatus.CANCELLED &&
+                        order.status !== OrderStatus.COMPLETED &&
+                        !order.isPaid
+                    )
+                }));
+            },
 
             createOrder: async (orderData: CreateOrderData, restaurantId: string, tableId: string, unitId?: string) => {
                 set({ isLoading: true, error: null });
                 try {
-                    const token = localStorage.getItem('auth_token') || localStorage.getItem('guest_token');
-                    const establishmentId = restaurantId || unitId;
-
                     const payload = {
                         ...orderData,
-                        status: 'pending',
+                        status: OrderStatus.PROCESSING,
                         isPaid: false,
-                        restaurantId: unitId ? undefined : restaurantId,
-                        restaurantUnitId: unitId,
+                        items: orderData.items.map(item => ({
+                            ...item,
+                            status: OrderItemStatus.ADDED
+                        })),
+                        restaurantUnitId: unitId || restaurantId,
                         meta: {
                             ...orderData.meta,
                             tableId: Number(tableId),
                             guestId: orderData.guestInfo.id,
                             orderCreatedAt: new Date()
-                        },
+                        }
                     };
 
-                    const response = await fetch(`${API_URL}/restaurant/${establishmentId}/${tableId}/order/new`, {
+                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/new`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'Authorization': token ? `Bearer ${token}` : ''
+                            'Authorization': `Bearer ${token}`
                         },
                         body: JSON.stringify(payload)
                     });
@@ -133,10 +251,7 @@ export const useOrderStore = create(
                     }
 
                     const newOrder = await response.json();
-                    set(state => ({
-                        order: [...state.order, newOrder],
-                        isLoading: false
-                    }));
+                    set(state => ({ order: [newOrder, ...state.order].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), isLoading: false }));
 
                     return newOrder;
                 } catch (error: any) {
@@ -166,7 +281,14 @@ export const useOrderStore = create(
                     if (!response.ok) throw new Error('Erro ao buscar pedidos do convidado');
 
                     const data = await response.json();
-                    set({ order: data.orders || [] });
+                    interface GuestOrderResponse {
+                        orders: Order[];
+                    }
+
+                    const activeOrders: Order[] = ((data as GuestOrderResponse).orders || [])
+                        .filter((order: Order) => !order.isPaid && order.status !== 'cancelled')
+                        .sort((a: Order, b: Order) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                    set({ order: activeOrders });
                 } catch (error) {
                     console.error('Erro ao buscar pedidos do convidado:', error);
                     throw error;
@@ -174,14 +296,13 @@ export const useOrderStore = create(
             },
 
             fetchRestaurantUnitOrders: async (restaurantId, unitId) => {
-                const token = useAuthStore.getState().token;
                 try {
                     if (!unitId && !restaurantId) {
                         throw new Error("ID da unidade ou do restaurante é obrigatório.");
                     }
 
                     const endpoint = unitId
-                        ? `${API_URL}/restaurant-unit/${unitId}/orders`
+                        ? `${API_URL}/restaurant/${unitId}/orders`
                         : `${API_URL}/restaurant/${restaurantId}/orders`;
 
                     const response = await fetch(endpoint, {
@@ -214,41 +335,50 @@ export const useOrderStore = create(
                 }
             },
 
-            requestCheckout: async (tableId, restaurantId, guestId, splitCount = 1) => {
+            fetchOrdersWithMetrics: async (unitId: string) => {
+                try {
+                    const response = await fetch(`${API_URL}/restaurant-unit/${unitId}/orders/metrics`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (!response.ok) throw new Error('Erro ao buscar pedidos com métricas');
+
+                    const data = await response.json();
+                    return data;
+                } catch (error: any) {
+                    console.error('Erro ao buscar pedidos com métricas:', error);
+                    throw error;
+                }
+            },
+
+
+
+            requestCheckout: async (orderIds: string[], guestId: string, restaurantId: string, tableId: string, splitCount?: number) => {
                 set({ isLoading: true, error: null });
                 try {
-                    const order = get().order.filter(
-                        order => order.guestInfo.id === guestId
-                    );
-
-                    const orderIds = order.map(order => order._id);
-
                     const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/request-checkout`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             orderIds,
-                            tableId,
                             guestId,
                             splitCount
                         })
                     });
 
-                    if (!response.ok) throw new Error('Erro ao solicitar fechamento');
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.message);
+                    }
+
+                    const updatedOrders = await response.json();
 
                     set(state => ({
                         order: state.order.map(order =>
-                            order.guestInfo.id === guestId
-                                ? {
-                                    ...order,
-                                    status: 'payment_requested',
-                                    meta: {
-                                        ...order.meta,
-                                        splitCount,
-                                        paymentRequestedAt: new Date()
-                                    }
-                                }
-                                : order
+                            updatedOrders.find((updated: Order) => updated._id === order._id) || order
                         ),
                         isLoading: false
                     }));
@@ -300,7 +430,7 @@ export const useOrderStore = create(
 
             cancelOrder: async (orderId: string, restaurantId: string, tableId: string) => {
                 try {
-                    const response = await fetch(`/api/restaurant/${restaurantId}/${tableId}/order/${orderId}/cancel`, {
+                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/cancel`, {
                         method: 'PATCH'
                     });
 
@@ -315,7 +445,7 @@ export const useOrderStore = create(
 
             cancelOrderItem: async (orderId: string, itemId: string, restaurantId: string, tableId: string) => {
                 try {
-                    const response = await fetch(`/api/restaurant/${restaurantId}/${tableId}/order/${orderId}/item/${itemId}/cancel`, {
+                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/item/${itemId}/cancel`, {
                         method: 'PATCH'
                     });
 
@@ -328,12 +458,13 @@ export const useOrderStore = create(
                 }
             },
 
-            updateOrder: async (restaurantId, tableId, orderId, updatedData) => {
+            updateOrder: async (restaurantId: string, tableId: string, orderId: string, updatedData: Partial<Order>) => {
                 try {
                     const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/update`, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
                         },
                         body: JSON.stringify(updatedData),
                     });
@@ -345,15 +476,139 @@ export const useOrderStore = create(
 
                     const updatedOrder = await response.json();
 
-                    // Atualiza o estado local
-                    set((state: OrderStore) => ({
-                        order: state.order.map((order: Order) =>
-                            order._id === updatedOrder._id ? updatedOrder : order
-                        ),
+                    set((state) => ({
+                        order: state.order.map((order: Order) => {
+                            if (order._id === orderId) {
+                                switch (updatedData.status) {
+                                    case OrderStatus.COMPLETED:
+                                        return {
+                                            ...order,
+                                            ...updatedData,
+                                            items: order.items.map(item => ({
+                                                ...item,
+                                                itemStatus: OrderItemStatus.COMPLETED
+                                            }))
+                                        };
+                                    case OrderStatus.PROCESSING:
+                                        return {
+                                            ...order,
+                                            ...updatedData,
+                                            items: order.items.map(item => ({
+                                                ...item,
+                                                itemStatus: item.itemStatus === OrderItemStatus.COMPLETED
+                                                    ? OrderItemStatus.COMPLETED
+                                                    : OrderItemStatus.ADDED
+                                            }))
+                                        };
+                                    case OrderStatus.CANCELLED:
+                                        return {
+                                            ...order,
+                                            ...updatedData,
+                                            items: order.items.map(item => ({
+                                                ...item,
+                                                itemStatus: OrderItemStatus.CANCELLED
+                                            }))
+                                        };
+                                    default:
+                                        return { ...order, ...updatedData };
+                                }
+                            }
+                            return order;
+                        }),
                     }));
+
+                    return updatedOrder;
                 } catch (error) {
                     console.error("Erro ao atualizar pedido:", error);
-                    // Aqui você pode lidar com erros, por exemplo, definir um estado de erro
+                    throw error;
+                }
+            },
+
+            addItemsToOrder: async (restaurantId: string, tableId: string, orderId: string, items: CartItemProps[], totalAmount: number) => {
+                try {
+                    const itemsWithStatus = items.map(item => ({
+                        ...item,
+                        status: OrderItemStatus.ADDED
+                    }));
+
+                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/add-items`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            items: itemsWithStatus,
+                            totalAmount
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Falha ao adicionar itens ao pedido');
+                    }
+
+                    const updatedOrder = await response.json();
+
+                    // Atualiza o estado local
+                    set((state) => ({
+                        order: state.order.map((order) =>
+                            order._id === updatedOrder._id ? updatedOrder : order
+                        )
+                    }));
+
+                    return updatedOrder;
+                } catch (error) {
+                    console.error("Erro ao adicionar itens ao pedido:", error);
+                    throw error;
+                }
+            },
+
+            // No orderStore, adicione esta função junto com as outras
+
+            updateOrderItem: async (restaurantId: string,
+                tableId: string,
+                orderId: string,
+                itemId: string,
+                updates: {
+                    quantity?: number;
+                    observations?: string
+                    status?: OrderItemStatusType;
+                }) => {
+                try {
+                    const updatesWithStatus = {
+                        ...updates,
+                        status: updates.quantity !== undefined
+                            ? OrderItemStatus.ADDED
+                            : updates.status
+                    };
+
+                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/item/${itemId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(updatesWithStatus)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.message || 'Erro ao atualizar item do pedido');
+                    }
+
+                    const updatedOrder = await response.json();
+
+                    // Atualiza o estado local
+                    set((state) => ({
+                        order: state.order.map((order) =>
+                            order._id === orderId ? updatedOrder : order
+                        )
+                    }));
+
+                    return updatedOrder;
+                } catch (error) {
+                    console.error("Erro ao atualizar item do pedido:", error);
+                    throw error;
                 }
             },
 
@@ -381,20 +636,27 @@ export const useOrderStore = create(
                 set({ order: newOrders });
             },
 
-            partialize: (state: OrderStore) => ({
-                order: state.order.map(order => ({
-                    _id: order._id,
-                    totalAmount: order.totalAmount,
-                    status: order.status,
-                })),
-                isLoading: false,
-                error: null,
-                stats: null,
-            }),
+            cleanUpOrders: () => {
+                set(state => ({
+                    order: state.order.filter(order =>
+                        !order.isPaid &&
+                        order.status !== 'cancelled' &&
+                        order.status !== 'completed')
+                }));
+            },
         }),
         {
             name: 'order-storage',
-            storage: createJSONStorage(() => localStorage),
+            storage: createJSONStorage(() => customStorage),
+            partialize: (state) => ({
+                ...state,
+                order: state.order.filter(order =>
+                    order.status !== 'completed' &&
+                    order.status !== 'cancelled' &&
+                    !order.isPaid
+                )
+            }),
         }
     )
 );
+

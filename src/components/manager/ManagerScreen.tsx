@@ -7,45 +7,68 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { Order, OrderItem } from '../order/types';
-import { CartItemProps } from '../cart';
+import { Order, OrderItem } from '@/stores/order';
+import { OrderStatus, OrderItemStatus, OrderStatusType, OrderItemStatusType } from '@/stores/order/types/order.types';
 
 interface ManagerScreenProps {
     slug: string;
+}
+
+interface Addon {
+    id: string;
+    name: string;
+    price: number;
+    quantity?: number;
 }
 
 interface OrderItemState {
     id: string;
     name: string;
     quantity: number;
-    status: 'added' | 'removed' | 'updated';
+    status: OrderItemStatusType;
+    addons?: Addon[];
 }
 
-type OrderStatus = 'pending' | 'processing' | 'completed' | 'cancelled' | 'payment_requested' | 'paid';
+const StatusTexts: Record<OrderStatusType, string> = {
+    [OrderStatus.PROCESSING]: 'Em preparo',
+    [OrderStatus.COMPLETED]: 'Concluído',
+    [OrderStatus.CANCELLED]: 'Cancelado',
+    [OrderStatus.PAYMENT_REQUESTED]: 'Pagamento solicitado',
+    [OrderStatus.PAID]: 'Pago'
+};
 
-const StatusTexts = {
-    pending: 'Pendente',
-    processing: 'Em preparo',
-    completed: 'Concluído',
-    cancelled: 'Cancelado',
-    payment_requested: 'Pagamento solicitado',
-    paid: 'Pago'
+const StatusColors: Record<OrderStatusType, string> = {
+    [OrderStatus.PROCESSING]: 'bg-blue-200 text-blue-800',
+    [OrderStatus.COMPLETED]: 'bg-green-200 text-green-800',
+    [OrderStatus.CANCELLED]: 'bg-red-200 text-red-800',
+    [OrderStatus.PAYMENT_REQUESTED]: 'bg-purple-200 text-purple-800',
+    [OrderStatus.PAID]: 'bg-gray-200 text-gray-800'
 };
 
 export function ManagerScreen({ slug }: ManagerScreenProps) {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const { order, fetchRestaurantUnitOrders, updateOrder } = useOrderStore();
-    const { tableId } = useTableStore();
     const { currentUnitId } = useRestaurantUnitStore();
     const [previousOrders, setPreviousOrders] = useState<{ [key: string]: OrderItem[] }>({});
 
     const restaurantId = slug && extractIdFromSlug(String(slug));
 
+    const getStatusColor = (status: OrderStatusType) => StatusColors[status];
+    const getStatusText = (status: OrderStatusType) => StatusTexts[status];
+
     useEffect(() => {
-        if (restaurantId || currentUnitId) {
-            fetchRestaurantUnitOrders(restaurantId, String(currentUnitId));
-        }
-    }, [restaurantId, currentUnitId]);
+        const loadOrders = async () => {
+            if (restaurantId && currentUnitId) {
+                try {
+                    await fetchRestaurantUnitOrders(restaurantId, String(currentUnitId));
+                } catch (error) {
+                    console.error('Error fetching orders:', error);
+                }
+            }
+        };
+
+        loadOrders();
+    }, [restaurantId, currentUnitId, fetchRestaurantUnitOrders]);
 
     useEffect(() => {
         const newPreviousOrders: { [key: string]: OrderItem[] } = {};
@@ -53,90 +76,38 @@ export function ManagerScreen({ slug }: ManagerScreenProps) {
             const key = `${orderItem.meta.tableId}-${orderItem.guestInfo.id}`;
             newPreviousOrders[key] = orderItem.items.map(item => ({
                 ...item,
-                id: item._id, // Ensure 'id' is present
-                guestId: orderItem.guestInfo?.id
+                id: item._id,
+                guestId: orderItem.guestInfo.id,
+                addons: item.addons ? item.addons.filter(addon => typeof addon !== 'string') as Addon[] : undefined
             }));
         });
         setPreviousOrders(newPreviousOrders);
     }, [order]);
 
-    const calculateItemDifferences = (
-        previousOrderSnapshot: Order[],
-        currentOrders: Order[]
-    ): { [key: string]: OrderItemState[] } => {
-        const differences: { [key: string]: OrderItemState[] } = {};
-
-        currentOrders.forEach(currentOrder => {
-            const previousOrder = previousOrderSnapshot.find(po => po._id === currentOrder._id);
-            const itemDiff: OrderItemState[] = [];
-
-            if (previousOrder) {
-                const previousItemsMap = new Map<string, CartItemProps>();
-                previousOrder.items.forEach(item => previousItemsMap.set(item.id, item));
-
-                currentOrder.items.forEach(currentItem => {
-                    const previousItem = previousItemsMap.get(currentItem.id);
-                    const quantityChange = currentItem.quantity - (previousItem?.quantity || 0);
-
-                    if (quantityChange !== 0) {
-                        itemDiff.push({
-                            id: currentItem.id,
-                            name: currentItem.name,
-                            quantity: Math.abs(quantityChange),
-                            status: quantityChange > 0 ? 'added' : 'removed',
-                        });
-                    } else {
-                        itemDiff.push({
-                            id: currentItem.id,
-                            name: currentItem.name,
-                            quantity: currentItem.quantity,
-                            status: 'updated',
-                        });
-                    }
-                });
-
-                previousOrder.items.forEach(previousItem => {
-                    if (!currentOrder.items.find(item => item.id === previousItem.id)) {
-                        itemDiff.push({
-                            id: previousItem.id,
-                            name: previousItem.name,
-                            quantity: previousItem.quantity,
-                            status: 'removed',
-                        });
-                    }
-                });
-            }
-
-            differences[currentOrder._id] = itemDiff;
-        });
-
-        return differences;
-    };
-
     const handleRefresh = async () => {
         if (!restaurantId) return;
         setIsRefreshing(true);
         try {
-            // Snapshot dos pedidos atuais
-            const previousOrderSnapshot: Order[] = JSON.parse(JSON.stringify(order));
+            // Armazena o snapshot antes da atualização
+            const previousOrderSnapshot = JSON.parse(JSON.stringify(order));
 
+            // Busca os novos pedidos
             await fetchRestaurantUnitOrders(restaurantId, currentUnitId ? String(currentUnitId) : '');
 
-            // Use a estrutura correta para calcular as diferenças
-            const currentOrders: Order[] = JSON.parse(JSON.stringify(order));
-            const differences = calculateItemDifferences(previousOrderSnapshot, currentOrders);
-
+            // Atualiza previousOrders com os dados corretos
             setPreviousOrders(() => {
-                const newPreviousOrders: { [key: string]: CartItemProps[] } = {};
-                currentOrders.forEach((orderItem: Order) => {
-                    const key = `${orderItem.meta.tableId}-${orderItem.guestInfo?.id}`;
-                    newPreviousOrders[key] = orderItem.items.map(item => ({ ...item }));
+                const newPreviousOrders: { [key: string]: OrderItem[] } = {};
+                previousOrderSnapshot.forEach((orderItem: Order) => {
+                    const key = `${orderItem.meta.tableId}-${orderItem.guestInfo.id}`;
+                    newPreviousOrders[key] = orderItem.items.map(item => ({
+                        ...item,
+                        id: item._id,
+                        guestId: orderItem.guestInfo.id,
+                        addons: item.addons ? [...item.addons] : undefined // keep as string[] or undefined
+                    }));
                 });
                 return newPreviousOrders;
             });
-
-            console.log('Atualização concluída: ', order);
-            console.log('Diferenças calculadas: ', differences);
         } catch (error) {
             console.error('Erro na atualização manual:', error);
         } finally {
@@ -144,73 +115,14 @@ export function ManagerScreen({ slug }: ManagerScreenProps) {
         }
     };
 
-    const getStatusColor = (status: OrderStatus) => {
-        const colors = {
-            pending: 'bg-yellow-200 text-yellow-800',
-            processing: 'bg-blue-200 text-blue-800',
-            completed: 'bg-green-200 text-green-800',
-            cancelled: 'bg-red-200 text-red-800',
-            payment_requested: 'bg-purple-200 text-purple-800',
-            paid: 'bg-gray-200 text-gray-800'
-        };
-        return colors[status];
-    };
-
-    const getStatusText = (status: OrderStatus) => {
-        return StatusTexts[status];
-    };
-
-    const processOrderItems = (
-        currentItems: OrderItem[],
-        previousItems: OrderItem[]
-    ): OrderItemState[] => {
-        const itemState: OrderItemState[] = [];
-
-        // Mapeia itens anteriores por ID para fácil acesso
-        const previousItemsMap = new Map<string, OrderItem>();
-        previousItems.forEach(item => previousItemsMap.set(item.id, item));
-
-        // Processa itens atuais
-        currentItems.forEach(currentItem => {
-            const previousItem = previousItemsMap.get(currentItem.id);
-            const quantityChange = currentItem.quantity - (previousItem?.quantity || 0);
-
-            if (quantityChange > 0) {
-                // Item adicionado ou incrementado
-                itemState.push({
-                    id: currentItem.id,
-                    name: currentItem.name,
-                    quantity: quantityChange,
-                    status: 'added',
-                });
-            } else if (quantityChange < 0) {
-                // Item decrementado
-                itemState.push({
-                    id: currentItem.id,
-                    name: currentItem.name,
-                    quantity: -quantityChange,
-                    status: 'removed',
-                });
-            }
-        });
-
-        // Verifica itens removidos completamente
-        previousItems.forEach(previousItem => {
-            if (!currentItems.find(item => item.id === previousItem.id)) {
-                itemState.push({
-                    id: previousItem.id,
-                    name: previousItem.name,
-                    quantity: previousItem.quantity,
-                    status: 'removed',
-                });
-            }
-        });
-
-        return itemState;
-    };
-
-    const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
-        updateOrder(restaurantId, String(tableId), orderId, { status: newStatus });
+    const handleStatusChange = async (orderId: string, newStatus: OrderStatusType) => {
+        try {
+            await updateOrder(restaurantId, String(order[0].meta.tableId), orderId, {
+                status: newStatus
+            });
+        } catch (error) {
+            console.error('Erro ao atualizar status:', error);
+        }
     };
 
     const groupOrders = () => {
@@ -224,7 +136,7 @@ export function ManagerScreen({ slug }: ManagerScreenProps) {
                 groupedOrders[key] = { ...orderItem, items: [...orderItem.items] };
             } else {
                 orderItem.items.forEach(item => {
-                    const existingItem = groupedOrders[key].items.find((i: OrderItem) => i.id === item._id);
+                    const existingItem = groupedOrders[key].items.find((i: OrderItem) => i._id === item._id);
                     if (existingItem) {
                         existingItem.quantity += item.quantity; // Acumula a quantidade
                     } else {
@@ -232,93 +144,133 @@ export function ManagerScreen({ slug }: ManagerScreenProps) {
                     }
                 });
                 groupedOrders[key].totalAmount += orderItem.totalAmount; // Atualiza o total
-                groupedOrders[key].status = 'pending'; // Retorna ao status pendente
+                groupedOrders[key].status = 'processing'; // Retorna ao status de em andamento
             }
         });
 
         return Object.values(groupedOrders);
     };
-    const renderOrderItems = (orderId: string, differences: { [key: string]: OrderItemState[] }) => {
-        const items = differences[orderId] || []; // Garante que sempre há uma lista para iterar
 
-        return items.map(item => {
-            let colorClass;
-            switch (item.status) {
-                case 'removed':
-                    colorClass = 'text-red-600';
+    const renderOrderItems = (order: Order) => {
+        const previousItems = previousOrders[`${order.meta.tableId}-${order.guestInfo.id}`] || [];
+
+        return order.items.map(item => {
+            const isPreviouslySeen = previousItems.some(prev => prev._id === item._id);
+
+            // Considera "novo" se não foi visto antes E o pedido já tinha sido exibido anteriormente
+            const isNew =
+                !isPreviouslySeen &&
+                item.createdAt &&
+                (!order.updatedAt || new Date(item.createdAt) > new Date(order.updatedAt));
+
+            let style = '';
+            let prefix = '';
+
+            switch (order.status) {
+                case OrderStatus.COMPLETED:
+                    style = 'text-gray-900 line-through';
                     break;
-                case 'added':
-                    colorClass = 'text-green-600';
+
+                case OrderStatus.PAYMENT_REQUESTED:
+                    style = 'text-purple-600';
                     break;
+
+                case OrderStatus.PROCESSING:
+                    if (isNew) {
+                        style = 'text-green-600 font-medium';
+                        prefix = '+';
+                    } else if (item.status === OrderItemStatus.COMPLETED) {
+                        style = 'text-gray-900 line-through';
+                    } else if (
+                        item.status === OrderItemStatus.REMOVED ||
+                        item.status === OrderItemStatus.CANCELLED
+                    ) {
+                        style = 'text-red-600';
+                        prefix = '-';
+                    } else {
+                        style = 'text-gray-600';
+                    }
+                    break;
+
                 default:
-                    colorClass = 'text-gray-600';
+                    style = 'text-gray-600';
             }
 
             return (
-                <li key={item.id} className={colorClass}>
-                    {item.status === 'removed' ? '-' : '+'}{Math.abs(item.quantity)}x {item.name}
-                </li>
+                <div key={item._id} className="mb-2">
+                    <li className={`${style} flex flex-col`}>
+                        <span>{prefix}{Math.abs(item.quantity)}x {item.name}</span>
+                        {item.addons && item.addons.length > 0 && (
+                            <ul className="ml-6 text-sm">
+                                {item.addons.map((addon, index) => (
+                                    <li key={index} className={`${style} italic`}>
+                                        {prefix}{Math.abs(addon.quantity || 1)}x {addon.name}
+                                        {addon.price > 0 && ` (+R$ ${addon.price.toFixed(2)})`}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </li>
+                </div>
             );
         });
     };
 
-    const renderOrders = (statuses: OrderStatus[]) => {
+
+    const renderOrders = (statuses: OrderStatusType[]) => {
         const groupedOrders = groupOrders();
 
         return groupedOrders
-            .filter(order => statuses.includes(order.status as OrderStatus))
-            .map(order => {
-                const key = `${order.meta.tableId}-${order.guestInfo.id}`;
-                const previousItems = previousOrders[key] || [];
-                const processedItems = processOrderItems(order.items, previousItems);
-
-                return (
-                    <Card key={order._id} className="mb-4">
-                        <CardHeader>
-                            <CardTitle className="flex justify-between items-center text-primary text-xl font-semibold">
-                                <span>Mesa {order.meta.tableId}</span>
-                                <Select
-                                    value={order.status}
-                                    onValueChange={(value) => handleStatusChange(order._id, value as OrderStatus)}
-                                    disabled={order.status === 'paid' || order.status === 'cancelled'}
-                                >
-                                    <SelectTrigger className={`w-[180px] ${getStatusColor(order.status as OrderStatus)}`}>
-                                        <SelectValue>
-                                            {getStatusText(order.status as OrderStatus) || "Status Desconhecido"}
-                                        </SelectValue>
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {Object.keys(StatusTexts).map((key) => (
-                                            <SelectItem key={key} value={key}>
-                                                {StatusTexts[key as OrderStatus]}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-2">
-                                <p><strong>Cliente:</strong> {order.guestInfo?.name || 'Anônimo'}</p>
-                                <p><strong>Itens:</strong></p>
-                                <ul>
-                                    {renderOrderItems(order._id, { [order._id]: processedItems })} {/* Renderiza itens processados */}
-                                </ul>
-                                <p><strong>Total:</strong> R$ {order.totalAmount.toFixed(2)}</p>
-                                {order.meta?.observations && (
-                                    <p><strong>Observações:</strong> {order.meta.observations}</p>
-                                )}
-                                {order.meta?.orderType && (
-                                    <p><strong>Tipo:</strong> {order.meta.orderType === 'local' ? 'Local' : 'Para Viagem'}</p>
-                                )}
-                                {order.meta?.splitCount && order.meta.splitCount > 1 && (
-                                    <p><strong>Divisão:</strong> {order.meta.splitCount} pessoas</p>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
-                );
-            });
+            .filter(order => statuses.includes(order.status))
+            .map(order => (
+                <Card key={order._id} className="mb-4">
+                    <CardHeader>
+                        <CardTitle className="flex justify-between items-center text-primary text-xl font-semibold">
+                            <span>Mesa {order.meta.tableId}</span>
+                            <Select
+                                value={order.status}
+                                onValueChange={(value) => handleStatusChange(order._id, value as OrderStatusType)}
+                                disabled={order.status === OrderStatus.PAID || order.status === OrderStatus.CANCELLED}
+                            >
+                                <SelectTrigger className={`w-[180px] ${getStatusColor(order.status)}`}>
+                                    <SelectValue>
+                                        {getStatusText(order.status)}
+                                    </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {Object.keys(OrderStatus).map((key) => (
+                                        <SelectItem
+                                            key={key}
+                                            value={OrderStatus[key as keyof typeof OrderStatus]}
+                                        >
+                                            {StatusTexts[OrderStatus[key as keyof typeof OrderStatus]]}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-2">
+                            <p><strong>Cliente:</strong> {order.guestInfo?.name || 'Anônimo'}</p>
+                            <p><strong>Itens:</strong></p>
+                            <ul>
+                                {renderOrderItems(order)}
+                            </ul>
+                            <p><strong>Total:</strong> R$ {order.totalAmount.toFixed(2)}</p>
+                            {order.meta?.observations && (
+                                <p><strong>Observações:</strong> {order.meta.observations}</p>
+                            )}
+                            {order.meta?.orderType && (
+                                <p><strong>Tipo:</strong> {order.meta.orderType === 'local' ? 'Local' : 'Para Viagem'}</p>
+                            )}
+                            {order.meta?.splitCount && order.meta.splitCount > 1 && (
+                                <p><strong>Divisão:</strong> {order.meta.splitCount} pessoas</p>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+            ));
     };
 
     return (
@@ -337,40 +289,31 @@ export function ManagerScreen({ slug }: ManagerScreenProps) {
                     </Button>
                 </div>
 
-                <div className="grid grid-cols-4 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-3 md:grid-cols-3 gap-6 justify-center items-center">
                     <div className="bg-white p-6 rounded-lg shadow-sm min-h-[calc(100vh-200px)] overflow-y-auto">
-                        <h2 className="text-lg font-semibold mb-6 sticky top-0 bg-white py-2">
-                            Pendentes
-                        </h2>
-                        <div className="space-y-4">
-                            {renderOrders(['pending'])}
-                        </div>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-lg shadow-sm min-h-[calc(100vh-200px)] overflow-y-auto">
-                        <h2 className="text-lg font-semibold mb-6 sticky top-0 bg-white py-2">
+                        <h2 className="text-xl font-semibold mb-6 sticky top-0 bg-white py-2">
                             Em Preparo
                         </h2>
                         <div className="space-y-4">
-                            {renderOrders(['processing'])}
+                            {renderOrders([OrderStatus.PROCESSING])}
                         </div>
                     </div>
 
                     <div className="bg-white p-6 rounded-lg shadow-sm min-h-[calc(100vh-200px)] overflow-y-auto">
-                        <h2 className="text-lg font-semibold mb-6 sticky top-0 bg-white py-2">
+                        <h2 className="text-xl font-semibold mb-6 sticky top-0 bg-white py-2">
                             Concluídos
                         </h2>
                         <div className="space-y-4">
-                            {renderOrders(['completed'])}
+                            {renderOrders([OrderStatus.COMPLETED])}
                         </div>
                     </div>
 
                     <div className="bg-white p-6 rounded-lg shadow-sm min-h-[calc(100vh-200px)] overflow-y-auto">
-                        <h2 className="text-lg font-semibold mb-6 sticky top-0 bg-white py-2">
+                        <h2 className="text-xl font-semibold mb-6 sticky top-0 bg-white py-2">
                             Pagamentos Solicitados
                         </h2>
                         <div className="space-y-4">
-                            {renderOrders(['payment_requested'])}
+                            {renderOrders([OrderStatus.PAYMENT_REQUESTED])}
                         </div>
                     </div>
                 </div>
@@ -380,3 +323,6 @@ export function ManagerScreen({ slug }: ManagerScreenProps) {
 }
 
 export default ManagerScreen;
+
+
+

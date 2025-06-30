@@ -1,11 +1,13 @@
 // stores/cartStore.ts
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { OrderItemStatusType } from '../order/types/order.types';
 
 interface Addon {
     id: string;
     name: string;
     price: number;
+    quantity?: number;
 }[];
 
 export interface CartItemProps {
@@ -13,10 +15,13 @@ export interface CartItemProps {
     name: string;
     price: number;
     quantity: number;
-    status: 'pending' | 'processing' | 'completed' | 'cancelled' | 'payment_requested' | 'paid';
-    observations?: string;
-    image: string;
     addons?: Addon[];
+    status: OrderItemStatusType;
+    observations?: string;
+    image?: string;
+    costPrice?: number;
+    profit?: number;
+    promotionalDiscount?: number;
 }
 
 interface GuestInfo {

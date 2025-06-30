@@ -1,69 +1,81 @@
-// components/PromotionHistory.tsx
-'use client';
-
+// components/PromotionHistoryPage.tsx
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { formatCurrency } from '@/services/restaurant/services';
-import { Product, PromotionHistoryEntry, useProductStore } from '@/stores';
-import { useParams } from 'next/navigation';
-import { extractIdFromSlug } from '@/utils/slugify';
+import { useProductStore } from '@/stores/products/productStore';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getCategoryName } from '@/utils/getCategoryName';
+import CategoryPromotionHistory from '@/components/promotion/CategoryPromotionHistory';
+import { Button } from '../ui/button';
+import { useRouter } from 'next/navigation';
 
-export default function PromotionHistory({ product }: { product: Product }) {
-    const { slug } = useParams();
-    const { getPromotionHistory, reactivatePromotion } = useProductStore();
-    const [history, setHistory] = useState<PromotionHistoryEntry[]>([]);
+interface PromotionHistoryProps {
+    restaurantId: string;
+}
 
-    const restaurantId = slug && extractIdFromSlug(String(slug));
+export default function PromotionHistory({ restaurantId }: PromotionHistoryProps) {
+    const router = useRouter();
+    const { products, fetchProducts } = useProductStore();
+    const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
     useEffect(() => {
-        loadHistory();
-    }, [product._id]);
+        fetchProducts(restaurantId);
+    }, [fetchProducts, restaurantId]);
 
-    const loadHistory = async () => {
-        const historyRaw = await getPromotionHistory(product._id, product.restaurant);
-        // Map or cast PromotionHistory[] to PromotionHistoryEntry[] if needed
-        const history: PromotionHistoryEntry[] = historyRaw.map((item: any) => ({
-            ...item,
-            action: item.action ?? '', // Provide default or map as needed
-            actionDate: item.actionDate ?? '',
-            actionBy: item.actionBy ?? '',
-            type: item.type ?? '',
-        }));
-        setHistory(history);
-    };
+    const categorizedProducts = products.reduce((acc, product) => {
+        if (product.category) {
+            if (!acc[product.category]) {
+                acc[product.category] = [];
+            }
+            acc[product.category].push(product);
+        }
+        return acc;
+    }, {} as Record<string, typeof products>);
+
+    const categories = Object.keys(categorizedProducts);
 
     return (
-        <div className="space-y-4">
-            <h2 className="text-xl font-bold">Histórico de Promoções</h2>
-            {history.map((promotion) => (
-                <Card key={promotion._id}>
-                    <CardContent className="p-4">
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <p className="font-semibold">
-                                    {promotion.discountPercentage}% OFF
-                                </p>
-                                <p className="text-sm text-gray-500">
-                                    {new Date(promotion.promotionStartDate).toLocaleDateString()} -
-                                    {new Date(promotion.promotionEndDate).toLocaleDateString()}
-                                </p>
-                                <p>
-                                    De {formatCurrency(product.price)} por{' '}
-                                    {formatCurrency(promotion.promotionalPrice ?? 0)}
-                                </p>
-                            </div>
-                            <Button
-                                variant="outline"
-                                onClick={() => reactivatePromotion(product._id, promotion._id, String(restaurantId))}
-                                disabled={promotion.isActive}
-                            >
-                                Reativar
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            ))}
+        <div className="container mx-auto p-6 overflow-x-hidden">
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold">Histórico de Promoções</h1>
+                <Button onClick={() => router.back()}>
+                    Voltar
+                </Button>
+            </div>
+
+            <Tabs defaultValue="all" className="w-full">
+                <TabsList className="mb-6">
+                    <TabsTrigger value="all" onClick={() => setSelectedCategory('all')}>
+                        Todas as Categorias
+                    </TabsTrigger>
+                    {categories.map((category) => (
+                        <TabsTrigger
+                            key={category}
+                            value={category}
+                            onClick={() => setSelectedCategory(category)}
+                        >
+                            {getCategoryName(category)}
+                        </TabsTrigger>
+                    ))}
+                </TabsList>
+
+                <TabsContent value="all">
+                    {categories.map((category) => (
+                        <CategoryPromotionHistory
+                            key={category}
+                            category={category}
+                            products={categorizedProducts[category]}
+                        />
+                    ))}
+                </TabsContent>
+
+                {categories.map((category) => (
+                    <TabsContent key={category} value={category}>
+                        <CategoryPromotionHistory
+                            category={category}
+                            products={categorizedProducts[category]}
+                        />
+                    </TabsContent>
+                ))}
+            </Tabs>
         </div>
     );
 }
