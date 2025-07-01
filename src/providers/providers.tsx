@@ -11,16 +11,10 @@ interface ProvidersProps {
 
 export default function Providers({ children }: ProvidersProps) {
     return (
-        <html>
-            <body>
-                <SessionProvider>
-                    <SessionManager>
-                        <ToastProvider>
-                            {children}
-                        </ToastProvider>
-                    </SessionManager>
-                </SessionProvider>
-            </body>
-        </html>
+        <SessionProvider>
+            <SessionManager>
+                {children}
+            </SessionManager>
+        </SessionProvider>
     );
 }
