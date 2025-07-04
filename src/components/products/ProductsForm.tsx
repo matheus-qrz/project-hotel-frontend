@@ -250,7 +250,7 @@ export default function ProductForm({ slug }: ProductFormProps) {
                 description: 'Produto adicionado com sucesso.'
             });
 
-            router.push(`/restaurant/${slug}/products`);
+            router.push(`/admin/restaurant/${slug}/products`);
         } catch (error) {
             console.error('Erro ao criar produto:', error);
             toast({

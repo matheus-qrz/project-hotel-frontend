@@ -22,9 +22,9 @@ export function LoginPage() {
     useEffect(() => {
         if (!isLoading && isAuthenticated) {
             if (role === 'ADMIN') {
-                router.push(`/restaurant/${slug}/dashboard`);
+                router.push(`/admin/restaurant/${slug}/dashboard`);
             } else if (role === 'MANAGER') {
-                router.push(`/restaurant/${slug}/dashboard`);
+                router.push(`/admin/restaurant/${slug}/dashboard`);
             } else if (role === 'ATTENDANT') {
                 router.push('/attendant/orders');
             } else if (role === 'CLIENT' || 'GUEST') {

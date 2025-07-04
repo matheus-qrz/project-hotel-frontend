@@ -28,9 +28,9 @@ const handler = NextAuth({
                     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
                     const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
-                    console.log(`Tentando login em: ${baseUrl}/login`);
+                    console.log(`Tentando login em: /api/login`);
 
-                    const response = await fetch(`${baseUrl}/login`, {
+                    const response = await fetch(`/api/login`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json"

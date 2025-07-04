@@ -108,7 +108,7 @@ export default function ProductDetails() {
                 description: "Produto excluído com sucesso",
             });
 
-            router.push(`/restaurant/${restaurantId}/products`);
+            router.push(`/admin/restaurant/${restaurantId}/products`);
         } catch (err) {
             console.error("Erro ao excluir produto:", err);
             toast({
@@ -200,7 +200,7 @@ export default function ProductDetails() {
                     O produto solicitado não foi encontrado. Verifique se o ID está correto ou retorne à lista de produtos.
                 </p>
                 <button
-                    onClick={() => router.push(`/restaurant/${restaurantId}/products`)}
+                    onClick={() => router.push(`/admin/restaurant/${restaurantId}/products`)}
                     className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md self-start"
                 >
                     Voltar à Lista
@@ -253,7 +253,7 @@ export default function ProductDetails() {
                                                 <Trash2 size={20} className="items-center justify-center" />
                                             </Button>
                                             <Button
-                                                onClick={() => router.push(`/restaurant/${restaurantId}/products/${productId}/edit`)}
+                                                onClick={() => router.push(`/admin/restaurant/${restaurantId}/products/${productId}/edit`)}
                                                 className="bg-blue-600 hover:bg-blue-700"
                                             >
                                                 <Edit size={20} className="items-center justify-center" />

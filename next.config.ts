@@ -1,12 +1,16 @@
-import type { NextConfig } from "next";
+// next.config.ts
+import { NextConfig as FullNextConfig } from 'next';
 
-const nextConfig: NextConfig = {
+const nextConfig: FullNextConfig = {
   reactStrictMode: true,
-  i18n: {
-    defaultLocale: 'pt-BR',
-    locales: ['pt-BR', 'en-US', 'es'],
-    localeDetection: true,
-  } as any,
-}
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'https://seugarcom-prod.backend.railway.app/:path*',
+      },
+    ];
+  },
+};
 
 export default nextConfig;

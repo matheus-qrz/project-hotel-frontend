@@ -328,7 +328,7 @@ export default function ProductsList({ slug }: ProductsListProps) {
 
                     <div className="flex max-lg:flex-col gap-3">
                         <Button
-                            onClick={() => router.push(`/restaurant/${slug}/products/add`)}
+                            onClick={() => router.push(`/admin/restaurant/${slug}/products/add`)}
                             className="w-full lg:w-auto"
                         >
                             <Plus className="h-4 w-4 mr-2" />
@@ -340,7 +340,7 @@ export default function ProductsList({ slug }: ProductsListProps) {
                             asChild
                             className="w-full lg:w-auto"
                         >
-                            <Link href={`/restaurant/${slug}/products/import`}>
+                            <Link href={`/admin/restaurant/${slug}/products/import`}>
                                 <FileText className="h-4 w-4 mr-2" />
                                 Importar
                             </Link>
@@ -436,8 +436,8 @@ export default function ProductsList({ slug }: ProductsListProps) {
                                                             formatCurrency={formatCurrency}
                                                             isPromotionActive={isPromotionActive}
                                                             getDiscountPercentage={getDiscountPercentage}
-                                                            onEditClick={() => router.push(`/restaurant/${slug}/products/${product._id}/edit`)}
-                                                            onPromotionClick={() => router.push(`/restaurant/${slug}/products/${product._id}/promotion`)}
+                                                            onEditClick={() => router.push(`/admin/restaurant/${slug}/products/${product._id}/edit`)}
+                                                            onPromotionClick={() => router.push(`/admin/restaurant/${slug}/products/${product._id}/promotion`)}
                                                             onDeleteClick={() => handleDeleteClick(product)}
                                                         />
                                                     ))}
@@ -454,8 +454,8 @@ export default function ProductsList({ slug }: ProductsListProps) {
                                                     formatCurrency={formatCurrency}
                                                     isPromotionActive={isPromotionActive}
                                                     getDiscountPercentage={getDiscountPercentage}
-                                                    onEditClick={() => router.push(`/restaurant/${slug}/products/${product._id}/edit`)}
-                                                    onPromotionClick={() => router.push(`/restaurant/${slug}/products/${product._id}/promotion`)}
+                                                    onEditClick={() => router.push(`/admin/restaurant/${slug}/products/${product._id}/edit`)}
+                                                    onPromotionClick={() => router.push(`/admin/restaurant/${slug}/products/${product._id}/promotion`)}
                                                     onDeleteClick={() => handleDeleteClick(product as Product)}
                                                 />
                                             ))}
@@ -585,7 +585,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" side="bottom" className="w-48">
                                         <DropdownMenuItem asChild>
-                                            <Link href={`/restaurant/${restaurantId}/products/${product._id}/details`}>
+                                            <Link href={`/admin/restaurant/${restaurantId}/products/${product._id}/details`}>
                                                 <Info className="h-4 w-4 mr-2" />
                                                 Ver detalhes
                                             </Link>

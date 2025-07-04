@@ -47,49 +47,49 @@ export function Sidebar({ className }: SidebarProps) {
     const allItems: NavItem[] = [
         {
             title: "Início",
-            href: role === 'ADMIN' ? `/restaurant/${slug}/dashboard` : `/restaurant/${slug}/manager`,
+            href: role === 'ADMIN' ? `/admin/restaurant/${slug}/dashboard` : `/admin/restaurant/${slug}/manager`,
             icon: <Home size={20} />,
             color: "#ef4444"
         },
         {
             title: "Funcionários",
-            href: `/restaurant/${slug}/employees`,
+            href: `/admin/restaurant/${slug}/employees`,
             icon: <UserCog2 size={20} />,
             color: "#84cc16"
         },
         {
             title: "Unidades",
-            href: `/restaurant/${slug}/units`,
+            href: `/admin/restaurant/${slug}/units`,
             icon: <Store size={20} />,
             color: "#d946ef"
         },
         {
             title: "QR-Code",
-            href: `/restaurant/${slug}/qrcode`,
+            href: `/admin/restaurant/${slug}/qrcode`,
             icon: <QrCode size={20} />,
             color: "#0400ff"
         },
         {
             title: "Menu",
-            href: `/restaurant/${slug}/products`,
+            href: `/admin/restaurant/${slug}/products`,
             icon: <SquareMenu size={20} />,
             color: "#f3de1f"
         },
         {
             title: "Promoções",
-            href: `/restaurant/${slug}/promotions`,
+            href: `/admin/restaurant/${slug}/promotions`,
             icon: <BadgePercent size={20} />,
             color: "#f97316"
         },
         {
             title: "Estatísticas",
-            href: `/restaurant/${slug}/statistics`,
+            href: `/admin/restaurant/${slug}/statistics`,
             icon: <BarChart size={20} />,
             color: "#06b6d4"
         },
         {
             title: "Histórico de pedidos",
-            href: `/restaurant/${slug}/order/history`,
+            href: `/admin/restaurant/${slug}/order/history`,
             icon: <History size={20} />,
             color: "#10b981"
         }

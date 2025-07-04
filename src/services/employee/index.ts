@@ -12,7 +12,7 @@ export const formatRole = (role: string): string => {
 };
 
 export async function getEmployeesByRestaurant(restaurantId: string, token: string): Promise<IEmployee[]> {
-    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/employees`, {
+    const response = await fetch(`/api/restaurant/${restaurantId}/employees`, {
         headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -28,7 +28,7 @@ export async function getEmployeesByRestaurant(restaurantId: string, token: stri
 }
 
 export async function getEmployeesByUnit(unitId: string, token: string): Promise<IEmployee[]> {
-    const response = await fetch(`${API_URL}/unit/${unitId}/employees`, {
+    const response = await fetch(`/api/unit/${unitId}/employees`, {
         headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -44,7 +44,7 @@ export async function getEmployeesByUnit(unitId: string, token: string): Promise
 }
 
 export async function getEmployeeById(id: string, token: string): Promise<IEmployee> {
-    const response = await fetch(`${API_URL}/users/${id}`, {
+    const response = await fetch(`/api/users/${id}`, {
         headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -64,7 +64,7 @@ export async function createEmployee(
     restaurantId: string,
     token: string
 ): Promise<IEmployee> {
-    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/employee/create`, {
+    const response = await fetch(`/api/restaurant/${restaurantId}/employee/create`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -89,7 +89,7 @@ export async function updateEmployee(
     data: Partial<ICreateEmployeeData>,
     token: string
 ): Promise<IEmployee> {
-    const response = await fetch(`${API_URL}/users/${id}/edit`, {
+    const response = await fetch(`/api/users/${id}/edit`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -107,7 +107,7 @@ export async function updateEmployee(
 }
 
 export async function deleteEmployee(id: string, token: string): Promise<void> {
-    const response = await fetch(`${API_URL}/users/${id}/delete`, {
+    const response = await fetch(`/api/users/${id}/delete`, {
         method: 'DELETE',
         headers: {
             'Authorization': `Bearer ${token}`,

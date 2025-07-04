@@ -32,14 +32,14 @@ export default function QRCodeHandler() {
                 }
 
                 // Buscar informações do restaurante e unidade
-                const restaurantResponse = await fetch(`${API_URL}/restaurant/by-slug/${slug}`);
+                const restaurantResponse = await fetch(`/api/restaurant/by-slug/${slug}`);
                 if (!restaurantResponse.ok) throw new Error('Restaurante não encontrado');
 
                 const restaurant = await restaurantResponse.json();
 
                 // Se tiver unitId, verificar se a unidade existe
                 if (unitId) {
-                    const unitResponse = await fetch(`${API_URL}/units/${unitId}`);
+                    const unitResponse = await fetch(`/api/units/${unitId}`);
                     if (!unitResponse.ok) throw new Error('Unidade não encontrada');
                 }
 

@@ -15,7 +15,7 @@ export default function RestaurantPage() {
         // Função para buscar o ID do restaurante pelo nome
         async function fetchRestaurantId() {
             try {
-                const response = await fetch(`${API_URL}/restaurant/by-slug/${restaurantName}`);
+                const response = await fetch(`/api/restaurant/by-slug/${restaurantName}`);
                 if (response.ok) {
                     const restaurant = await response.json();
                     // Redirecionar para a URL com ID

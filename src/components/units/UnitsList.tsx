@@ -46,7 +46,7 @@ export default function UnitsList({ units = [], isLoading, restaurantId }: Units
   };
 
   const handleRegisterRestaurantUnit = () => {
-    router.push(`/restaurant/${restaurantId}/units/register`);
+    router.push(`/admin/restaurant/${restaurantId}/units/register`);
   };
 
   if (isLoading) {

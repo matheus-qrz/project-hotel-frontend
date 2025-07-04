@@ -47,7 +47,7 @@ export const useRestaurantUnitStore = create<RestaurantUnitState>()(
             fetchUnits: async (restaurantId: string) => {
                 try {
                     const headers = useAuthStore.getState().getHeaders();
-                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/units?includeMatrix=true`, {
+                    const response = await fetch(`/api/restaurant/${restaurantId}/units?includeMatrix=true`, {
                         headers,
                     });
 
@@ -79,7 +79,7 @@ export const useRestaurantUnitStore = create<RestaurantUnitState>()(
             fetchUnitByRestaurantId: async (restaurantId: string) => {
                 try {
                     const headers = useAuthStore.getState().getHeaders();
-                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/units`, {
+                    const response = await fetch(`/api/restaurant/${restaurantId}/units`, {
                         headers,
                     });
 
@@ -95,7 +95,7 @@ export const useRestaurantUnitStore = create<RestaurantUnitState>()(
                         return unitId;
                     }
 
-                    const restaurantResponse = await fetch(`${API_URL}/restaurant/${restaurantId}`, {
+                    const restaurantResponse = await fetch(`/api/restaurant/${restaurantId}`, {
                         headers,
                     });
 
@@ -117,7 +117,7 @@ export const useRestaurantUnitStore = create<RestaurantUnitState>()(
             addUnit: async (restaurantId: string, unitData: Omit<RestaurantUnit, 'id'>) => {
                 try {
                     const headers = useAuthStore.getState().getHeaders();
-                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/units`, {
+                    const response = await fetch(`/api/restaurant/${restaurantId}/units`, {
                         method: 'POST',
                         headers: {
                             ...headers,
@@ -140,7 +140,7 @@ export const useRestaurantUnitStore = create<RestaurantUnitState>()(
             updateUnit: async (unitId: string, unitData: Partial<Omit<RestaurantUnit, 'id'>>) => {
                 try {
                     const headers = useAuthStore.getState().getHeaders();
-                    const response = await fetch(`${API_URL}/unit/${unitId}`, {
+                    const response = await fetch(`/api/unit/${unitId}`, {
                         method: 'PUT',
                         headers: {
                             ...headers,
@@ -167,7 +167,7 @@ export const useRestaurantUnitStore = create<RestaurantUnitState>()(
             deleteUnit: async (unitId: string, restaurantId: string) => {
                 try {
                     const headers = useAuthStore.getState().getHeaders();
-                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/units/${unitId}`, {
+                    const response = await fetch(`/api/restaurant/${restaurantId}/units/${unitId}`, {
                         method: 'DELETE',
                         headers,
                     });

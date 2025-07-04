@@ -41,7 +41,8 @@ export function AdminLogin() {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ email, password }),
+                credentials: 'omit' // Incluir cookies para autenticação
             });
 
             const data = await response.json();
@@ -75,9 +76,9 @@ export function AdminLogin() {
 
                 // Redirecionar baseado no papel do usuário
                 if (data.user.role === 'ADMIN') {
-                    router.push(`/restaurant/${slug}/dashboard`);
+                    router.push(`/admin/restaurant/${slug}/dashboard`);
                 } else if (data.user.role === 'MANAGER') {
-                    router.push(`/restaurant/${slug}/manager`);
+                    router.push(`/admin/restaurant/${slug}/manager`);
                 }
             }
         } catch (error) {

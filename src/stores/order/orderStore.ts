@@ -236,7 +236,7 @@ export const useOrderStore = create(
                         }
                     };
 
-                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/new`, {
+                    const response = await fetch(`/api/restaurant/${restaurantId}/${tableId}/order/new`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -262,7 +262,7 @@ export const useOrderStore = create(
 
             fetchTableOrders: async (restaurantId: string, tableId: string, guestId: string) => {
                 try {
-                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/orders?guestId=${guestId}`);
+                    const response = await fetch(`/api/restaurant/${restaurantId}/${tableId}/orders?guestId=${guestId}`);
                     if (!response.ok) throw new Error('Erro ao buscar pedidos');
 
                     const data = await response.json();
@@ -277,7 +277,7 @@ export const useOrderStore = create(
 
             fetchGuestOrders: async (guestId: string, tableId: string) => {
                 try {
-                    const response = await fetch(`${API_URL}/${tableId}/guest-orders/${guestId}`);
+                    const response = await fetch(`/api/${tableId}/guest-orders/${guestId}`);
                     if (!response.ok) throw new Error('Erro ao buscar pedidos do convidado');
 
                     const data = await response.json();
@@ -302,8 +302,8 @@ export const useOrderStore = create(
                     }
 
                     const endpoint = unitId
-                        ? `${API_URL}/restaurant/${unitId}/orders`
-                        : `${API_URL}/restaurant/${restaurantId}/orders`;
+                        ? `/api/restaurant/${unitId}/orders`
+                        : `/api/restaurant/${restaurantId}/orders`;
 
                     const response = await fetch(endpoint, {
                         headers: {
@@ -325,7 +325,7 @@ export const useOrderStore = create(
             fetchOrderStats: async (unitId) => {
                 set({ isLoading: true, error: null });
                 try {
-                    const response = await fetch(`${API_URL}/unit/${unitId}/orders/stats`);
+                    const response = await fetch(`/api/unit/${unitId}/orders/stats`);
                     if (!response.ok) throw new Error('Erro ao buscar estatísticas');
 
                     const data = await response.json();
@@ -337,7 +337,7 @@ export const useOrderStore = create(
 
             fetchOrdersWithMetrics: async (unitId: string) => {
                 try {
-                    const response = await fetch(`${API_URL}/restaurant-unit/${unitId}/orders/metrics`, {
+                    const response = await fetch(`/api/restaurant-unit/${unitId}/orders/metrics`, {
                         headers: {
                             'Authorization': `Bearer ${token}`,
                             'Content-Type': 'application/json'
@@ -359,7 +359,7 @@ export const useOrderStore = create(
             requestCheckout: async (orderIds: string[], guestId: string, restaurantId: string, tableId: string, splitCount?: number) => {
                 set({ isLoading: true, error: null });
                 try {
-                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/request-checkout`, {
+                    const response = await fetch(`/api/restaurant/${restaurantId}/${tableId}/order/request-checkout`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -391,7 +391,7 @@ export const useOrderStore = create(
             processPayment: async (orderId, paymentData) => {
                 set({ isLoading: true, error: null });
                 try {
-                    const response = await fetch(`${API_URL}/order/${orderId}/process-payment`, {
+                    const response = await fetch(`/api/order/${orderId}/process-payment`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -430,7 +430,7 @@ export const useOrderStore = create(
 
             cancelOrder: async (orderId: string, restaurantId: string, tableId: string) => {
                 try {
-                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/cancel`, {
+                    const response = await fetch(`/api/restaurant/${restaurantId}/${tableId}/order/${orderId}/cancel`, {
                         method: 'PATCH'
                     });
 
@@ -445,7 +445,7 @@ export const useOrderStore = create(
 
             cancelOrderItem: async (orderId: string, itemId: string, restaurantId: string, tableId: string) => {
                 try {
-                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/item/${itemId}/cancel`, {
+                    const response = await fetch(`/api/restaurant/${restaurantId}/${tableId}/order/${orderId}/item/${itemId}/cancel`, {
                         method: 'PATCH'
                     });
 
@@ -460,7 +460,7 @@ export const useOrderStore = create(
 
             updateOrder: async (restaurantId: string, tableId: string, orderId: string, updatedData: Partial<Order>) => {
                 try {
-                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/update`, {
+                    const response = await fetch(`/api/restaurant/${restaurantId}/${tableId}/order/${orderId}/update`, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
@@ -531,7 +531,7 @@ export const useOrderStore = create(
                         status: OrderItemStatus.ADDED
                     }));
 
-                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/guest/${guestId}/add-items`, {
+                    const response = await fetch(`/api/restaurant/${restaurantId}/${tableId}/order/${orderId}/guest/${guestId}/add-items`, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
@@ -582,7 +582,7 @@ export const useOrderStore = create(
                             : updates.status
                     };
 
-                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/item/${itemId}`, {
+                    const response = await fetch(`/api/restaurant/${restaurantId}/${tableId}/order/${orderId}/item/${itemId}`, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',

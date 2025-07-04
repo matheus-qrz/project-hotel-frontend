@@ -242,8 +242,8 @@ export default function EmployeeForm({ restaurantId, employeeId, isEditMode }: E
 
                     // Ajusta o redirecionamento baseado se é matriz ou unidade
                     const redirectPath = formData.unitId === restaurantId
-                        ? `/restaurant/${slug}/employees`
-                        : `/restaurant/${slug}/units/${formData.unitId}/employees`;
+                        ? `/admin/restaurant/${slug}/employees`
+                        : `/admin/restaurant/${slug}/units/${formData.unitId}/employees`;
 
                     router.push(redirectPath);
                 } else {
@@ -260,8 +260,8 @@ export default function EmployeeForm({ restaurantId, employeeId, isEditMode }: E
 
                     // Ajusta o redirecionamento baseado se é matriz ou unidade
                     const redirectPath = formData.unitId === restaurantId
-                        ? `/restaurant/${slug}/employees`
-                        : `/restaurant/${slug}/units/${formData.unitId}/employees`;
+                        ? `/admin/restaurant/${slug}/employees`
+                        : `/admin/restaurant/${slug}/units/${formData.unitId}/employees`;
 
                     router.push(redirectPath);
                 }
@@ -284,7 +284,7 @@ export default function EmployeeForm({ restaurantId, employeeId, isEditMode }: E
 
     // Voltar para a lista
     const goBack = () => {
-        router.push(`/restaurant/${slug}/employees`);
+        router.push(`/admin/restaurant/${slug}/employees`);
     };
 
     // Obtém a lista completa de unidades com a matriz

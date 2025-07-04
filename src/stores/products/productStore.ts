@@ -97,7 +97,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         set({ loading: true, error: null });
 
         try {
-            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products`, {
+            const response = await fetch(`/api/restaurant/${restaurantId}/products`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
@@ -123,7 +123,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         set({ loading: true, error: null });
         // Obtenha o token de autenticação
         try {
-            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products/${productId}`, {
+            const response = await fetch(`/api/restaurant/${restaurantId}/products/${productId}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -151,7 +151,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         set({ loading: true, error: null });
 
         try {
-            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products`, {
+            const response = await fetch(`/api/restaurant/${restaurantId}/products`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -185,7 +185,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         console.log("token>", token)
 
         try {
-            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products/${id}/update`, {
+            const response = await fetch(`/api/restaurant/${restaurantId}/products/${id}/update`, {
                 method: 'PATCH',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -220,7 +220,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         set({ loading: true, error: null });
         // Obtenha o token de autenticação
         try {
-            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products/${id}/delete`, {
+            const response = await fetch(`/api/restaurant/${restaurantId}/products/${id}/delete`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -251,7 +251,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         set({ loading: true, error: null });
         // Obtenha o token de autenticação
         try {
-            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products/promotional`, {
+            const response = await fetch(`/api/restaurant/${restaurantId}/products/promotional`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -278,7 +278,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         set({ loading: true });
 
         try {
-            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/promotions/category`, {
+            const response = await fetch(`/api/restaurant/${restaurantId}/promotions/category`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -304,7 +304,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
         try {
             const response = await fetch(
-                `${API_URL}/restaurant/${restaurantId}/products/${productId}/promotions/history`,
+                `/api/restaurant/${restaurantId}/products/${productId}/promotions/history`,
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -326,7 +326,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
         try {
             const response = await fetch(
-                `${API_URL}/restaurant/${restaurantId}/products/${productId}/promotions/${promotionId}/reactivate`,
+                `/api/restaurant/${restaurantId}/products/${productId}/promotions/${promotionId}/reactivate`,
                 {
                     method: 'POST',
                     headers: {
@@ -353,7 +353,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
             const formData = new FormData();
             formData.append('file', file);
 
-            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products/import`, {
+            const response = await fetch(`/api/restaurant/${restaurantId}/products/import`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -394,7 +394,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         set({ loading: true });
         try {
             const response = await fetch(
-                `${API_URL}/restaurant/${restaurantId}/products/${productId}/promotion/deactivate`,
+                `/api/restaurant/${restaurantId}/products/${productId}/promotion/deactivate`,
                 {
                     method: 'POST',
                     headers: {
@@ -432,7 +432,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         set({ loading: true });
         try {
             const response = await fetch(
-                `${API_URL}/restaurant/${restaurantId}/products/${productId}/promotion`,
+                `/api/restaurant/${restaurantId}/products/${productId}/promotion`,
                 {
                     method: 'PATCH',
                     headers: {
@@ -463,7 +463,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         set({ loading: true, error: null });
 
         try {
-            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/combos`, {
+            const response = await fetch(`/api/restaurant/${restaurantId}/combos`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -496,7 +496,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         set({ loading: true, error: null });
 
         try {
-            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/combos/${id}/update`, {
+            const response = await fetch(`/api/restaurant/${restaurantId}/combos/${id}/update`, {
                 method: 'PATCH',
                 headers: {
                     'Authorization': `Bearer ${token}`,

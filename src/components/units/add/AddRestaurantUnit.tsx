@@ -131,7 +131,7 @@ export default function AddRestaurantUnit({ restaurantId }: iAddRestaurantUnit) 
 
     const handleClose = () => {
         resetForm();
-        router.push(`/restaurant/${restaurantId}/units`);
+        router.push(`/admin/restaurant/${restaurantId}/units`);
     };
 
     const handleSubmit = async () => {
@@ -170,7 +170,7 @@ export default function AddRestaurantUnit({ restaurantId }: iAddRestaurantUnit) 
                 status: 'active'
             };
 
-            const response = await fetch(`${API_URL}/restaurant/${restaurantId}/units/register`, {
+            const response = await fetch(`/api/restaurant/${restaurantId}/units/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -304,14 +304,14 @@ export default function AddRestaurantUnit({ restaurantId }: iAddRestaurantUnit) 
                             <div className="flex justify-center gap-4">
                                 <Button
                                     variant="outline"
-                                    onClick={() => router.push(`/restaurant/${restaurantId}/units`)}
+                                    onClick={() => router.push(`/admin/restaurant/${restaurantId}/units`)}
                                     className="w-full"
                                 >
                                     Voltar para o menu inicial
                                 </Button>
                                 <Button
                                     className="w-full bg-black hover:bg-gray-800 text-white"
-                                    onClick={() => router.push(`/restaurant/unit/${unitData.id}`)}
+                                    onClick={() => router.push(`/admin/restaurant/unit/${unitData.id}`)}
                                 >
                                     Visualizar unidade
                                     <ChevronRight className="h-4 w-4 ml-2" />

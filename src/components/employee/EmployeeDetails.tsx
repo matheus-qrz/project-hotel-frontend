@@ -54,12 +54,12 @@ export default function EmployeeDetails({ unitId, employeeId }: EmployeeDetailsP
 
     // Voltar para a lista
     const goBack = () => {
-        router.push(`/restaurant/${slug}/employees`);
+        router.push(`/admin/restaurant/${slug}/employees`);
     };
 
     // Ir para edição
     const goToEdit = () => {
-        router.push(`/restaurant/${slug}/employees/${employeeId}/edit`);
+        router.push(`/admin/restaurant/${slug}/employees/${employeeId}/edit`);
     };
 
     // Renderizar skeleton durante carregamento

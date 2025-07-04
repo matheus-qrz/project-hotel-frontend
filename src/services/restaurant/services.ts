@@ -28,7 +28,7 @@ export async function getRestaurantById(id: string) {
     try {
         // Se não for o ID específico, ainda tentamos a API
         const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:3333';
-        const response = await fetch(`${API_URL}/restaurant/${id}`);
+        const response = await fetch(`/api/restaurant/${id}`);
 
         if (!response.ok) {
             throw new Error(`Restaurante não encontrado (Status: ${response.status})`);
@@ -52,7 +52,7 @@ export async function getRestaurantBySlug(slug: string) {
         console.log("Tentando buscar restaurante com slug:", normalizedSlug);
 
         // Primeira tentativa: endpoint específico de slug
-        const response = await fetch(`${API_URL}/restaurant/by-slug/${normalizedSlug}`);
+        const response = await fetch(`/api/restaurant/by-slug/${normalizedSlug}`);
 
         if (response.ok) {
             const restaurant = await response.json();
@@ -63,7 +63,7 @@ export async function getRestaurantBySlug(slug: string) {
         console.log("Endpoint específico falhou, tentando buscar todos os restaurantes");
 
         // Segunda tentativa: buscar todos os restaurantes e filtrar
-        const allRestaurantsResponse = await fetch(`${API_URL}/restaurant`);
+        const allRestaurantsResponse = await fetch(`/api/restaurant`);
 
         if (allRestaurantsResponse.ok) {
             const restaurants = await allRestaurantsResponse.json();
@@ -260,7 +260,7 @@ export async function getOrderById(orderId: string) {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('guest_token');
 
     try {
-        const response = await fetch(`${API_URL}/order/${orderId}`, {
+        const response = await fetch(`/api/order/${orderId}`, {
             headers: {
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {})
             }

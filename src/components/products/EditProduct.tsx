@@ -157,7 +157,7 @@ export default function ProductEdit() {
                 description: "Produto atualizado com sucesso",
             });
 
-            router.push(`/restaurant/${restaurantId}/products/${productId}`);
+            router.push(`/admin/restaurant/${restaurantId}/products/${productId}`);
         } catch (error) {
             console.error("Erro ao atualizar produto:", error);
             toast({

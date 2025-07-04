@@ -213,10 +213,10 @@ export default function RestaurantRegisterContainer() {
 
                 // Redirecionar para o dashboard com o ID do restaurante
                 if (restaurantId) {
-                    router.push(`/restaurant/${restaurantId}/dashboard`);
+                    router.push(`/admin/restaurant/${restaurantId}/dashboard`);
                 } else {
                     // Fallback para a resposta da API se o store não tiver o ID ainda
-                    router.push(`/restaurant/${result.restaurant?._id}/dashboard`);
+                    router.push(`/admin/restaurant/${result.restaurant?._id}/dashboard`);
                 }
             } else {
                 setError(result.message);

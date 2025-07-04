@@ -68,7 +68,7 @@ export default function PromotionsPage() {
     const categories = Array.from(new Set(products?.map(p => p.category) || []));
 
     const handleEditPromotion = (product: Product) => {
-        router.push(`/restaurant/${product.restaurant}/promotions/${product._id}/promotion`);
+        router.push(`/admin/restaurant/${product.restaurant}/promotions/${product._id}/promotion`);
     };
 
     const handleDeactivatePromotion = (productId: string) => {
@@ -104,7 +104,7 @@ export default function PromotionsPage() {
         <div className="container mx-auto p-6">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold">Gerenciar Promoções</h1>
-                <Button onClick={() => router.push(`/restaurant/${slug}/promotions/history`)}>
+                <Button onClick={() => router.push(`/admin/restaurant/${slug}/promotions/history`)}>
                     Histórico de Promoções
                 </Button>
             </div>
@@ -148,7 +148,7 @@ export default function PromotionsPage() {
                                     category={category}
                                     products={products.filter(p => p.category === category)}
                                     onApplyPromotion={() => {
-                                        router.push(`/restaurant/${slug}/promotions/category/${category}`);
+                                        router.push(`/admin/restaurant/${slug}/promotions/category/${category}`);
                                     }}
                                 />
                             ))}

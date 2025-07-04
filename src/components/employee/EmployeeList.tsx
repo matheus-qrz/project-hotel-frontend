@@ -128,11 +128,11 @@ export default function EmployeeList({ restaurantId }: EmployeeListProps) {
     };
 
     const goToEdit = (employeeId: string) => {
-        router.push(`/restaurant/${restaurantId}/employees/${employeeId}/edit`);
+        router.push(`/admin/restaurant/${restaurantId}/employees/${employeeId}/edit`);
     };
 
     const goToCreate = () => {
-        router.push(`/restaurant/${restaurantId}/employees/create`);
+        router.push(`/admin/restaurant/${restaurantId}/employees/create`);
     };
 
     const renderRoleBadge = (role: string) => {
@@ -250,7 +250,7 @@ export default function EmployeeList({ restaurantId }: EmployeeListProps) {
                             {sortedEmployees.map((employee) => (
                                 <TableRow key={employee._id}>
                                     <TableCell className="font-medium">
-                                        <Link href={`/restaurant/${restaurantId}/employees/${employee._id}`} className="hover:underline">
+                                        <Link href={`/admin/restaurant/${restaurantId}/employees/${employee._id}`} className="hover:underline">
                                             {formatFullName(employee.firstName, employee.lastName)}
                                         </Link>
                                     </TableCell>

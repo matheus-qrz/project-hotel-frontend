@@ -105,7 +105,7 @@ export default function ImportProducts() {
                 setUploadSuccess(true);
 
                 setTimeout(() => {
-                    router.push(`/restaurant/${restaurantId}/products`);
+                    router.push(`/admin/restaurant/${restaurantId}/products`);
                 })
             } else {
                 setUploadError(result.message)

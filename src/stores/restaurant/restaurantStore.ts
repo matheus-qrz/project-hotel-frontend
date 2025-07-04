@@ -86,7 +86,7 @@ export const useRestaurantStore = create<RestaurantStore>((set, get) => ({
             // Garante que estamos usando apenas o slug básico
             const cleanSlug = slug.split('?')[0]; // Remove query params se houver
 
-            const response = await fetch(`${API_URL}/restaurant/by-slug/${cleanSlug}`, {
+            const response = await fetch(`/api/restaurant/by-slug/${cleanSlug}`, {
                 headers: {
                     ...useAuthStore.getState().getHeaders(),
                 }
@@ -113,7 +113,7 @@ export const useRestaurantStore = create<RestaurantStore>((set, get) => ({
         try {
             set({ isLoading: true, error: null });
 
-            const response = await fetch(`${API_URL}/restaurant/${restaurant._id}`, {
+            const response = await fetch(`/api/restaurant/${restaurant._id}`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',

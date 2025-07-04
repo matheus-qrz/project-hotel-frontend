@@ -26,7 +26,7 @@ const useFetchRestaurantInfo = () => {
                     return;
                 }
 
-                const response = await fetch(`${API_URL}/validate`, {
+                const response = await fetch(`/api/validate`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -54,7 +54,7 @@ const useFetchRestaurantInfo = () => {
                     });
 
                     // Use o slug no redirecionamento
-                    router.push(`/restaurant/${slug}/dashboard`);
+                    router.push(`/admin/restaurant/${slug}/dashboard`);
                 } else {
                     toast.toast({
                         variant: "destructive",

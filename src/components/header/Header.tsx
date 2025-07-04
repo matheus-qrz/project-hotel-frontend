@@ -47,7 +47,7 @@ export default function Header() {
                 <span className="sr-only">Toggle Sidebar</span>
             </Button>
 
-            <h2 className="text-xl text-primary font-medium text-center cursor-pointer" onClick={() => route.push(`/restaurant/${slug}/dashboard`)}>{displayName}</h2>
+            <h2 className="text-xl text-primary font-medium text-center cursor-pointer" onClick={() => route.push(`/admin/restaurant/${slug}/dashboard`)}>{displayName}</h2>
 
             <Button
                 variant="outline"

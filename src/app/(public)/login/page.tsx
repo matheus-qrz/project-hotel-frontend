@@ -15,10 +15,10 @@ export default function LoginPage() {
     useEffect(() => {
         if (!isLoading && isAuthenticated && isAdmin && session?.user?.restaurantId) {
             const slug = generateRestaurantSlug('restaurantName', session.user.restaurantId);
-            router.replace(`/restaurant/${slug}/dashboard`);
+            router.replace(`/admin/restaurant/${slug}/dashboard`);
         } else if (!isLoading && isAuthenticated && isManager && session?.user?.restaurantId) {
             const slug = generateRestaurantSlug('restaurantName', session.user.restaurantId);
-            router.replace(`/restaurant/${slug}/manager`);
+            router.replace(`/admin/restaurant/${slug}/manager`);
         }
     }, [isAuthenticated, isAdmin, session, isLoading, router]);
 
