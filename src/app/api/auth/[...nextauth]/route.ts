@@ -54,20 +54,22 @@ const handler = NextAuth({
                     console.log("Dados do login:", JSON.stringify(data));
 
                     // Verifica se é resposta de restaurant ou user
-                    if (data.restaurant && data.user) {
+                    if (data.restaurantInfo && data.user) {
                         if (!["ADMIN", "MANAGER"].includes(data.user.role)) {
-                            throw new Error("Acesso negado. Apenas ADMIN e MANAGER podem acessar.");
+                            throw new Error("Acesso negado.");
                         }
 
                         return {
-                            id: data.restaurant._id,
-                            name: data.restaurant.admin.fullName,
-                            email: data.restaurant.admin.email,
+                            id: data.user.id,
+                            name: data.user.firstName,
+                            email: data.user.email,
                             role: data.user.role,
                             token: data.token,
-                            restaurantId: data.restaurant._id
+                            restaurantId: data.restaurantInfo.restaurantId,
+                            unitId: data.restaurantInfo.unitId || null
                         } as iUser;
-                    } else if (data.user) {
+                    }
+                    else if (data.user) {
                         // Verifica se o usuário é ADMIN ou MANAGER
                         if (data.user.role !== "ADMIN" && data.user.role !== "MANAGER") {
                             throw new Error("Acesso negado. Apenas ADMIN e MANAGER podem acessar.");

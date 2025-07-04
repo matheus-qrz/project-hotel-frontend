@@ -26,13 +26,9 @@ export default function SessionManager({ children }: SessionManagerProps) {
 
     useEffect(() => {
         if (status === 'authenticated' && session) {
-            updateFromSession(session);
-
-            if (session.user?.restaurantId) {
-                fetchRestaurantData(session.user.restaurantId);
-            }
+            useAuthStore.getState().updateFromSession(session);
         }
-    }, [session, status, updateFromSession, fetchRestaurantData]);
+    }, [status, session]);
 
     return <>{children}</>;
 }

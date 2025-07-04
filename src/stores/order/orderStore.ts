@@ -97,7 +97,7 @@ interface OrderStore {
     }) => Promise<void>;
     cancelOrder: (orderId: string, restaurantId: string, tableId: string) => Promise<void>;
     cancelOrderItem: (orderId: string, itemId: string, restaurantId: string, tableId: string) => Promise<void>;
-    addItemsToOrder: (restaurantId: string, tableId: string, orderId: string, items: CartItemProps[], totalAmount: number) => Promise<void>;
+    addItemsToOrder: (restaurantId: string, tableId: string, orderId: string, guestId: string, items: CartItemProps[], totalAmount: number) => Promise<void>;
     updateOrderItem: (
         restaurantId: string,
         tableId: string,
@@ -524,14 +524,14 @@ export const useOrderStore = create(
                 }
             },
 
-            addItemsToOrder: async (restaurantId: string, tableId: string, orderId: string, items: CartItemProps[], totalAmount: number) => {
+            addItemsToOrder: async (restaurantId: string, tableId: string, orderId: string, guestId: string, items: CartItemProps[], totalAmount: number) => {
                 try {
                     const itemsWithStatus = items.map(item => ({
                         ...item,
                         status: OrderItemStatus.ADDED
                     }));
 
-                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/add-items`, {
+                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/guest/${guestId}/add-items`, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
