@@ -21,12 +21,9 @@ interface Addon {
     quantity?: number;
 }
 
-interface OrderItemState {
-    id: string;
-    name: string;
-    quantity: number;
-    status: OrderItemStatusType;
-    addons?: Addon[];
+function formatTime(dateStr: string) {
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
 const StatusTexts: Record<OrderStatusType, string> = {
@@ -45,20 +42,24 @@ const StatusColors: Record<OrderStatusType, string> = {
     [OrderStatus.PAID]: 'bg-gray-200 text-gray-800'
 };
 
-export function ManagerScreen({ slug }: ManagerScreenProps) {
+export default function ManagerScreen({ slug }: ManagerScreenProps) {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const { order, fetchRestaurantUnitOrders, updateOrder } = useOrderStore();
     const { currentUnitId } = useRestaurantUnitStore();
-    const [previousOrders, setPreviousOrders] = useState<{ [key: string]: OrderItem[] }>({});
 
     const restaurantId = slug && extractIdFromSlug(String(slug));
 
-    const getStatusColor = (status: OrderStatusType) => StatusColors[status];
-    const getStatusText = (status: OrderStatusType) => StatusTexts[status];
+    console.log('Restaurant ID:', restaurantId);
 
     useEffect(() => {
         const loadOrders = async () => {
-            if (restaurantId && currentUnitId) {
+            if (restaurantId) {
+                try {
+                    await fetchRestaurantUnitOrders(restaurantId);
+                } catch (error) {
+                    console.error('Error fetching orders:', error);
+                }
+            } else if (currentUnitId) {
                 try {
                     await fetchRestaurantUnitOrders(restaurantId, String(currentUnitId));
                 } catch (error) {
@@ -70,44 +71,11 @@ export function ManagerScreen({ slug }: ManagerScreenProps) {
         loadOrders();
     }, [restaurantId, currentUnitId, fetchRestaurantUnitOrders]);
 
-    useEffect(() => {
-        const newPreviousOrders: { [key: string]: OrderItem[] } = {};
-        order.forEach(orderItem => {
-            const key = `${orderItem.meta.tableId}-${orderItem.guestInfo.id}`;
-            newPreviousOrders[key] = orderItem.items.map(item => ({
-                ...item,
-                id: item._id,
-                guestId: orderItem.guestInfo.id,
-                addons: item.addons ? item.addons.filter(addon => typeof addon !== 'string') as Addon[] : undefined
-            }));
-        });
-        setPreviousOrders(newPreviousOrders);
-    }, [order]);
-
     const handleRefresh = async () => {
         if (!restaurantId) return;
         setIsRefreshing(true);
         try {
-            // Armazena o snapshot antes da atualização
-            const previousOrderSnapshot = JSON.parse(JSON.stringify(order));
-
-            // Busca os novos pedidos
-            await fetchRestaurantUnitOrders(restaurantId, currentUnitId ? String(currentUnitId) : '');
-
-            // Atualiza previousOrders com os dados corretos
-            setPreviousOrders(() => {
-                const newPreviousOrders: { [key: string]: OrderItem[] } = {};
-                previousOrderSnapshot.forEach((orderItem: Order) => {
-                    const key = `${orderItem.meta.tableId}-${orderItem.guestInfo.id}`;
-                    newPreviousOrders[key] = orderItem.items.map(item => ({
-                        ...item,
-                        id: item._id,
-                        guestId: orderItem.guestInfo.id,
-                        addons: item.addons ? [...item.addons] : undefined // keep as string[] or undefined
-                    }));
-                });
-                return newPreviousOrders;
-            });
+            await fetchRestaurantUnitOrders(restaurantId, String(currentUnitId));
         } catch (error) {
             console.error('Erro na atualização manual:', error);
         } finally {
@@ -151,170 +119,111 @@ export function ManagerScreen({ slug }: ManagerScreenProps) {
         return Object.values(groupedOrders);
     };
 
-    const renderOrderItems = (order: Order) => {
-        const previousItems = previousOrders[`${order.meta.tableId}-${order.guestInfo.id}`] || [];
-
-        return order.items.map(item => {
-            const isPreviouslySeen = previousItems.some(prev => prev._id === item._id);
-
-            // Considera "novo" se não foi visto antes E o pedido já tinha sido exibido anteriormente
-            const isNew =
-                !isPreviouslySeen &&
-                item.createdAt &&
-                (!order.updatedAt || new Date(item.createdAt) > new Date(order.updatedAt));
-
-            let style = '';
+    const renderOrderItems = (items: OrderItem[]) => {
+        return items.map((item, index) => {
+            let style = 'text-gray-600';
             let prefix = '';
 
-            switch (order.status) {
-                case OrderStatus.COMPLETED:
-                    style = 'text-gray-900 line-through';
-                    break;
-
-                case OrderStatus.PAYMENT_REQUESTED:
-                    style = 'text-purple-600';
-                    break;
-
-                case OrderStatus.PROCESSING:
-                    if (isNew) {
-                        style = 'text-green-600 font-medium';
-                        prefix = '+';
-                    } else if (item.status === OrderItemStatus.COMPLETED) {
-                        style = 'text-gray-900 line-through';
-                    } else if (
-                        item.status === OrderItemStatus.REMOVED ||
-                        item.status === OrderItemStatus.CANCELLED
-                    ) {
-                        style = 'text-red-600';
-                        prefix = '-';
-                    } else {
-                        style = 'text-gray-600';
-                    }
-                    break;
-
-                default:
-                    style = 'text-gray-600';
+            if (item.status === OrderItemStatus.ADDED) {
+                style = 'text-green-600 font-medium';
+                prefix = '+';
+            } else if (item.status === OrderItemStatus.CANCELLED || item.status === OrderItemStatus.REMOVED) {
+                style = 'text-red-600';
+                prefix = '-';
+            } else if (item.status === OrderItemStatus.COMPLETED) {
+                style = 'text-gray-500 line-through';
             }
 
             return (
-                <div key={item._id} className="mb-2">
-                    <li className={`${style} flex flex-col`}>
-                        <span>{prefix}{Math.abs(item.quantity)}x {item.name}</span>
-                        {item.addons && item.addons.length > 0 && (
-                            <ul className="ml-6 text-sm">
-                                {item.addons.map((addon, index) => (
-                                    <li key={index} className={`${style} italic`}>
-                                        {prefix}{Math.abs(addon.quantity || 1)}x {addon.name}
-                                        {addon.price > 0 && ` (+R$ ${addon.price.toFixed(2)})`}
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </li>
-                </div>
+                <li key={index} className={`${style} flex justify-between`}>
+                    <span>{prefix}{item.quantity}x {item.name}</span>
+                </li>
             );
         });
     };
 
+    const renderBadges = (order: Order) => {
+        const badges = [];
 
-    const renderOrders = (statuses: OrderStatusType[]) => {
-        const groupedOrders = groupOrders();
+        if (order.items.some(i => i.status === OrderItemStatus.ADDED)) {
+            badges.push(<span key="novo" className="text-sm text-blue-600">🆕 Novo item</span>);
+        }
+        if (order.items.every(i => i.status === OrderItemStatus.COMPLETED)) {
+            badges.push(<span key="completo" className="text-sm text-green-600">✅ Todos servidos</span>);
+        }
+        if (order.status === OrderStatus.PAYMENT_REQUESTED) {
+            badges.push(<span key="pago" className="text-sm text-purple-600">💳 Pagamento solicitado</span>);
+        }
+        if (order.items.some(i => i.status === OrderItemStatus.CANCELLED)) {
+            badges.push(<span key="cancelado" className="text-sm text-red-600">❗Item cancelado</span>);
+        }
 
-        return groupedOrders
-            .filter(order => statuses.includes(order.status))
-            .map(order => (
-                <Card key={order._id} className="mb-4">
-                    <CardHeader>
-                        <CardTitle className="flex justify-between items-center text-primary text-xl font-semibold">
-                            <span>Mesa {order.meta.tableId}</span>
-                            <Select
-                                value={order.status}
-                                onValueChange={(value) => handleStatusChange(order._id, value as OrderStatusType)}
-                                disabled={order.status === OrderStatus.PAID || order.status === OrderStatus.CANCELLED}
-                            >
-                                <SelectTrigger className={`w-[180px] ${getStatusColor(order.status)}`}>
-                                    <SelectValue>
-                                        {getStatusText(order.status)}
-                                    </SelectValue>
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {Object.keys(OrderStatus).map((key) => (
-                                        <SelectItem
-                                            key={key}
-                                            value={OrderStatus[key as keyof typeof OrderStatus]}
-                                        >
-                                            {StatusTexts[OrderStatus[key as keyof typeof OrderStatus]]}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-2">
-                            <p><strong>Cliente:</strong> {order.guestInfo?.name || 'Anônimo'}</p>
-                            <p><strong>Itens:</strong></p>
-                            <ul>
-                                {renderOrderItems(order)}
-                            </ul>
-                            <p><strong>Total:</strong> R$ {order.totalAmount.toFixed(2)}</p>
-                            {order.meta?.observations && (
-                                <p><strong>Observações:</strong> {order.meta.observations}</p>
-                            )}
-                            {order.meta?.orderType && (
-                                <p><strong>Tipo:</strong> {order.meta.orderType === 'local' ? 'Local' : 'Para Viagem'}</p>
-                            )}
-                            {order.meta?.splitCount && order.meta.splitCount > 1 && (
-                                <p><strong>Divisão:</strong> {order.meta.splitCount} pessoas</p>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
-            ));
+        return <div className="flex gap-2 flex-wrap mt-2">{badges}</div>;
+    };
+
+    const renderOrderCard = (order: Order) => (
+        <Card key={order._id} className="p-3 rounded-xl shadow-sm bg-white w-full max-w-lg mx-auto">
+            <CardHeader className="pb-2">
+                <CardTitle className="flex flex-col items-start text-base">
+                    <div className="flex justify-between w-full">
+                        {renderBadges(order)}
+                        <span className="font-semibold">Mesa {order.meta.tableId}</span>
+                        <Select
+                            value={order.status}
+                            onValueChange={(value) => handleStatusChange(order._id, value as OrderStatusType)}
+                            disabled={([OrderStatus.PAID, OrderStatus.CANCELLED] as OrderStatusType[]).includes(order.status)}
+                        >
+                            <SelectTrigger className={`w-[140px] text-sm ${StatusColors[order.status]} px-2`}>
+                                <SelectValue>{StatusTexts[order.status]}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Object.entries(OrderStatus).map(([key, value]) => (
+                                    <SelectItem key={key} value={value}>{StatusTexts[value]}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="gap-4 text-lg">
+                <p><strong>Cliente:</strong> {order.guestInfo?.name || 'Anônimo'}</p>
+                <p className="mt-1"><strong>Itens:</strong></p>
+                <ul className="ml-4 list-disc">
+                    {renderOrderItems(order.items)}
+                </ul>
+                <p className="mt-1"><strong>Enviado às:</strong> {formatTime(String(order.createdAt))}</p>
+                <p><strong>Total:</strong> R$ {order.totalAmount.toFixed(2)}</p>
+            </CardContent>
+        </Card>
+    );
+
+    const renderOrders = (status: string) => {
+        return order.filter(o => o.status === status).map(renderOrderCard);
     };
 
     return (
         <div className="w-full max-h-screen overflow-hidden bg-gray-50">
-            <div className="w-full mx-auto p-6">
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-2xl font-bold">Gerenciamento de Pedidos</h1>
-                    <Button
-                        onClick={handleRefresh}
-                        className="flex items-center gap-2"
-                        variant="outline"
-                        disabled={isRefreshing}
-                    >
-                        <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                        {isRefreshing ? 'Atualizando...' : 'Atualizar Pedidos'}
+            <div className="w-full h-screen mx-auto p-4">
+                <div className="flex justify-between items-center mb-4">
+                    <h1 className="text-xl font-bold">Gerenciamento de Pedidos</h1>
+                    <Button onClick={handleRefresh} variant="outline" disabled={isRefreshing} className="text-sm">
+                        <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        {isRefreshing ? 'Atualizando...' : 'Atualizar'}
                     </Button>
                 </div>
 
-                <div className="grid grid-cols-3 md:grid-cols-3 gap-6 justify-center items-center">
-                    <div className="bg-white p-6 rounded-lg shadow-sm min-h-[calc(100vh-200px)] overflow-y-auto">
-                        <h2 className="text-xl font-semibold mb-6 sticky top-0 bg-white py-2">
-                            Em Preparo
-                        </h2>
-                        <div className="space-y-4">
-                            {renderOrders([OrderStatus.PROCESSING])}
-                        </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                        <h2 className="text-lg font-semibold mb-3">Em preparo</h2>
+                        {renderOrders(OrderStatus.PROCESSING)}
                     </div>
-
-                    <div className="bg-white p-6 rounded-lg shadow-sm min-h-[calc(100vh-200px)] overflow-y-auto">
-                        <h2 className="text-xl font-semibold mb-6 sticky top-0 bg-white py-2">
-                            Concluídos
-                        </h2>
-                        <div className="space-y-4">
-                            {renderOrders([OrderStatus.COMPLETED])}
-                        </div>
+                    <div>
+                        <h2 className="text-lg font-semibold mb-3">Concluídos</h2>
+                        {renderOrders(OrderStatus.COMPLETED)}
                     </div>
-
-                    <div className="bg-white p-6 rounded-lg shadow-sm min-h-[calc(100vh-200px)] overflow-y-auto">
-                        <h2 className="text-xl font-semibold mb-6 sticky top-0 bg-white py-2">
-                            Pagamentos Solicitados
-                        </h2>
-                        <div className="space-y-4">
-                            {renderOrders([OrderStatus.PAYMENT_REQUESTED])}
-                        </div>
+                    <div>
+                        <h2 className="text-lg font-semibold mb-3">Pagamentos solicitados</h2>
+                        {renderOrders(OrderStatus.PAYMENT_REQUESTED)}
                     </div>
                 </div>
             </div>
@@ -322,7 +231,6 @@ export function ManagerScreen({ slug }: ManagerScreenProps) {
     );
 }
 
-export default ManagerScreen;
 
 
 

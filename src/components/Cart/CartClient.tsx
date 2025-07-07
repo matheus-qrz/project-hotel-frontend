@@ -115,8 +115,10 @@ export function CartClient() {
                     }))
                 }));
 
+                console.log("restaurantId", restaurantId);
+
                 // ✅ Usando a função correta da store
-                await addItemsToOrder(String(restaurantId), String(tableId), existingOrder._id, newItems, getTotal());
+                await addItemsToOrder(String(restaurantId), String(tableId), existingOrder._id, guestId, newItems, getTotal());
 
                 await fetchGuestOrders(guestId, String(tableId));
 
