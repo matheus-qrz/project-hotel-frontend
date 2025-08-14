@@ -25,7 +25,7 @@ export default function PromotionsManagementPage() {
     }
 
     if (!isAuthenticated || !isAdminOrManager) {
-        router.push('/login');
+        router.push('/');
         return null;
     }
 

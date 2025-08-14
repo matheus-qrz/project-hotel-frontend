@@ -12,7 +12,8 @@ export const OrderItemStatus = {
     REMOVED: 'removed',
     PROCESSING: 'processing',
     CANCELLED: 'cancelled',
-    COMPLETED: 'completed'
+    COMPLETED: 'completed',
+    REDUCED: 'reduced'
 } as const;
 
 export type OrderStatusType = typeof OrderStatus[keyof typeof OrderStatus];

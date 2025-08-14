@@ -15,13 +15,13 @@ export default function QRCodeHandler() {
         localStorage.setItem(`table-${restaurantId}`, tableId);
 
         // Criar token de convidado para autenticação
-        createGuestAuth(restaurantId, tableId);
+        createGuestAuth(restaurantId, Number(tableId));
 
         // Redirecionar para a página da mesa
         router.push(`/restaurant/${restaurantId}/table/${tableId}`);
     }, [restaurantId, tableId, router]);
 
-    const createGuestAuth = (restaurantId: string, tableId: string) => {
+    const createGuestAuth = (restaurantId: string, tableId: number) => {
         // Criar um token temporário para convidado
         const guestToken = `guest_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
         localStorage.setItem('guest_token', guestToken);

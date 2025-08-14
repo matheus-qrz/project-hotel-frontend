@@ -29,19 +29,17 @@ export default function RootLayout({ children, params }: RootLayoutProps) {
     return (
         <html lang={locale} className="light" suppressHydrationWarning>
             <body className={inter.variable} suppressHydrationWarning>
-                <Providers>
-                    <ThemeProvider
-                        attribute="class"
-                        defaultTheme="light"
-                        enableSystem={false}
-                        disableTransitionOnChange
-                    >
-                        <ToastProvider>
-                            {children}
-                            <Toaster />
-                        </ToastProvider>
-                    </ThemeProvider>
-                </Providers>
+                <ThemeProvider
+                    attribute="class"
+                    defaultTheme="light"
+                    enableSystem={false}
+                    disableTransitionOnChange
+                >
+                    <ToastProvider>
+                        {children}
+                        <Toaster />
+                    </ToastProvider>
+                </ThemeProvider>
             </body>
         </html>
     );

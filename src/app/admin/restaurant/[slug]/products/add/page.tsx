@@ -3,25 +3,28 @@
 import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
-import { useAuthCheck } from '@/hooks/sessionManager';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores';
 import Header from '@/components/header/Header';
 import { Sidebar } from '@/components/dashboard/SideMenu';
 import { useSidebar } from '@/components/ui/sidebar';
 import ProductForm from '@/components/products/ProductsForm';
 
+
 export default function ProductsPage() {
-    const { isAuthenticated, isLoading } = useAuthCheck();
+    const { isAuthenticated, isLoading } = useAuthStore();
     const router = useRouter();
     const { isOpen } = useSidebar();
     const { slug } = useParams();
+
+
 
     if (isLoading) {
         return <div>Loading...</div>;
     }
 
     if (!isAuthenticated) {
-        router.push('/login');
+        router.push('/');
         return null;
     }
 

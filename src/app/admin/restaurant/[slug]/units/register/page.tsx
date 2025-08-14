@@ -6,15 +6,18 @@ import Header from "@/components/header/Header";
 import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import AddRestaurantUnit from "@/components/units/add/AddRestaurantUnit";
-import { useAuthCheck } from "@/hooks/sessionManager";
 import { useParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { extractIdFromSlug } from "@/utils/slugify";
+import { useRoleGuard } from "@/hooks/useRoleGuard";
+import { useAuthStore } from "@/stores";
 
 export default function AddUnitPage() {
     const { slug } = useParams();
-    const { isAuthenticated, isLoading, isAdminOrManager } = useAuthCheck();
     const { isOpen } = useSidebar();
+    const { isLoading } = useAuthStore();
+
+
 
     const restaurantId = slug && extractIdFromSlug(String(slug));
 
@@ -30,23 +33,6 @@ export default function AddUnitPage() {
                         ))}
                     </div>
                 </div>
-            </div>
-        );
-    }
-
-    if (!isAuthenticated) {
-        return null;
-    }
-
-    if (!isAdminOrManager) {
-        return (
-            <div className="container mx-auto px-4 py-8">
-                <Card>
-                    <CardContent className="p-6 text-center">
-                        <h2 className="text-xl font-semibold text-red-600 mb-2">Acesso Negado</h2>
-                        <p>Você não tem permissão para acessar esta página.</p>
-                    </CardContent>
-                </Card>
             </div>
         );
     }

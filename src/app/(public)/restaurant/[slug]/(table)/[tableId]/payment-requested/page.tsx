@@ -1,12 +1,11 @@
 'use client';
 
 import React, { useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Home, Minus, Plus, Users } from "lucide-react";
+import { CreditCard, Home } from "lucide-react";
 import { extractNameFromSlug } from "@/utils/slugify";
 import { useCartStore } from "@/stores";
-import { formatCurrency } from "@/services/restaurant/services";
 
 export default function PaymentPage() {
     const { slug, tableId } = useParams();

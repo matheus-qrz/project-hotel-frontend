@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { PlusCircle, Edit, Trash2, Search, UserCircle, ArrowUpDown } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { PlusCircle, Edit, Trash2, Search, UserCircle, ArrowUpDown, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,80 +23,104 @@ import {
     DialogDescription,
     DialogFooter,
 } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/useToast';
 import { formatFullName } from '@/utils/formatFullname';
 import { formatDate } from '@/utils/formatDate';
-import {
-    getEmployeesByRestaurant,
-    deleteEmployee,
-    formatRole,
-} from '@/services/employee/index';
-import { IEmployee } from '@/services/employee/types';
-import { useAuthCheck } from '@/hooks/sessionManager';
+import { useEmployeeStore, IEmployee } from '@/stores/employees';
+import { formatRole } from '@/utils/formatRole';
+import { extractIdFromSlug } from '@/utils/slugify';
+import { useAuthStore } from '@/stores';
 
-interface EmployeeListProps {
-    restaurantId: string;
-}
 
-export default function EmployeeList({ restaurantId }: EmployeeListProps) {
+export default function EmployeeList() {
     const router = useRouter();
+    const { slug } = useParams();
     const { toast } = useToast();
-    const { isAuthenticated, isAdminOrManager, session } = useAuthCheck();
-    const [employees, setEmployees] = useState<IEmployee[]>([]);
-    const [filteredEmployees, setFilteredEmployees] = useState<IEmployee[]>([]);
+    const { isAuthenticated, token } = useAuthStore();
+
+    const {
+        employees,
+        isLoading,
+        error,
+        fetchEmployees,
+        deleteEmployee,
+    } = useEmployeeStore();
+
+    const [filteredEmployees, setFilteredEmployees] = useState(employees);
     const [searchQuery, setSearchQuery] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
+    const [selectedRole, setSelectedRole] = useState<string>('');
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [employeeToDelete, setEmployeeToDelete] = useState<IEmployee | null>(null);
-    const [error, setError] = useState<string | null>(null);
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-    const fetchEmployees = async () => {
-        try {
-            setIsLoading(true);
-            setError(null);
+    const restaurantId = extractIdFromSlug(String(slug));
 
-            if (isAuthenticated && isAdminOrManager) {
-                const data = await getEmployeesByRestaurant(restaurantId, session?.token ?? '');
-                setEmployees(Array.isArray(data) ? data : []);
-                setFilteredEmployees(Array.isArray(data) ? data : []);
-            }
-        } catch (error) {
-            toast({
-                title: "Erro",
-                description: "Não foi possível carregar os funcionários. Tente novamente.",
-                variant: "destructive"
-            });
-        } finally {
-            setIsLoading(false);
+    // Carrega funcionários ao acessar ou retornar para a tela
+    useEffect(() => {
+        const shouldFetch =
+            isAuthenticated && token && restaurantId;
+
+        if (shouldFetch) {
+            fetchEmployees(restaurantId, token ?? '')
+                .then(() => {
+                    // Filtro aplicado pelo outro useEffect
+                })
+                .catch(() => {
+                    toast({
+                        title: "Erro",
+                        description: "Não foi possível carregar os funcionários.",
+                        variant: "destructive"
+                    });
+                });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [restaurantId, isAuthenticated, token]);
+
+
+    useEffect(() => {
+        const query = searchQuery.toLowerCase();
+
+        const filtered = employees.filter((employee: IEmployee) => {
+            const role = (employee.role || '').toUpperCase();
+
+            const matchesSearch =
+                (employee.firstName || '').toLowerCase().includes(query) ||
+                (employee.lastName || '').toLowerCase().includes(query) ||
+                (employee.email || '').toLowerCase().includes(query) ||
+                formatRole(role).toLowerCase().includes(query);
+
+            const matchesRole =
+                selectedRole === 'ALL' || role === selectedRole;
+
+            return matchesSearch && matchesRole;
+        });
+
+        setFilteredEmployees(filtered);
+    }, [searchQuery, employees, selectedRole]);
+
+    useEffect(() => {
+        return () => {
+            setSearchQuery('');
+            setSelectedRole('ALL');
+        };
+    }, []);
+
+    const handleRefresh = async () => {
+        if (token) {
+            await fetchEmployees(restaurantId, token);
+            toast({ title: "Atualizado", description: "Lista de funcionários atualizada." });
         }
     };
 
-    useEffect(() => {
-        fetchEmployees();
-    }, [restaurantId]);
-
-    useEffect(() => {
-        if (searchQuery.trim() === '') {
-            setFilteredEmployees(employees);
-        } else {
-            const query = searchQuery.toLowerCase();
-            const filtered = employees.filter(employee =>
-                employee.firstName.toLowerCase().includes(query) ||
-                employee.lastName.toLowerCase().includes(query) ||
-                employee.email.toLowerCase().includes(query) ||
-                formatRole(employee.role).toLowerCase().includes(query)
-            );
-            setFilteredEmployees(filtered);
-        }
-    }, [searchQuery, employees]);
-
-    const sortedEmployees = [...filteredEmployees].sort((a, b) => {
-        return sortOrder === 'asc'
-            ? a.firstName.localeCompare(b.firstName)
-            : b.firstName.localeCompare(a.firstName);
-    });
+    const sortedEmployees = [...filteredEmployees]
+        .filter(emp => emp && emp.firstName)
+        .sort((a, b) =>
+            sortOrder === 'asc'
+                ? a.firstName.localeCompare(b.firstName)
+                : b.firstName.localeCompare(a.firstName)
+        );
 
     const confirmDelete = (employee: IEmployee) => {
         setEmployeeToDelete(employee);
@@ -106,23 +130,24 @@ export default function EmployeeList({ restaurantId }: EmployeeListProps) {
     const handleDelete = async () => {
         if (!employeeToDelete) return;
 
+        setDeleteDialogOpen(false);
+
         try {
-            await deleteEmployee(employeeToDelete._id, session?.token ?? '');
+            await deleteEmployee(employeeToDelete._id, token ?? '');
 
             toast({
                 title: "Sucesso",
                 description: `Funcionário ${formatFullName(employeeToDelete.firstName, employeeToDelete.lastName)} excluído com sucesso.`,
             });
 
-            fetchEmployees();
+            await fetchEmployees(restaurantId, token ?? '');
         } catch (error: any) {
             toast({
                 title: "Erro",
-                description: error.message || "Não foi possível excluir o funcionário. Tente novamente.",
+                description: "Não foi possível excluir o funcionário.",
                 variant: "destructive"
             });
         } finally {
-            setDeleteDialogOpen(false);
             setEmployeeToDelete(null);
         }
     };
@@ -182,21 +207,33 @@ export default function EmployeeList({ restaurantId }: EmployeeListProps) {
             <Card className="bg-red-50 border-red-100">
                 <CardContent className="p-6 text-center">
                     <p className="text-red-600 mb-4">{error}</p>
-                    <Button onClick={fetchEmployees}>Tentar Novamente</Button>
+                    <Button onClick={() => fetchEmployees}>Tentar Novamente</Button>
                 </CardContent>
             </Card>
         );
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-10">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <h2 className="text-2xl font-bold text-primary">Funcionários</h2>
-                <Button onClick={goToCreate} className="flex items-center gap-2">
-                    <PlusCircle size={18} />
-                    <span>Novo Funcionário</span>
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={handleRefresh}
+                        className="flex items-center gap-2"
+                        title="Recarregar lista"
+                    >
+                        <RefreshCcw size={18} />
+                        <span className="hidden sm:inline">Atualizar</span>
+                    </Button>
+                    <Button onClick={goToCreate} className="flex items-center gap-2">
+                        <PlusCircle size={18} />
+                        <span>Novo Funcionário</span>
+                    </Button>
+                </div>
             </div>
+
 
             <div className="flex flex-col md:flex-row gap-4 mb-6">
                 <div className="relative flex-1">
@@ -210,6 +247,18 @@ export default function EmployeeList({ restaurantId }: EmployeeListProps) {
                         disabled={employees.length === 0}
                     />
                 </div>
+
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                    <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Filtrar por função" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="ALL">Todas as funções</SelectItem>
+                        <SelectItem value="ADMIN">Administrador</SelectItem>
+                        <SelectItem value="MANAGER">Gerente</SelectItem>
+                        <SelectItem value="ATTENDANT">Atendente</SelectItem>
+                    </SelectContent>
+                </Select>
 
                 <Button
                     variant="outline"

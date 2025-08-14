@@ -1,7 +1,6 @@
 "use client"
 
 import { SidebarProvider } from "@/components/ui/sidebar"
-import Providers from "@/providers/providers"
 
 export default function ImportProductsLayout({
     children,

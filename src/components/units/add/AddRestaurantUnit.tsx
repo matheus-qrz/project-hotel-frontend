@@ -13,7 +13,6 @@ import UnitManagersForm from "./UnitManagersForm";
 import UnitSuccessScreen from "./UnitSuccessScreen";
 import { useToast } from "@/hooks/useToast";
 import useFetchRestaurantInfo from "@/hooks/fetchRestaurantInfo";
-import { useAuthCheck } from "@/hooks/sessionManager";
 
 export interface Schedule {
     day: string;
@@ -64,7 +63,7 @@ const initialUnit: RestaurantUnit = {
 
 export default function AddRestaurantUnit({ restaurantId }: iAddRestaurantUnit) {
     useFetchRestaurantInfo();
-    const { isAuthenticated, isLoading, isAdminOrManager, session } = useAuthCheck();
+    const { isAuthenticated, isLoading } = useAuthStore();
     const { unitData, resetForm } = useRestaurantUnitFormStore();
     const router = useRouter();
     const { toast } = useToast();
@@ -75,11 +74,11 @@ export default function AddRestaurantUnit({ restaurantId }: iAddRestaurantUnit) 
     const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
     useEffect(() => {
-        if (!isLoading && !isAuthenticated && !isAdminOrManager) {
-            router.push('/login');
+        if (!isLoading && !isAuthenticated) {
+            router.push('/');
             return;
         }
-    }, [isLoading, isAuthenticated, isAdminOrManager])
+    }, [isLoading, isAuthenticated])
 
     const handleNext = () => {
         if (step === 1) {
@@ -170,7 +169,7 @@ export default function AddRestaurantUnit({ restaurantId }: iAddRestaurantUnit) 
                 status: 'active'
             };
 
-            const response = await fetch(`/api/restaurant/${restaurantId}/units/register`, {
+            const response = await fetch(`/${API_URL}/restaurant/${restaurantId}/units/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

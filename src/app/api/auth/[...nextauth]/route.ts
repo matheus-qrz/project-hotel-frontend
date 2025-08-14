@@ -27,10 +27,10 @@ const handler = NextAuth({
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-                    const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
-                    console.log(`Tentando login em: /api/login`);
+                    const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+                    console.log(`Tentando login em: /login`);
 
-                    const response = await fetch(`/api/login`, {
+                    const response = await fetch(`${API_URL}/login`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json"
@@ -103,8 +103,6 @@ const handler = NextAuth({
         strategy: "jwt",
         maxAge: 30 * 24 * 60 * 60 // 30 dias
     },
-    debug: process.env.NODE_ENV === "development",
-    // Aumentando o tempo de expiração do token
     jwt: {
         maxAge: 30 * 24 * 60 * 60, // 30 dias em segundos
     },
@@ -121,7 +119,7 @@ const handler = NextAuth({
         }
     },
     callbacks: {
-        async jwt({ token, user }) {
+        async jwt({ token, user }: { token: any, user?: any }) {
             if (user) {
                 return {
                     ...token,
@@ -133,7 +131,7 @@ const handler = NextAuth({
             }
             return token;
         },
-        async session({ session, token }) {
+        async session({ session, token }: { session: any, token: any }) {
             return {
                 ...session,
                 user: {
@@ -145,7 +143,11 @@ const handler = NextAuth({
                 token: token.token
             };
         }
-    }
+    },
+    useSecureCookies: true,
+    debug: true,
+    adapter: undefined,
+    secret: process.env.NEXTAUTH_SECRET
 });
 
 export { handler as GET, handler as POST };

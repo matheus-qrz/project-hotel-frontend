@@ -4,23 +4,21 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { extractIdFromSlug } from '@/utils/slugify';
 import { CartClient } from '@/components/cart/index';
-import { getRestaurantProducts } from '@/services/restaurant/services';
-import { IProducts } from './types';
+import { useProductStore } from '@/stores/products';
 
 export default function CartPage() {
     const { slug } = useParams();
-    const [products, setProducts] = useState<IProducts[]>();
+    const { fetchProducts } = useProductStore();
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
     const restaurantId = slug && extractIdFromSlug(String(slug));
 
     useEffect(() => {
-        const fetchProducts = async () => {
+        const fetchRestaurantProducts = async () => {
             try {
                 setIsLoading(true);
-                const data = await getRestaurantProducts(String(restaurantId));
-                setProducts(data);
+                await fetchProducts(String(restaurantId));
             } catch (err: any) {
                 console.error('Erro ao buscar produtos:', err);
                 setError(err.message);
@@ -30,7 +28,7 @@ export default function CartPage() {
         };
 
         if (restaurantId) {
-            fetchProducts();
+            fetchRestaurantProducts();
         }
     }, [restaurantId]);
 

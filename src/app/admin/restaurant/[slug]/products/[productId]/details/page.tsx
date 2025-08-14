@@ -1,28 +1,30 @@
 'use client';
 
 import React from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { extractIdFromSlug } from '@/utils/slugify';
+import { useRouter } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
-import { useAuthCheck } from '@/hooks/sessionManager';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores';
 import Header from '@/components/header/Header';
 import { Sidebar } from '@/components/dashboard/SideMenu';
 import { useSidebar } from '@/components/ui/sidebar';
 import { DelayedLoading } from '@/components/loading/DelayedLoading';
 import ProductDetails from '@/components/products/ProductDetails';
 
+
 export default function ProductDetailsPage() {
-    const { isAuthenticated, isLoading } = useAuthCheck();
+    const { isAuthenticated, isLoading } = useAuthStore();
     const router = useRouter();
     const { isOpen } = useSidebar();
+
+
 
     if (isLoading) {
         return <DelayedLoading />;
     }
 
     if (!isAuthenticated) {
-        router.push('/login');
+        router.push('/');
         return null;
     }
 

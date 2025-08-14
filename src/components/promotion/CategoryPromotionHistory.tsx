@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency } from '@/services/restaurant/services';
+import { formatCurrency } from '@/utils/formatCurrency';
 import { getCategoryName } from '@/utils/getCategoryName';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';

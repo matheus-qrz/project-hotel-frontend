@@ -5,24 +5,25 @@ import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Header from '@/components/header/Header';
 import { Sidebar } from '@/components/dashboard/SideMenu';
+import { useAuthStore } from '@/stores';
 import { useSidebar } from '@/components/ui/sidebar';
-import { useAuthCheck } from '@/hooks/sessionManager';
 import { cn } from '@/lib/utils';
 import OrderHistory from '@/components/order/OrderHistory';
 import { DelayedLoading } from '@/components/loading/DelayedLoading';
 
+
 export default function EmployeesPage() {
     const router = useRouter();
     const { slug } = useParams();
-    const { isAuthenticated, isLoading, isAdminOrManager } = useAuthCheck();
+    const { isAuthenticated, isLoading } = useAuthStore();
     const { isOpen } = useSidebar();
 
     if (isLoading) {
         return <DelayedLoading />;
     }
 
-    if (!isAuthenticated || !isAdminOrManager) {
-        router.push('/login');
+    if (!isAuthenticated) {
+        router.push('/');
         return null;
     }
 

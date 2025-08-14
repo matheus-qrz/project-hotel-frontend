@@ -7,7 +7,9 @@ import { Card } from "@/components/ui/card";
 import { Chart } from "@/components/charts";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useMockedDashboardStore } from '@/stores';
+import { useRestaurantUnitStore } from '@/stores/restaurantUnit';
+import { useDashboardStore } from '@/stores';
+import { RecentSale } from '@/types/dashboard';
 
 const DelayedComponent = dynamic(
     () => import('@/components/loading/LoadingComponent').then(mod => mod.LoadingComponent),
@@ -15,11 +17,14 @@ const DelayedComponent = dynamic(
 );
 
 export function FinancialDashboard() {
-    const { data, isLoading, error, fetchDashboardData } = useMockedDashboardStore();
+    const unitId = useRestaurantUnitStore.getState().currentUnitId;
+    const { data, isLoading, error, fetchDashboardData } = useDashboardStore();
 
     useEffect(() => {
-        fetchDashboardData('mock-unit-id', 'financial');
-    }, []);
+        if (unitId) {
+            fetchDashboardData('unit', unitId, 'financial');
+        }
+    }, [unitId]);
 
     if (isLoading) {
         <Suspense>
@@ -74,16 +79,16 @@ export function FinancialDashboard() {
                     </p>
                 </Card>
 
-                <Card className="bg-white shadow-sm p-4 rounded-lg">
+                <Card className="bg-white shadow-sm p-4 rounded-lg justify-start">
                     <p className="text-gray-500 text-sm mb-1">Ponto de equilíbrio</p>
-                    <p className="text-gray-900 text-xl font-semibold mb-1">
+                    <p className="text-gray-900 text-xl font-semibold mb-1 pt-6">
                         R$ {summary.breakEvenPoint.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                 </Card>
 
                 <Card className="bg-white shadow-sm p-4 rounded-lg">
                     <p className="text-gray-500 text-sm mb-1">Lucro Operacional</p>
-                    <p className="text-gray-900 text-xl font-semibold mb-1">
+                    <p className="text-gray-900 text-xl font-semibold mb-1 pt-6">
                         R$ {summary.operationalProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                 </Card>
@@ -103,13 +108,15 @@ export function FinancialDashboard() {
                                 {format(new Date(2025, 3, 15), 'MMM dd, yyyy', { locale: ptBR })}
                             </p>
                         </div>
-                        <Chart
-                            data={revenueReport.monthly}
-                            height={300}
-                            barColor="#1fc1dd"
-                            valuePrefix="R$"
-                            highlightColor="#e6f32b"
-                        />
+                        <div className='pt-28'>
+                            <Chart
+                                data={revenueReport.monthly}
+                                height={300}
+                                barColor="#1fc1dd"
+                                valuePrefix="R$"
+                                highlightColor="#e6f32b"
+                            />
+                        </div>
                     </Card>
                 </div>
 
@@ -117,7 +124,7 @@ export function FinancialDashboard() {
                     <Card className="bg-white shadow-sm p-6 rounded-lg">
                         <h3 className="text-gray-900 text-lg font-semibold mb-4">Vendas Recentes</h3>
                         <div className="space-y-2 max-h-[380px] overflow-y-auto">
-                            {recentSales.map((sale, index) => (
+                            {recentSales.map((sale: RecentSale, index: any) => (
                                 <Card className="bg-white shadow-sm p-6 rounded-lg">
                                     <div key={index} className="flex items-center justify-between">
                                         <span className="text-gray-500 text-sm">{sale.name}</span>

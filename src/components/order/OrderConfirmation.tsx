@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, Home, Clock } from 'lucide-react';
-import { formatCurrency } from '@/services/restaurant/services';
+import { formatCurrency } from '@/utils/formatCurrency';
 import { useOrderStore, Order } from '@/stores/order/orderStore';
 import { useCartStore } from '@/stores';
 
@@ -9,7 +9,7 @@ interface OrderConfirmationProps {
     orderId: string;
     restaurantId: string;
     restaurantName: string;
-    tableId: string;
+    tableId: number;
     splitCount?: number;
     unitId?: string;
     onBackToMenu: () => void;
@@ -33,7 +33,7 @@ export default function OrderConfirmation({
     useEffect(() => {
         const loadOrder = async () => {
             try {
-                await fetchGuestOrders(String(guestId), String(tableId));
+                await fetchGuestOrders(String(guestId), Number(tableId));
                 setIsLoading(false);
             } catch (error) {
                 console.error('Erro ao carregar pedido:', error);

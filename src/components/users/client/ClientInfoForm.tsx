@@ -55,7 +55,7 @@ export default function ClientInfoForm() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { toast } = useToast();
 
-    const apiUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+    const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -94,7 +94,7 @@ export default function ClientInfoForm() {
 
             console.log("Sending form" + (avatarFile ? " with avatar" : ""));
 
-            const response = await fetch(`${apiUrl}/users/create`, {
+            const response = await fetch(`${API_URL}/users/create`, {
                 method: 'POST',
                 body: formData,
                 credentials: 'include',

@@ -1,7 +1,7 @@
 "use client"
 
 import { SidebarProvider } from "@/components/ui/sidebar"
-import Providers from '@/providers/providers';
+import { RoleGuard } from "@/hooks/useRoleGuard";
 
 export default function ManagersLayout({
     children,
@@ -9,10 +9,10 @@ export default function ManagersLayout({
     children: React.ReactNode
 }) {
     return (
-        <Providers>
+        <>
             <SidebarProvider>
                 {children}
             </SidebarProvider>
-        </Providers>
+         </>
     )
 }

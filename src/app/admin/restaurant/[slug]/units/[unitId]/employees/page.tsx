@@ -2,29 +2,32 @@
 'use client';
 
 import React from 'react';
+import { cn } from '@/lib/utils';
 import { useParams, useRouter } from 'next/navigation';
 import EmployeeList from '@/components/employee/EmployeeList';
 import Header from '@/components/header/Header';
 import { Sidebar } from '@/components/dashboard/SideMenu';
 import { useSidebar } from '@/components/ui/sidebar';
-import { useAuthCheck } from '@/hooks/sessionManager';
-import { cn } from '@/lib/utils';
 import { extractIdFromSlug } from '@/utils/slugify';
+import { useAuthStore } from '@/stores';
+
 
 export default function EmployeesFromIdPage() {
     const router = useRouter();
-    const { slug, unitId } = useParams();
-    const { isAuthenticated, isLoading } = useAuthCheck();
+    const { slug } = useParams();
+    const { isAuthenticated, isLoading } = useAuthStore();
     const { isOpen } = useSidebar();
 
     const restaraurantId = slug && extractIdFromSlug(String(slug));
+
+
 
     if (isLoading) {
         return <div>Loading...</div>; // Ou algum componente de carregamento
     }
 
     if (!isAuthenticated) {
-        router.push('/login');
+        router.push('/');
         return null; // Evita renderizar o componente até o redirecionamento
     }
 
@@ -40,7 +43,7 @@ export default function EmployeesFromIdPage() {
 
                 <div className="flex-1 w-full overflow-auto">
                     <div className="max-w-5xl mx-auto px-6 py-4">
-                        <EmployeeList restaurantId={String(restaraurantId)} />
+                        <EmployeeList />
                     </div>
                 </div>
             </div>

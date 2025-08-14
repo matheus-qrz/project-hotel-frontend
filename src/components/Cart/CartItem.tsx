@@ -2,9 +2,9 @@
 import React from 'react';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { formatCurrency } from '@/services/restaurant/services';
-import { useCartStore } from '@/stores';
+import { calculateItemTotal, useCartStore } from '@/stores';
 import { OrderItemStatusType } from '@/stores/order/types/order.types';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 interface Addon {
     id: string;
@@ -16,18 +16,20 @@ interface Addon {
 interface CartItemProps {
     id: string;
     name: string;
-    image?: string;
     price: number;
+    image?: string;
+    costPrice: number;
     quantity: number;
     itemStatus: OrderItemStatusType;
     guestId: string;
     addons?: Addon[];
 }
 
-const CartItem: React.FC<CartItemProps> = ({
+export const CartItem: React.FC<CartItemProps> = ({
     id,
     name,
     price,
+    costPrice,
     quantity,
     addons,
 }) => {
@@ -47,14 +49,6 @@ const CartItem: React.FC<CartItemProps> = ({
 
     const handleRemove = () => {
         removeItem(id);
-    };
-
-    // Calcula o preço total incluindo addons
-    const calculateItemTotal = () => {
-        const basePrice = price * quantity;
-        const addonsTotal = addons?.reduce((total, addon) =>
-            total + (addon.price * (addon.quantity || 1)), 0) || 0;
-        return basePrice + (addonsTotal * quantity);
     };
 
     return (
@@ -79,18 +73,18 @@ const CartItem: React.FC<CartItemProps> = ({
                 {/* Lista de Addons */}
                 {addons && addons.length > 0 && (
                     <div className="ml-4 mb-3">
-                        <p className="text-sm text-gray-500 mb-1">Adicionais:</p>
+                        <p className="text-sm text-green-700 mb-1">Adicionais:</p>
                         <ul className="space-y-1">
                             {addons.map((addon, index) => (
                                 <li
                                     key={`${addon.id}-${index}`}
-                                    className="text-sm text-gray-600 flex justify-between"
+                                    className="text-sm text-green-700 flex justify-between"
                                 >
                                     <span>
                                         {addon.quantity || 1}x {addon.name}
                                     </span>
                                     {addon.price > 0 && (
-                                        <span className="text-gray-500">
+                                        <span className="text-green-700">
                                             +{formatCurrency(addon.price * (addon.quantity || 1))}
                                         </span>
                                     )}
@@ -123,7 +117,7 @@ const CartItem: React.FC<CartItemProps> = ({
                     </div>
                     <div className="text-right">
                         <span className="text-primary font-medium">
-                            {formatCurrency(calculateItemTotal())}
+                            {formatCurrency(calculateItemTotal({ price, quantity, addons }))}
                         </span>
                     </div>
                 </div>
@@ -131,5 +125,3 @@ const CartItem: React.FC<CartItemProps> = ({
         </div>
     );
 };
-
-export default CartItem;

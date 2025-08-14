@@ -4,7 +4,6 @@
 import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
-import { useAuthCheck } from '@/hooks/sessionManager';
 import { cn } from '@/lib/utils';
 import Header from '@/components/header/Header';
 import { Sidebar } from '@/components/dashboard/SideMenu';
@@ -17,21 +16,25 @@ import {
     FinancialDashboard
 } from '@/components/dashboard';
 
+import { useAuthStore } from '@/stores';
+
 type DashboardTab = 'orders' | 'financial' | 'customers' | 'promotions';
 
 export default function StatisticsDashboardPage() {
     const [activeTab, setActiveTab] = useState<DashboardTab>('orders');
-    const { isAuthenticated, isLoading } = useAuthCheck();
+    const { isAuthenticated, isLoading } = useAuthStore();
     const router = useRouter();
     const { isOpen } = useSidebar();
     const { slug } = useParams();
+
+
 
     if (isLoading) {
         return <div>Loading...</div>;
     }
 
     if (!isAuthenticated) {
-        router.push('/login');
+        router.push('/');
         return null;
     }
 

@@ -3,10 +3,9 @@
 
 import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { extractIdFromSlug } from '@/utils/slugify';
 import { ChevronLeft } from 'lucide-react';
-import { useAuthCheck } from '@/hooks/sessionManager';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores';
 import Header from '@/components/header/Header';
 import { Sidebar } from '@/components/dashboard/SideMenu';
 import { useSidebar } from '@/components/ui/sidebar';
@@ -14,7 +13,7 @@ import ProductsList from '@/components/products/ProductsList';
 import { DelayedLoading } from '@/components/loading/DelayedLoading';
 
 export default function ProductsPage() {
-    const { isAuthenticated, isLoading } = useAuthCheck();
+    const { isLoading, isAuthenticated } = useAuthStore();
     const router = useRouter();
     const { isOpen } = useSidebar();
     const { slug } = useParams();
@@ -24,7 +23,7 @@ export default function ProductsPage() {
     }
 
     if (!isAuthenticated) {
-        router.push('/login');
+        router.push('/');
         return null;
     }
 

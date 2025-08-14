@@ -2,7 +2,6 @@
 'use client';
 
 import { SidebarProvider } from '@/components/ui/sidebar';
-import Providers from '@/providers/providers';
 
 export default function AdminLayout({
     children,
@@ -10,10 +9,8 @@ export default function AdminLayout({
     children: React.ReactNode;
 }) {
     return (
-        <Providers>
-            <SidebarProvider>
-                {children}
-            </SidebarProvider>
-        </Providers>
+        <SidebarProvider>
+            {children}
+        </SidebarProvider>
     );
 }

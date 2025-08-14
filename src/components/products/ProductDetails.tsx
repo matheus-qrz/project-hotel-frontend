@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { ChevronLeft, Edit, Trash2, AlertCircle } from 'lucide-react';
-import { formatCurrency } from '@/services/restaurant/services';
+import { formatCurrency } from '@/utils/formatCurrency';
 import { extractIdFromSlug } from '@/utils/slugify';
 import { Card, CardContent } from "@/components/ui/card";
 import { MENU_CATEGORIES } from '@/components/products/types';
@@ -35,7 +35,7 @@ export default function ProductDetails() {
     // Verificação de autenticação
     useEffect(() => {
         if (status === "unauthenticated") {
-            router.push('/login');
+            router.push('/');
         }
     }, [status, router]);
 

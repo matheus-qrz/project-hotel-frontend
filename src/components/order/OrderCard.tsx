@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from 'react';
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
@@ -20,7 +22,6 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useParams } from 'next/navigation';
-import Image from 'next/image';
 
 interface OrderCardProps {
     order: Order;
@@ -31,8 +32,9 @@ interface OrderCardProps {
 export function OrderCard({ order, className, onStatusUpdate }: OrderCardProps) {
     const { slug } = useParams();
     const [isUpdating, setIsUpdating] = useState(false);
+    const [cancelQuantity, setCancelQuantity] = useState(1);
     const [itemToCancel, setItemToCancel] = useState<string | null>(null);
-    const { updateOrder, cancelOrderItem } = useOrderStore();
+    const { cancelOrder, updateOrderItem } = useOrderStore();
     const [previousItems, setPreviousItems] = useState<OrderItem[]>(order.items);
     const restaurantId = slug && extractIdFromSlug(String(slug));
 
@@ -45,12 +47,7 @@ export function OrderCard({ order, className, onStatusUpdate }: OrderCardProps) 
 
         setIsUpdating(true);
         try {
-            await updateOrder(
-                String(restaurantId),
-                String(order.meta.tableId),
-                order._id,
-                { status: 'cancelled' }
-            );
+            await cancelOrder(order._id, String(restaurantId), Number(order.meta.tableId));
             onStatusUpdate?.();
         } catch (error) {
             console.error('Erro ao cancelar pedido:', error);
@@ -59,18 +56,30 @@ export function OrderCard({ order, className, onStatusUpdate }: OrderCardProps) 
         }
     };
 
-    const handleCancelItem = async (itemId: string) => {
+    const handleCancelItem = async (itemId: string, currentQuantity: number, quantityToCancel: number) => {
         if (!restaurantId || !order.meta.tableId) return;
 
+        const newQuantity = currentQuantity - quantityToCancel;
         setIsUpdating(true);
+
         try {
-            await cancelOrderItem(order._id, itemId, String(restaurantId), String(order.meta.tableId));
+            await updateOrderItem(
+                restaurantId,
+                Number(order.meta.tableId),
+                order._id,
+                itemId,
+                newQuantity > 0
+                    ? { quantity: newQuantity }
+                    : { quantity: 0, status: "cancelled" }
+            );
+
             onStatusUpdate?.();
         } catch (error) {
-            console.error('Erro ao cancelar item:', error);
+            console.error('Erro ao atualizar quantidade do item:', error);
         } finally {
             setIsUpdating(false);
             setItemToCancel(null);
+            setCancelQuantity(1);
         }
     };
 
@@ -78,16 +87,25 @@ export function OrderCard({ order, className, onStatusUpdate }: OrderCardProps) 
 
     const renderOrderItems = (items: OrderItem[]) => {
         return items.map(item => {
-            const previousItem = previousItems.find(prev => prev.id === item.id);
+            const previousItem = previousItems.find(prev => prev._id === item._id);
             const isNew = previousItem ? item.quantity > previousItem.quantity : true;
-            const colorClass = isNew ? 'text-green-600' : '';
+            const isCancelled = item.status === "cancelled";
 
             return (
-                <div key={item.id} className="flex items-center justify-between">
+                <div key={item._id} className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                         <div className='flex flex-col items-start justify-start py-4'>
-                            <h3 className={`font-medium ${colorClass}`}>{item.name}</h3>
-                            <p className="text-sm text-gray-500">
+                            <h3 className={cn(
+                                "font-medium",
+                                isNew && "text-green-600",
+                                isCancelled && "text-red-500 line-through"
+                            )}>
+                                {item.name}
+                            </h3>
+                            <p className={cn(
+                                "text-sm text-gray-500",
+                                isCancelled && "text-red-400 line-through"
+                            )}>
                                 {new Intl.NumberFormat('pt-BR', {
                                     style: 'currency',
                                     currency: 'BRL'
@@ -96,10 +114,16 @@ export function OrderCard({ order, className, onStatusUpdate }: OrderCardProps) 
                         </div>
                     </div>
                     <div className="flex items-center justify-center space-x-2">
-                        <span className={`text-sm font-medium ${colorClass}`}>
+                        <span className={cn(
+                            "text-sm font-medium",
+                            isNew && "text-green-600",
+                            isCancelled && "text-red-500 line-through"
+                        )}>
                             Quantidade: {item.quantity}
                         </span>
-                        {canCancel && item.status !== 'cancelled' && (
+
+                        {/* Botão de cancelar só aparece se não estiver cancelado */}
+                        {canCancel && !isCancelled && (
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <Button
@@ -114,16 +138,34 @@ export function OrderCard({ order, className, onStatusUpdate }: OrderCardProps) 
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Cancelar item</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            Tem certeza que deseja cancelar este item do pedido?
+                                        <AlertDialogDescription className="space-y-2">
+                                            <p className='text-md'>Esse item possui {item.quantity} unidades.</p>
+                                            <p className='text-md'>Quantas você deseja cancelar?</p>
+                                            <div className="flex justify-center items-center gap-6 p-4">
+                                                <Button
+                                                    className='text-lg'
+                                                    variant="outline"
+                                                    onClick={() => setCancelQuantity(prev => Math.max(1, prev - 1))}
+                                                >
+                                                    -
+                                                </Button>
+                                                <span>{cancelQuantity}</span>
+                                                <Button
+                                                    className='text-lg'
+                                                    variant="outline"
+                                                    onClick={() => setCancelQuantity(prev => Math.min(item.quantity, prev + 1))}
+                                                >
+                                                    +
+                                                </Button>
+                                            </div>
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                         <AlertDialogCancel>Não</AlertDialogCancel>
                                         <AlertDialogAction
-                                            onClick={() => handleCancelItem(item.id)}
+                                            onClick={() => handleCancelItem(item._id, item.quantity, cancelQuantity)}
                                         >
-                                            Sim, cancelar item
+                                            Sim, cancelar {cancelQuantity} unidade{cancelQuantity > 1 ? 's' : ''}
                                         </AlertDialogAction>
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
@@ -134,6 +176,7 @@ export function OrderCard({ order, className, onStatusUpdate }: OrderCardProps) 
             );
         });
     };
+
 
     return (
         <Card className={cn("w-full", className)}>

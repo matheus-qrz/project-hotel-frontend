@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Edit2, Power, Clock, Calendar } from 'lucide-react';
 import Image from 'next/image';
-import { formatCurrency } from '@/services/restaurant/services';
+import { formatCurrency } from '@/utils/formatCurrency';
 import { Product } from '@/stores';
 
 // Primeiro, vamos criar um tipo específico para o card que estende o Product

@@ -1,27 +1,30 @@
 'use client';
 
 import React from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { useAuthCheck } from '@/hooks/sessionManager';
 import { cn } from '@/lib/utils';
+import { useParams, useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores';
 import Header from '@/components/header/Header';
 import { Sidebar } from '@/components/dashboard/SideMenu';
 import { useSidebar } from '@/components/ui/sidebar';
 import { DelayedLoading } from '@/components/loading/DelayedLoading';
 import ManagerScreen from '@/components/manager/ManagerScreen';
 
+
 export default function ManagerPage() {
-    const { isAuthenticated, isLoading } = useAuthCheck();
+    const { isAuthenticated, isLoading } = useAuthStore();
     const router = useRouter();
     const { isOpen } = useSidebar();
     const { slug } = useParams();
+
+    useRoleGuard(['MANAGER'], '/login');
 
     if (isLoading) {
         return <DelayedLoading />;
     }
 
     if (!isAuthenticated) {
-        router.push('/login');
+        router.push('/');
         return null;
     }
 

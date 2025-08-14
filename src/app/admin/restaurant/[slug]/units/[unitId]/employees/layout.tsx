@@ -19,7 +19,7 @@ export function EmployeesLayout({
 
     useEffect(() => {
         if (!loading && (!session || !isAdmin)) {
-            router.push('/login/admin');
+            router.push('/login');
         }
     }, [session, loading, isAdmin, router]);
 

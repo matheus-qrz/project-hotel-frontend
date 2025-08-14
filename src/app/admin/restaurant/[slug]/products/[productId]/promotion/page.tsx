@@ -3,25 +3,28 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
-import { useAuthCheck } from '@/hooks/sessionManager';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores';
 import Header from '@/components/header/Header';
 import { Sidebar } from '@/components/dashboard/SideMenu';
 import { useSidebar } from '@/components/ui/sidebar';
 import { DelayedLoading } from '@/components/loading/DelayedLoading';
 import CreatePromotion from '@/components/products/CreatePromotion';
 
+
 export default function PromotionPage() {
-    const { isAuthenticated, isLoading } = useAuthCheck();
+    const { isAuthenticated, isLoading } = useAuthStore();
     const router = useRouter();
     const { isOpen } = useSidebar();
+
+
 
     if (isLoading) {
         return <DelayedLoading />;
     }
 
     if (!isAuthenticated) {
-        router.push('/login');
+        router.push('/');
         return null;
     }
 

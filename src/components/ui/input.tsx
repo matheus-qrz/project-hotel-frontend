@@ -36,11 +36,34 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (isCurrency) {
         const target = e.currentTarget;
-        const numericValue = Number(target.value.replace(/\D/g, "")) / 100;
+        const raw = target.value.replace(/\D/g, "");
+
+        // Permite apagar o valor sem formatar automaticamente
+        if (raw === "") {
+          target.value = "";
+          onChange?.(e);
+          return;
+        }
+
+        const numericValue = Number(raw) / 100;
         target.value = formatCurrency(numericValue);
+
+        // Cria um novo evento para enviar o valor formatado corretamente ao React Hook Form
+        const syntheticEvent = {
+          ...e,
+          currentTarget: {
+            ...target,
+            value: formatCurrency(numericValue),
+          },
+        };
+
+        onChange?.(syntheticEvent as React.ChangeEvent<HTMLInputElement>);
+        return;
       }
+
       onChange?.(e);
     };
+
 
     return (
       <input

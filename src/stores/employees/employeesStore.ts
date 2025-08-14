@@ -1,99 +1,173 @@
+// stores/employeeStore.ts
 import { create } from 'zustand';
-import type { IEmployee, ICreateEmployeeData } from '@/services/employee/types';
 import type { IRestaurantUnit } from '@/services/restaurant/types';
-import {
-    getEmployeesByRestaurant,
-    createEmployee,
-    updateEmployee,
-    deleteEmployee
-} from '@/services/employee';
+
+export type Role = "ADMIN" | "MANAGER" | "ATTENDANT";
+
+export interface IEmployee {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    role: Role;
+    restaurant?: string;
+    restaurantUnit?: string;
+    createdAt?: string;
+}
+
+export interface ICreateEmployeeData {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    password?: string;
+    role: Role;
+    restaurant: string;
+    restaurantUnit: string;
+}
+
 
 interface EmployeeState {
     employees: IEmployee[];
     units: IRestaurantUnit[];
     isLoading: boolean;
     error: string | null;
+
     fetchEmployees: (restaurantId: string, token: string) => Promise<void>;
+    fetchEmployeesByUnit: (unitId: string, token: string) => Promise<void>;
+    fetchEmployeeById: (id: string, token: string) => Promise<IEmployee | null>;
     setUnits: (units: IRestaurantUnit[]) => void;
+
     addEmployee: (employeeData: ICreateEmployeeData, restaurantId: string, token: string) => Promise<void>;
     updateEmployee: (employeeId: string, employeeData: Partial<ICreateEmployeeData>, token: string) => Promise<void>;
     deleteEmployee: (employeeId: string, token: string) => Promise<void>;
 }
 
-export const useEmployeeStore = create<EmployeeState>((set) => ({
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+
+export const useEmployeeStore = create<EmployeeState>((set, get) => ({
     employees: [],
     units: [],
     isLoading: false,
     error: null,
 
-    fetchEmployees: async (restaurantId: string, token: string) => {
+    setUnits: (units: IRestaurantUnit[]) => set({ units }),
+
+    fetchEmployees: async (restaurantId, token) => {
         set({ isLoading: true, error: null });
         try {
-            const employees = await getEmployeesByRestaurant(restaurantId, token);
-            set({ employees, isLoading: false });
-        } catch (error) {
-            set({
-                error: error instanceof Error ? error.message : 'Erro ao carregar funcionários',
-                isLoading: false
+            const res = await fetch(`${API_URL}/restaurant/${restaurantId}/employees`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
             });
-            throw error;
+            if (!res.ok) throw new Error((await res.json()).message);
+            const data: IEmployee[] = await res.json();
+            set({ employees: data, isLoading: false });
+        } catch (err: any) {
+            set({ error: err.message || 'Erro ao buscar funcionários', isLoading: false });
         }
     },
 
-    setUnits: (units: IRestaurantUnit[]) => {
-        set({ units });
-    },
-
-    addEmployee: async (employeeData: ICreateEmployeeData, restaurantId: string, token: string) => {
+    fetchEmployeesByUnit: async (unitId, token) => {
         set({ isLoading: true, error: null });
         try {
-            const newEmployee = await createEmployee(employeeData, restaurantId, token);
+            const res = await fetch(`${API_URL}/unit/${unitId}/employees`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (!res.ok) throw new Error((await res.json()).message);
+            const data: IEmployee[] = await res.json();
+            set({ employees: data, isLoading: false });
+        } catch (err: any) {
+            set({ error: err.message || 'Erro ao buscar funcionários da unidade', isLoading: false });
+        }
+    },
+
+    fetchEmployeeById: async (id, token) => {
+        try {
+            const res = await fetch(`${API_URL}/users/${id}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (!res.ok) throw new Error((await res.json()).message);
+            const json = await res.json();
+            return json.user;
+        } catch (err) {
+            set({ error: 'Erro ao buscar funcionário' });
+            return null;
+        }
+    },
+
+    addEmployee: async (employeeData, restaurantId, token) => {
+        set({ isLoading: true, error: null });
+        try {
+            const res = await fetch(`${API_URL}/restaurant/${restaurantId}/employee/create`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    ...employeeData,
+                    restaurant: restaurantId,
+                    restaurantUnit: employeeData.restaurantUnit
+                })
+
+            });
+            if (!res.ok) throw new Error((await res.json()).message);
+            const newEmp = await res.json();
+            set((state) => ({ employees: [...state.employees, newEmp], isLoading: false }));
+        } catch (err: any) {
+            set({ error: err.message || 'Erro ao adicionar funcionário', isLoading: false });
+        }
+    },
+
+    updateEmployee: async (employeeId, data, token) => {
+        set({ isLoading: true, error: null });
+        try {
+            const res = await fetch(`${API_URL}/users/${employeeId}/edit`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            if (!res.ok) throw new Error((await res.json()).message);
+            const updated = await res.json();
             set((state) => ({
-                employees: [...state.employees, newEmployee],
+                employees: state.employees.map(emp => emp._id === employeeId ? updated : emp),
                 isLoading: false
             }));
-        } catch (error) {
-            set({
-                error: error instanceof Error ? error.message : 'Erro ao adicionar funcionário',
-                isLoading: false
-            });
-            throw error;
+        } catch (err: any) {
+            set({ error: err.message || 'Erro ao atualizar funcionário', isLoading: false });
         }
     },
 
-    updateEmployee: async (employeeId: string, employeeData: Partial<ICreateEmployeeData>, token: string) => {
+    deleteEmployee: async (employeeId, token) => {
         set({ isLoading: true, error: null });
         try {
-            const updatedEmployee = await updateEmployee(employeeId, employeeData, token);
-            set((state) => ({
-                employees: state.employees.map(emp =>
-                    emp._id === employeeId ? updatedEmployee : emp
-                ),
-                isLoading: false
-            }));
-        } catch (error) {
-            set({
-                error: error instanceof Error ? error.message : 'Erro ao atualizar funcionário',
-                isLoading: false
+            const res = await fetch(`${API_URL}/users/${employeeId}/delete`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
             });
-            throw error;
-        }
-    },
-
-    deleteEmployee: async (employeeId: string, token: string) => {
-        set({ isLoading: true, error: null });
-        try {
-            await deleteEmployee(employeeId, token);
+            if (!res.ok) throw new Error((await res.json()).message);
             set((state) => ({
                 employees: state.employees.filter(emp => emp._id !== employeeId),
                 isLoading: false
             }));
-        } catch (error) {
-            set({
-                error: error instanceof Error ? error.message : 'Erro ao excluir funcionário',
-                isLoading: false
-            });
-            throw error;
+        } catch (err: any) {
+            set({ error: err.message || 'Erro ao excluir funcionário', isLoading: false });
         }
     }
 }));

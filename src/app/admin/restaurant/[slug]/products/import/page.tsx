@@ -7,8 +7,11 @@ import { cn } from '@/lib/utils';
 import { ChevronLeft } from 'lucide-react';
 import ImportProducts from '@/components/products/ImportProducts';
 
+
 export default function ImportProductsPage() {
     const { isOpen } = useSidebar();
+
+
 
     return (
         <div className="flex flex-col h-screen bg-background w-full">

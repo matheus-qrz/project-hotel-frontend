@@ -14,7 +14,8 @@ import { Sidebar } from '@/components/dashboard/SideMenu';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useParams } from 'next/navigation';
-import { extractIdFromSlug } from '@/utils/slugify';
+import { extractIdFromSlug, extractNameFromSlug } from '@/utils/slugify';
+
 
 export default function QRCodeGenerator() {
     const { slug } = useParams();
@@ -25,6 +26,9 @@ export default function QRCodeGenerator() {
     const { isOpen } = useSidebar();
 
     const restaurantId = slug && extractIdFromSlug(String(slug));
+    const restaurantName = slug && extractNameFromSlug(String(slug));
+
+
 
     // Gerar QR Codes para todas as mesas
     const generateQRCodes = () => {
@@ -147,7 +151,7 @@ export default function QRCodeGenerator() {
                                                 <Input
                                                     value={baseDomain}
                                                     onChange={(e) => setBaseDomain(e.target.value)}
-                                                    placeholder="https://seugarcom.service.com"
+                                                    placeholder={`${baseDomain}${restaurantName}/`}
                                                     className="mt-1"
                                                 />
                                             </div>

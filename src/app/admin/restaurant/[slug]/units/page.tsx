@@ -1,23 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import UnitsList from "@/components/units/UnitsList";
 import { Sidebar } from "@/components/dashboard/SideMenu";
 import Header from "@/components/header/Header";
 import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { useRestaurantId } from "@/hooks/useRestaurantId";
 import { useAuthStore, useRestaurantUnitStore } from '@/stores';
 import { useParams, useRouter } from "next/navigation";
-import { useAuthCheck } from "@/hooks/sessionManager";
 import { extractIdFromSlug } from "@/utils/slugify";
 import { useToast } from "@/hooks/useToast";
 import { DelayedLoading } from "@/components/loading/DelayedLoading";
 
 export default function UnitsPage() {
-    const router = useRouter();
     const toast = useToast();
-    const { isAuthenticated, isLoading, isAdminOrManager } = useAuthCheck();
+    const { isAuthenticated, isLoading } = useAuthStore();
     const { units = [], fetchUnits } = useRestaurantUnitStore()
     const { slug } = useParams();
     const { isOpen } = useSidebar();
@@ -25,13 +22,7 @@ export default function UnitsPage() {
 
     const restaurantId = slug && extractIdFromSlug(String(slug));
 
-    useEffect(() => {
-        if (!isLoading && (!isAuthenticated || !isAdminOrManager)) {
-            console.log('Redirecionando: Não autenticado ou sem permissão');
-            router.push('/login');
-            return;
-        }
-    }, [isAuthenticated, isAdminOrManager, isLoading, router]);
+
 
     useEffect(() => {
         const loadUnits = async () => {

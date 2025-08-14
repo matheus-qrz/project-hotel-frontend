@@ -15,11 +15,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/useToast';
 import { useEmployeeStore } from '@/stores/employees';
-import {
-    getEmployeeById
-} from '@/services/employee/index';
-import { useAuthCheck } from '@/hooks/sessionManager';
-import { useRestaurantUnitStore } from '@/stores';
+import { useAuthStore, useRestaurantUnitStore } from '@/stores';
 
 interface EmployeeFormProps {
     restaurantId: string;
@@ -31,12 +27,14 @@ export default function EmployeeForm({ restaurantId, employeeId, isEditMode }: E
     const router = useRouter();
     const { slug } = useParams()
     const { toast } = useToast();
-    const { session, isAdminOrManager } = useAuthCheck();
-    const { units, setUnits } = useEmployeeStore();
+    const { addEmployee, fetchEmployeeById, updateEmployee, units, setUnits } = useEmployeeStore();
     const { fetchUnitByRestaurantId } = useRestaurantUnitStore();
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [restaurantName, setRestaurantName] = useState('');
+    const { token } = useAuthStore();
+
+    const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
     // Dados do formulário
     const [formData, setFormData] = useState({
@@ -76,12 +74,12 @@ export default function EmployeeForm({ restaurantId, employeeId, isEditMode }: E
 
     useEffect(() => {
         const fetchData = async () => {
-            if (session?.token && restaurantId) {
+            if (token && restaurantId) {
                 try {
                     // Buscar dados do restaurante para obter o nome
-                    const restaurantResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/restaurant/${restaurantId}`, {
+                    const restaurantResponse = await fetch(`${API_URL}/restaurant/${restaurantId}`, {
                         headers: {
-                            'Authorization': `Bearer ${session.token}`
+                            'Authorization': `Bearer ${token}`
                         }
                     });
 
@@ -98,8 +96,8 @@ export default function EmployeeForm({ restaurantId, employeeId, isEditMode }: E
 
                     // Buscar dados do funcionário se estiver em modo de edição
                     if (isEditMode && employeeId) {
-                        const employee = await getEmployeeById(employeeId, session.token || '');
-                        setFormData({
+                        const employee = await fetchEmployeeById(employeeId, token || '');
+                        employee && setFormData({
                             firstName: employee.firstName,
                             lastName: employee.lastName,
                             email: employee.email,
@@ -122,7 +120,7 @@ export default function EmployeeForm({ restaurantId, employeeId, isEditMode }: E
         };
 
         fetchData();
-    }, [restaurantId, employeeId, isEditMode, session?.token]);
+    }, [restaurantId, employeeId, isEditMode, token]);
 
     // Atualizar dados do formulário
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -211,8 +209,10 @@ export default function EmployeeForm({ restaurantId, employeeId, isEditMode }: E
         setIsSaving(true);
         setError(null);
 
-        if (isAdminOrManager && session?.token) {
+        if (token) {
             try {
+                const isMatriz = formData.unitId === restaurantId;
+
                 const employeeData = {
                     firstName: formData.firstName,
                     lastName: formData.lastName,
@@ -222,17 +222,16 @@ export default function EmployeeForm({ restaurantId, employeeId, isEditMode }: E
                     password: formData.role === 'ADMIN' || formData.role === 'MANAGER'
                         ? formData.password
                         : undefined,
-                    // Verifica se a unidade selecionada é a matriz
-                    unitId: formData.unitId === restaurantId ? restaurantId : formData.unitId || restaurantId,
-                    // Adiciona o ID do restaurante quando for matriz
-                    id: formData.unitId === restaurantId ? restaurantId : undefined
+                    restaurant: restaurantId,
+                    restaurantUnit: isMatriz ? '' : formData.unitId
                 };
 
+
                 if (isEditMode && employeeId) {
-                    await useEmployeeStore.getState().updateEmployee(
+                    await updateEmployee(
                         employeeId,
                         employeeData,
-                        session.token
+                        token
                     );
 
                     toast({
@@ -241,16 +240,16 @@ export default function EmployeeForm({ restaurantId, employeeId, isEditMode }: E
                     });
 
                     // Ajusta o redirecionamento baseado se é matriz ou unidade
-                    const redirectPath = formData.unitId === restaurantId
+                    const redirectPath = isMatriz
                         ? `/admin/restaurant/${slug}/employees`
                         : `/admin/restaurant/${slug}/units/${formData.unitId}/employees`;
 
                     router.push(redirectPath);
                 } else {
-                    await useEmployeeStore.getState().addEmployee(
+                    await addEmployee(
                         employeeData,
                         restaurantId,
-                        session.token
+                        token
                     );
 
                     toast({
@@ -291,231 +290,233 @@ export default function EmployeeForm({ restaurantId, employeeId, isEditMode }: E
     const unitsWithMatrix = getUnitsWithMatrix();
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-row sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <h1 className="text-2xl font-bold text-primary">
-                    {isEditMode ? 'Editar Funcionário' : 'Novo Funcionário'}
-                </h1>
-                <Button
-                    variant="ghost"
-                    onClick={goBack}
-                    className="flex items-center gap-2 pl-0 hover:pl-2"
-                >
-                    <ArrowLeft size={18} />
-                    <span>Voltar para lista</span>
-                </Button>
-            </div>
-
-            {error && (
-                <Card className="bg-red-50 border-red-100 mb-6">
-                    <CardContent className="p-4 text-red-800">
-                        <p>{error}</p>
-                    </CardContent>
-                </Card>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Nome */}
-                    <div className="space-y-2">
-                        <Label htmlFor="firstName">Nome <span className="text-red-500">*</span></Label>
-                        <Input
-                            id="firstName"
-                            name="firstName"
-                            value={formData.firstName}
-                            onChange={handleInputChange}
-                            placeholder="Nome"
-                            className={validationErrors.firstName ? "border-red-500" : ""}
-                        />
-                        {validationErrors.firstName && (
-                            <p className="text-red-500 text-sm">{validationErrors.firstName}</p>
-                        )}
-                    </div>
-
-                    {/* Sobrenome */}
-                    <div className="space-y-2">
-                        <Label htmlFor="lastName">Sobrenome <span className="text-red-500">*</span></Label>
-                        <Input
-                            id="lastName"
-                            name="lastName"
-                            value={formData.lastName}
-                            onChange={handleInputChange}
-                            placeholder="Sobrenome"
-                            className={validationErrors.lastName ? "border-red-500" : ""}
-                        />
-                        {validationErrors.lastName && (
-                            <p className="text-red-500 text-sm">{validationErrors.lastName}</p>
-                        )}
-                    </div>
-
-                    {/* Email */}
-                    <div className="space-y-2">
-                        <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
-                        <Input
-                            id="email"
-                            name="email"
-                            type="email"
-                            value={formData.email}
-                            onChange={handleInputChange}
-                            placeholder="Email"
-                            className={validationErrors.email ? "border-red-500" : ""}
-                        />
-                        {validationErrors.email && (
-                            <p className="text-red-500 text-sm">{validationErrors.email}</p>
-                        )}
-                    </div>
-
-                    {/* Telefone */}
-                    <div className="space-y-2">
-                        <Label htmlFor="phone">Telefone</Label>
-                        <Input
-                            id="phone"
-                            name="phone"
-                            value={formData.phone}
-                            onChange={handleInputChange}
-                            placeholder="(00) 00000-0000"
-                        />
-                    </div>
-
-                    {/* Função */}
-                    <div className="space-y-2">
-                        <Label htmlFor="role">Função <span className="text-red-500">*</span></Label>
-                        <Select
-                            value={formData.role}
-                            onValueChange={handleRoleChange}
-                        >
-                            <SelectTrigger
-                                id="role"
-                                className={validationErrors.role ? "border-red-500" : ""}
-                            >
-                                <SelectValue placeholder="Selecione uma função" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectItem value="ADMIN">Administrador</SelectItem>
-                                    <SelectItem value="MANAGER">Gerente</SelectItem>
-                                    <SelectItem value="ATTENDANT">Atendente</SelectItem>
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                        {validationErrors.role && (
-                            <p className="text-red-500 text-sm">{validationErrors.role}</p>
-                        )}
-                    </div>
-
-                    {/* Unidade */}
-                    <div className="space-y-2">
-                        <Label htmlFor="unitId">Unidade <span className="text-red-500">*</span></Label>
-                        <Select
-                            value={formData.unitId}
-                            onValueChange={handleUnitChange}
-                        >
-                            <SelectTrigger
-                                id="unitId"
-                                className={validationErrors.unitId ? "border-red-500" : ""}
-                            >
-                                <SelectValue placeholder="Selecione uma unidade" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    {unitsWithMatrix.length === 0 ? (
-                                        // Se não houver unidades, mostra apenas a matriz
-                                        <SelectItem value={restaurantId}>
-                                            {`${restaurantName || 'Restaurante'} (MATRIZ)`}
-                                        </SelectItem>
-                                    ) : (
-                                        // Se houver unidades, mostra a lista com a matriz
-                                        unitsWithMatrix.map((unit: any) => (
-                                            <SelectItem key={unit._id} value={unit._id}>
-                                                {unit.isMatrix ? `${restaurantName || 'Restaurante'} (MATRIZ)` : (unit.name || 'Unidade')}
-                                            </SelectItem>
-                                        ))
-                                    )}
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                        {validationErrors.unitId && (
-                            <p className="text-red-500 text-sm">{validationErrors.unitId}</p>
-                        )}
-                    </div>
+        <div className="min-h-screen flex flex-col pt-15">
+            <div className="w-full max-w-4xl bg-white space-y-10 p-8 rounded-lg shadow-md">
+                <div className="flex flex-row sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <h1 className="text-2xl font-bold text-primary">
+                        {isEditMode ? 'Editar Funcionário' : 'Novo Funcionário'}
+                    </h1>
+                    <Button
+                        variant="ghost"
+                        onClick={goBack}
+                        className="flex items-center gap-2 pl-0 hover:pl-2"
+                    >
+                        <ArrowLeft size={18} />
+                        <span>Voltar para lista</span>
+                    </Button>
                 </div>
 
-                {/* Senha e Confirmação de Senha - Apenas para ADMIN e MANAGER */}
-                {(formData.role === 'ADMIN' || formData.role === 'MANAGER') && (
-                    <div className="border-t pt-6 mt-6">
-                        <h3 className="text-lg font-medium mb-4">
-                            {isEditMode ? 'Alterar Senha (opcional)' : 'Definir Senha'}
-                        </h3>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <Label htmlFor="password">
-                                    Senha {!isEditMode && <span className="text-red-500">*</span>}
-                                </Label>
-                                <Input
-                                    id="password"
-                                    name="password"
-                                    type="password"
-                                    value={formData.password}
-                                    onChange={handleInputChange}
-                                    placeholder={isEditMode ? "Deixe em branco para manter a atual" : "Senha"}
-                                    className={validationErrors.password ? "border-red-500" : ""}
-                                />
-                                {validationErrors.password && (
-                                    <p className="text-red-500 text-sm">{validationErrors.password}</p>
-                                )}
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="confirmPassword">
-                                    Confirmar Senha {!isEditMode && <span className="text-red-500">*</span>}
-                                </Label>
-                                <Input
-                                    id="confirmPassword"
-                                    name="confirmPassword"
-                                    type="password"
-                                    value={formData.confirmPassword}
-                                    onChange={handleInputChange}
-                                    placeholder="Confirmar senha"
-                                    className={validationErrors.confirmPassword ? "border-red-500" : ""}
-                                />
-                                {validationErrors.confirmPassword && (
-                                    <p className="text-red-500 text-sm">{validationErrors.confirmPassword}</p>
-                                )}
-                            </div>
-                        </div>
-                    </div>
+                {error && (
+                    <Card className="bg-red-50 border-red-100 mb-6">
+                        <CardContent className="p-4 text-red-800">
+                            <p>{error}</p>
+                        </CardContent>
+                    </Card>
                 )}
 
-                {/* Botões */}
-                <div className="flex justify-end gap-4 pt-4">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={goBack}
-                        disabled={isSaving}
-                    >
-                        Cancelar
-                    </Button>
-                    <Button
-                        type="submit"
-                        disabled={isSaving}
-                        className="flex items-center gap-2"
-                    >
-                        {isSaving ? (
-                            <>
-                                <Loader2 size={18} className="animate-spin" />
-                                <span>Salvando...</span>
-                            </>
-                        ) : (
-                            <>
-                                <Save size={18} />
-                                <span>Salvar</span>
-                            </>
-                        )}
-                    </Button>
-                </div>
-            </form>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Nome */}
+                        <div className="space-y-2">
+                            <Label htmlFor="firstName">Nome <span className="text-red-500">*</span></Label>
+                            <Input
+                                id="firstName"
+                                name="firstName"
+                                value={formData.firstName}
+                                onChange={handleInputChange}
+                                placeholder="Nome"
+                                className={validationErrors.firstName ? "border-red-500" : ""}
+                            />
+                            {validationErrors.firstName && (
+                                <p className="text-red-500 text-sm">{validationErrors.firstName}</p>
+                            )}
+                        </div>
+
+                        {/* Sobrenome */}
+                        <div className="space-y-2">
+                            <Label htmlFor="lastName">Sobrenome <span className="text-red-500">*</span></Label>
+                            <Input
+                                id="lastName"
+                                name="lastName"
+                                value={formData.lastName}
+                                onChange={handleInputChange}
+                                placeholder="Sobrenome"
+                                className={validationErrors.lastName ? "border-red-500" : ""}
+                            />
+                            {validationErrors.lastName && (
+                                <p className="text-red-500 text-sm">{validationErrors.lastName}</p>
+                            )}
+                        </div>
+
+                        {/* Email */}
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
+                            <Input
+                                id="email"
+                                name="email"
+                                type="email"
+                                value={formData.email}
+                                onChange={handleInputChange}
+                                placeholder="Email"
+                                className={validationErrors.email ? "border-red-500" : ""}
+                            />
+                            {validationErrors.email && (
+                                <p className="text-red-500 text-sm">{validationErrors.email}</p>
+                            )}
+                        </div>
+
+                        {/* Telefone */}
+                        <div className="space-y-2">
+                            <Label htmlFor="phone">Telefone</Label>
+                            <Input
+                                id="phone"
+                                name="phone"
+                                value={formData.phone}
+                                onChange={handleInputChange}
+                                placeholder="(00) 00000-0000"
+                            />
+                        </div>
+
+                        {/* Função */}
+                        <div className="space-y-2">
+                            <Label htmlFor="role">Função <span className="text-red-500">*</span></Label>
+                            <Select
+                                value={formData.role}
+                                onValueChange={handleRoleChange}
+                            >
+                                <SelectTrigger
+                                    id="role"
+                                    className={validationErrors.role ? "border-red-500" : ""}
+                                >
+                                    <SelectValue placeholder="Selecione uma função" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <SelectItem value="ADMIN">Administrador</SelectItem>
+                                        <SelectItem value="MANAGER">Gerente</SelectItem>
+                                        <SelectItem value="ATTENDANT">Atendente</SelectItem>
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                            {validationErrors.role && (
+                                <p className="text-red-500 text-sm">{validationErrors.role}</p>
+                            )}
+                        </div>
+
+                        {/* Unidade */}
+                        <div className="space-y-2">
+                            <Label htmlFor="unitId">Unidade <span className="text-red-500">*</span></Label>
+                            <Select
+                                value={formData.unitId}
+                                onValueChange={handleUnitChange}
+                            >
+                                <SelectTrigger
+                                    id="unitId"
+                                    className={validationErrors.unitId ? "border-red-500" : ""}
+                                >
+                                    <SelectValue placeholder="Selecione uma unidade" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        {unitsWithMatrix.length === 0 ? (
+                                            // Se não houver unidades, mostra apenas a matriz
+                                            <SelectItem value={restaurantId}>
+                                                {`${restaurantName || 'Restaurante'} (MATRIZ)`}
+                                            </SelectItem>
+                                        ) : (
+                                            // Se houver unidades, mostra a lista com a matriz
+                                            unitsWithMatrix.map((unit: any) => (
+                                                <SelectItem key={unit._id} value={unit._id}>
+                                                    {unit.isMatrix ? `${restaurantName || 'Restaurante'} (MATRIZ)` : (unit.name || 'Unidade')}
+                                                </SelectItem>
+                                            ))
+                                        )}
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                            {validationErrors.unitId && (
+                                <p className="text-red-500 text-sm">{validationErrors.unitId}</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Senha e Confirmação de Senha - Apenas para ADMIN e MANAGER */}
+                    {(formData.role === 'ADMIN' || formData.role === 'MANAGER') && (
+                        <div className="border-t pt-6 mt-6">
+                            <h3 className="text-lg font-medium mb-4">
+                                {isEditMode ? 'Alterar Senha (opcional)' : 'Definir Senha'}
+                            </h3>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <Label htmlFor="password">
+                                        Senha {!isEditMode && <span className="text-red-500">*</span>}
+                                    </Label>
+                                    <Input
+                                        id="password"
+                                        name="password"
+                                        type="password"
+                                        value={formData.password}
+                                        onChange={handleInputChange}
+                                        placeholder={isEditMode ? "Deixe em branco para manter a atual" : "Senha"}
+                                        className={validationErrors.password ? "border-red-500" : ""}
+                                    />
+                                    {validationErrors.password && (
+                                        <p className="text-red-500 text-sm">{validationErrors.password}</p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="confirmPassword">
+                                        Confirmar Senha {!isEditMode && <span className="text-red-500">*</span>}
+                                    </Label>
+                                    <Input
+                                        id="confirmPassword"
+                                        name="confirmPassword"
+                                        type="password"
+                                        value={formData.confirmPassword}
+                                        onChange={handleInputChange}
+                                        placeholder="Confirmar senha"
+                                        className={validationErrors.confirmPassword ? "border-red-500" : ""}
+                                    />
+                                    {validationErrors.confirmPassword && (
+                                        <p className="text-red-500 text-sm">{validationErrors.confirmPassword}</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Botões */}
+                    <div className="flex justify-end gap-4 pt-4">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={goBack}
+                            disabled={isSaving}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="submit"
+                            disabled={isSaving}
+                            className="flex items-center gap-2"
+                        >
+                            {isSaving ? (
+                                <>
+                                    <Loader2 size={18} className="animate-spin" />
+                                    <span>Salvando...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Save size={18} />
+                                    <span>Salvar</span>
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 }

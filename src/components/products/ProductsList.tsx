@@ -48,11 +48,11 @@ import { useToast } from "@/hooks/useToast";
 // Hooks and stores
 import { useProductStore } from '@/stores/products';
 import { Product } from '@/stores/products/types';
-import { useAuthCheck } from '@/hooks/sessionManager';
-import { formatCurrency } from '@/services/restaurant/services';
+import { formatCurrency } from '@/utils/formatCurrency';
 import { getCategoryName } from '@/utils/getCategoryName';
 import { extractIdFromSlug } from '@/utils/slugify';
 import { DelayedLoading } from '../loading/DelayedLoading';
+import { useAuthStore } from '@/stores';
 
 interface ProductsListProps {
     slug: string;
@@ -94,7 +94,7 @@ const CATEGORIES = [
 export default function ProductsList({ slug }: ProductsListProps) {
     const router = useRouter();
     const { toast } = useToast();
-    const { isAuthenticated, isLoading: isAuthLoading, isAdminOrManager, session, logout } = useAuthCheck();
+    const { isAuthenticated, isLoading: isAuthLoading, logout } = useAuthStore();
     const {
         products,
         error,
@@ -110,13 +110,16 @@ export default function ProductsList({ slug }: ProductsListProps) {
     const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
     const [showOnlyPromotions, setShowOnlyPromotions] = useState<boolean>(false);
     const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+    const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(true);
+
 
     const restaurantId = slug && extractIdFromSlug(String(slug));
 
     // Carregar produtos
     useEffect(() => {
         const loadProducts = async () => {
-            if (restaurantId && isAuthenticated && isAdminOrManager) {
+            if (restaurantId && isAuthenticated) {
+                setIsLoadingProducts(true);
                 try {
                     await fetchProducts(restaurantId);
                 } catch (err) {
@@ -127,9 +130,11 @@ export default function ProductsList({ slug }: ProductsListProps) {
                             variant: "destructive",
                             duration: 5000
                         });
-                        await logout()
-                        router.push('/login');
+                        await logout();
+                        router.push('/');
                     }
+                } finally {
+                    setIsLoadingProducts(false);
                 }
             }
         };
@@ -138,7 +143,7 @@ export default function ProductsList({ slug }: ProductsListProps) {
     }, [restaurantId, showOnlyPromotions, isAuthenticated, fetchProducts]);
 
     // Lista de categorias disponíveis
-    const categories = ['Todos', ...Array.from(new Set(products.map(product => product.category || 'Sem categoria')))];
+    const categories = ['Todos', ...Array.from(new Set(products.map(product => product.category || 'Todos')))];
 
     // Filtrar produtos
     const filteredProducts = products.filter(product => {
@@ -226,7 +231,7 @@ export default function ProductsList({ slug }: ProductsListProps) {
                 duration: 5000
             });
             await logout();
-            router.push('/login');
+            router.push('/');
         } finally {
             setIsRefreshing(false);
         }
@@ -249,7 +254,7 @@ export default function ProductsList({ slug }: ProductsListProps) {
                     <p className="text-muted-foreground mb-6">
                         Sua sessão expirou ou você não está autenticado. Por favor, faça login novamente.
                     </p>
-                    <Button onClick={() => router.push('/login')}>
+                    <Button onClick={() => router.push('/')}>
                         Fazer login
                     </Button>
                 </CardContent>
@@ -378,7 +383,7 @@ export default function ProductsList({ slug }: ProductsListProps) {
             {/* Lista de produtos ou mensagem de vazio */}
             {!error && (
                 <>
-                    {products.length === 0 ? (
+                    {isLoadingProducts ? (
                         <Card>
                             <CardContent className="pt-6 text-center flex flex-col items-center p-8">
                                 <div className="bg-muted rounded-full p-3 mb-4">
@@ -414,7 +419,7 @@ export default function ProductsList({ slug }: ProductsListProps) {
                                     {selectedCategory === 'Todos' ? (
                                         Object.entries(
                                             sortedProducts.reduce((acc, product) => {
-                                                const category = product.category || 'Sem categoria';
+                                                const category = product.category || 'Todos';
                                                 if (!acc[category]) {
                                                     acc[category] = [];
                                                 }

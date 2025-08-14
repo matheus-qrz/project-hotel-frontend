@@ -1,16 +1,14 @@
 "use client"
 
 import Link from "next/link"
-import { useParams, usePathname } from "next/navigation"
-import { signOut } from 'next-auth/react'
+import { useParams, usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Menu, BadgePercent, BarChart, Store, Sun, Cog, Home, LogOut, UserCog2, Moon, SquareMenu, QrCode, History } from "lucide-react"
+import { Menu, BadgePercent, BarChart, Store, Sun, Home, LogOut, UserCog2, Moon, SquareMenu, QrCode, History } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useSidebar } from "@/components/ui/sidebar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu"
-import { useRestaurantUnitId } from "@/hooks/useRestaurantUnitId"
 import { useAuthStore } from "@/stores"
 
 interface NavItem {
@@ -26,28 +24,25 @@ interface SidebarProps {
 
 export function Sidebar({ className }: SidebarProps) {
     const { slug } = useParams();
-    const unitId = useRestaurantUnitId();
     const pathname = usePathname();
     const { setTheme } = useTheme();
     const { isOpen } = useSidebar();
-    const { role } = useAuthStore();
+    const { user, logout } = useAuthStore();
+    const router = useRouter();
 
     if (!isOpen) {
         return null;
     }
 
-    const handleLogout = async (redirectUrl = '/login') => {
-        useAuthStore.getState().setToken('');
-        await signOut({
-            redirect: true,
-            callbackUrl: redirectUrl
-        });
+    const handleLogout = () => {
+        logout();
+        router.push("/login"); // ou página pública
     };
 
     const allItems: NavItem[] = [
         {
             title: "Início",
-            href: role === 'ADMIN' ? `/admin/restaurant/${slug}/dashboard` : `/admin/restaurant/${slug}/manager`,
+            href: user?.role === 'ADMIN' ? `/admin/restaurant/${slug}/dashboard` : `/admin/restaurant/${slug}/manager`,
             icon: <Home size={20} />,
             color: "#ef4444"
         },
@@ -106,7 +101,7 @@ export function Sidebar({ className }: SidebarProps) {
         return [];
     };
 
-    const items = filterItemsByRole(String(role));
+    const items = filterItemsByRole(String(user?.role));
 
     return (
         <div className={cn("fixed top-0 left-0 w-72 h-screen bg-background border-r border-border", className)}>

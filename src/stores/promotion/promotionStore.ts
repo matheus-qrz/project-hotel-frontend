@@ -67,7 +67,7 @@ export const usePromotionStore = create<PromotionStore>((set, get) => ({
     fetchPromotions: async (unitId: string) => {
         set({ isLoading: true, error: null });
         try {
-            const response = await fetch(`/api/unit/${unitId}/promotions`);
+            const response = await fetch(`${API_URL}/unit/${unitId}/promotions`);
             if (!response.ok) throw new Error('Erro ao buscar promoções');
 
             const data = await response.json();
@@ -80,7 +80,7 @@ export const usePromotionStore = create<PromotionStore>((set, get) => ({
     fetchPromotionStats: async (unitId: string) => {
         set({ isLoading: true, error: null });
         try {
-            const response = await fetch(`/api/unit/${unitId}/promotions/stats`);
+            const response = await fetch(`${API_URL}/unit/${unitId}/promotions/stats`);
             if (!response.ok) throw new Error('Erro ao buscar estatísticas');
 
             const data = await response.json();
@@ -93,7 +93,7 @@ export const usePromotionStore = create<PromotionStore>((set, get) => ({
     createPromotion: async (promotionData) => {
         set({ isLoading: true, error: null });
         try {
-            const response = await fetch(`/api/promotions`, {
+            const response = await fetch(`${API_URL}/promotions`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -117,7 +117,7 @@ export const usePromotionStore = create<PromotionStore>((set, get) => ({
     updatePromotion: async (id, updates) => {
         set({ isLoading: true, error: null });
         try {
-            const response = await fetch(`/api/promotions/${id}`, {
+            const response = await fetch(`${API_URL}/promotions/${id}`, {
                 method: 'PATCH',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -143,7 +143,7 @@ export const usePromotionStore = create<PromotionStore>((set, get) => ({
     deletePromotion: async (id) => {
         set({ isLoading: true, error: null });
         try {
-            const response = await fetch(`/api/promotions/${id}`, {
+            const response = await fetch(`${API_URL}/promotions/${id}`, {
                 method: 'DELETE'
             });
 

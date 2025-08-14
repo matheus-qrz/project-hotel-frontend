@@ -78,7 +78,7 @@ export function OrderHistory({ slug }: OrderHistoryProps) {
     };
 
     const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
-        updateOrder(restaurantId, String(tableId), orderId, { status: newStatus });
+        updateOrder(restaurantId, Number(tableId), orderId, { status: newStatus });
     };
 
     const renderOrders = (statuses: OrderStatus[]) => {

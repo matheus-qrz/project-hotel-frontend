@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import AuthGuard from '@/components/auth/AuthGuard';
+
 
 export default function ProtectedLayout({
     children,
@@ -8,8 +8,8 @@ export default function ProtectedLayout({
     children: React.ReactNode;
 }) {
     return (
-        <AuthGuard requireAuth={true} allowedRoles={['ADMIN', 'MANAGER']}>
+        <>
             {children}
-        </AuthGuard>
+         </>
     );
 }

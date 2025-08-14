@@ -7,7 +7,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-    const restaurantId = useRestaurantStore.getState().restaurantId;
+    const restaurantId = useRestaurantStore.getState().restaurant?._id;
     if (restaurantId) {
         config.headers['X-Restaurant-ID'] = restaurantId;
     }

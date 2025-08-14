@@ -4,22 +4,19 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
-import { useAuthCheck } from '@/hooks/sessionManager';
-import { extractIdFromSlug } from '@/utils/slugify';
+import { useAuthStore } from '@/stores';
 
 // API URL
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || '';
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
 
 export default function QRCodeHandler() {
     const router = useRouter();
     const { slug, tableId, unitId } = useParams();
-    const { session } = useAuthCheck();
+    const { token } = useAuthStore();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
-    const restaurantId = slug && extractIdFromSlug(String(slug));
-
+    
     useEffect(() => {
         const handleQRScan = async () => {
             try {
@@ -32,20 +29,19 @@ export default function QRCodeHandler() {
                 }
 
                 // Buscar informações do restaurante e unidade
-                const restaurantResponse = await fetch(`/api/restaurant/by-slug/${slug}`);
+                const restaurantResponse = await fetch(`/${API_URL}/restaurant/by-slug/${slug}`);
                 if (!restaurantResponse.ok) throw new Error('Restaurante não encontrado');
-
-                const restaurant = await restaurantResponse.json();
 
                 // Se tiver unitId, verificar se a unidade existe
                 if (unitId) {
-                    const unitResponse = await fetch(`/api/units/${unitId}`);
+                    const unitResponse = await fetch(`/${API_URL}/units/${unitId}`);
                     if (!unitResponse.ok) throw new Error('Unidade não encontrada');
                 }
 
                 // Criar token de convidado com informação da unidade
                 const guestToken = `guest_${Date.now()}_${unitId || 'main'}_${Math.random().toString(36).substring(2, 15)}`;
-                session?.token === guestToken;
+                // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+                token === guestToken;
                 localStorage.setItem('guest_token', guestToken);
 
                 // Redirecionar incluindo a unidade na URL se existir
@@ -63,7 +59,7 @@ export default function QRCodeHandler() {
         };
 
         handleQRScan();
-    }, [slug, tableId, unitId, router, session?.token]);
+    }, [slug, tableId, unitId, router, token]);
 
     if (loading) {
         return (

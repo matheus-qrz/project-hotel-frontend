@@ -1,31 +1,26 @@
-// Implementação para o componente EmployeeDetailsPage
-
 'use client';
 
 import React, { useEffect } from 'react';
+import { cn } from '@/lib/utils';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import EmployeeDetails from '@/components/employee/EmployeeDetails';
-import { useAuthCheck } from '@/hooks/sessionManager';
+import { extractIdFromSlug } from '@/utils/slugify';
+import Header from '@/components/header/Header';
+import { useAuthStore } from '@/stores';
+import { useSidebar } from '@/components/ui/sidebar';
+import { Sidebar } from '@/components/dashboard';
+
+
 
 export default function EmployeeDetailsPage() {
-    const params = useParams();
-    const router = useRouter();
-    const unitId = params.unitId as string;
-    const employeeId = params.employeeId as string;
+    const { slug, employeeId } = useParams();
+    const { isOpen } = useSidebar();
+    const { isLoading } = useAuthStore();
 
-    // Usar o hook de verificação de autenticação
-    const { isAuthenticated, isAdmin, isManager, isLoading } = useAuthCheck();
+    const restaurantId = extractIdFromSlug(String(slug))
 
-    // Verificar se o usuário está autorizado (admin ou gerente)
-    const isAuthorized = isAuthenticated && (isAdmin || isManager);
 
-    // Redirecionar se não estiver autenticado após carregamento
-    useEffect(() => {
-        if (!isLoading && !isAuthenticated) {
-            router.push('/login');
-        }
-    }, [isLoading, isAuthenticated, router]);
 
     if (isLoading) {
         return (
@@ -43,22 +38,24 @@ export default function EmployeeDetailsPage() {
         );
     }
 
-    if (!isAuthorized) {
-        return (
-            <div className="container mx-auto px-4 py-8">
-                <Card>
-                    <CardContent className="p-6 text-center">
-                        <h2 className="text-xl font-semibold text-red-600 mb-2">Acesso Negado</h2>
-                        <p>Você não tem permissão para acessar esta página.</p>
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
-
     return (
-        <div className="container mx-auto px-4 py-8">
-            <EmployeeDetails unitId={unitId} employeeId={employeeId} />
-        </div>
+        <>
+            <div className="w-full flex flex-col h-screen">
+                <Header />
+
+                <div className={cn(
+                    "flex flex-col w-screen transition-all duration-300",
+                    isOpen ? "ml-64" : "ml-0"
+                )}>
+                    <Sidebar />
+
+                    <div className="flex-1 w-full overflow-auto">
+                        <div className="max-w-5xl mx-auto px-6 py-10">
+                            <EmployeeDetails unitId={String(restaurantId)} employeeId={String(employeeId)} />
+                        </div>
+                    </div>
+                </div>
+            </div>
+         </>
     );
 }

@@ -30,8 +30,8 @@ import { Switch } from '@/components/ui/switch';
 import { Loader2 } from 'lucide-react';
 import { useProductStore } from '@/stores/products';
 import { Separator } from '@/components/ui/separator';
-import { useAuthCheck } from '@/hooks/sessionManager';
 import { extractIdFromSlug } from '@/utils/slugify';
+import { useAuthStore } from '@/stores';
 
 const formSchema = z.object({
     name: z.string().min(2, { message: 'Nome deve ter pelo menos 2 caracteres' }),
@@ -42,6 +42,13 @@ const formSchema = z.object({
         return !isNaN(number) && number > 0;
     }, {
         message: 'Preço deve ser um número positivo',
+    }),
+    costPrice: z.string().refine((val) => {
+        const numericString = val.replace(/[^\d.,]/g, '').replace(',', '.');
+        const number = parseFloat(numericString);
+        return !isNaN(number) && number >= 0;
+    }, {
+        message: 'Custo deve ser um número positivo',
     }),
     description: z.string().optional(),
     quantity: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
@@ -116,7 +123,7 @@ interface ProductFormProps {
 
 export default function ProductForm({ slug }: ProductFormProps) {
     const router = useRouter();
-    const { session } = useAuthCheck();
+    const { token } = useAuthStore();
     const { createProduct, products } = useProductStore();
     const [loading, setLoading] = useState(false);
     const { toast } = useToast();
@@ -129,6 +136,7 @@ export default function ProductForm({ slug }: ProductFormProps) {
             name: '',
             category: '',
             price: '',
+            costPrice: '',
             description: '',
             quantity: '1',
             image: '',
@@ -185,9 +193,9 @@ export default function ProductForm({ slug }: ProductFormProps) {
     };
 
     const onSubmit = async (values: FormValues) => {
-        console.log('Iniciando submit:', { restaurantId, sessionToken: session?.token });
-        if (!restaurantId || !session?.token) {
-            console.log('Submit bloqueado:', { restaurantId, sessionToken: session?.token });
+        console.log('Iniciando submit:', { restaurantId, sessionToken: token });
+        if (!restaurantId || !token) {
+            console.log('Submit bloqueado:', { restaurantId, sessionToken: token });
             return;
         }
 
@@ -196,6 +204,7 @@ export default function ProductForm({ slug }: ProductFormProps) {
             console.log('Valores do formulário:', values);
 
             const formattedPrice = parseFloat(values.price.replace(/[^\d.,]/g, '').replace(',', '.'));
+            const formattedCost = parseFloat(values.costPrice.replace(/[^\d.,]/g, '').replace(',', '.'));
 
             if (isNaN(formattedPrice) || formattedPrice <= 0) {
                 throw new Error('Preço inválido');
@@ -221,6 +230,7 @@ export default function ProductForm({ slug }: ProductFormProps) {
                 name: values.name,
                 category: values.category,
                 price: formattedPrice,
+                costPrice: formattedCost,
                 quantity: Number(values.quantity),
                 description: values.description ?? '',
                 image: values.image ?? '',
@@ -332,6 +342,24 @@ export default function ProductForm({ slug }: ProductFormProps) {
 
                                 <FormField
                                     control={form.control}
+                                    name="costPrice"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Preço de custo *</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="currency"
+                                                    placeholder="0,00"
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
                                     name="quantity"
                                     render={({ field }) => (
                                         <FormItem>
@@ -353,7 +381,7 @@ export default function ProductForm({ slug }: ProductFormProps) {
                                     control={form.control}
                                     name="image"
                                     render={({ field }) => (
-                                        <FormItem className="col-span-1 md:col-span-2">
+                                        <FormItem>
                                             <FormLabel>Carregar imagem</FormLabel>
                                             <FormControl>
                                                 <Input

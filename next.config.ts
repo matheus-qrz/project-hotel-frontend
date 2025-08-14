@@ -1,16 +1,21 @@
 // next.config.ts
-import { NextConfig as FullNextConfig } from 'next';
+import type { NextConfig } from 'next';
 
-const nextConfig: FullNextConfig = {
+const nextConfig: NextConfig = {
   reactStrictMode: true,
   async rewrites() {
     return [
       {
         source: '/api/:path*',
-        destination: 'https://seugarcom-prod.backend.railway.app/:path*',
+        destination: '/api/:path*',
+      },
+      {
+        source: '/_api/:path*',
+        destination: 'https://backend-production-1beb9.up.railway.app/:path*',
       },
     ];
   },
 };
 
 export default nextConfig;
+

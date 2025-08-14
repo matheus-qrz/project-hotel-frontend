@@ -12,7 +12,7 @@ export default function Header() {
     const route = useRouter();
     const { toggle, isOpen } = useSidebar();
     const { slug } = useParams();
-    const { restaurant, fetchRestaurantData } = useRestaurantStore();
+    const { restaurant, fetchRestaurantBySlug } = useRestaurantStore();
 
     console.log('Restaurant Slug:', slug);
 
@@ -21,7 +21,7 @@ export default function Header() {
         const loadRestaurant = async () => {
             try {
                 console.log('Tentando carregar restaurante com slug:', slug);
-                await fetchRestaurantData(String(slug));
+                await fetchRestaurantBySlug(String(slug));
             } catch (error) {
                 console.error('Erro ao carregar restaurante:', error);
             }

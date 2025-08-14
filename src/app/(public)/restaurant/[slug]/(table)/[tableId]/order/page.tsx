@@ -21,7 +21,7 @@ export default function OrderPage() {
     useEffect(() => {
         if (guestId) {
             console.log("Carregando pedidos para o guestId:", guestId);
-            fetchGuestOrders(guestId, String(tableId));
+            fetchGuestOrders(guestId, Number(tableId));
         } else {
             console.error("guestId não encontrado.");
         }

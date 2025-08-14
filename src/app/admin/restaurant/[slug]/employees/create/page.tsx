@@ -1,22 +1,25 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import React from 'react';
+import { cn } from '@/lib/utils';
+import { useParams } from 'next/navigation';
+import { useAuthStore } from '@/stores';
 import { Card, CardContent } from '@/components/ui/card';
 import EmployeeForm from '@/components/employee/EmployeeForm';
-import { useAuthCheck } from '@/hooks/sessionManager';
 import { useSidebar } from '@/components/ui/sidebar';
 import Header from '@/components/header/Header';
-import { cn } from '@/lib/utils';
 import { Sidebar } from '@/components/dashboard/SideMenu';
 import { extractIdFromSlug } from '@/utils/slugify';
 
+
 const CreateEmployeePage: React.FC = () => {
     const { slug } = useParams();
-    const { isAuthenticated, isLoading, isAdminOrManager } = useAuthCheck();
+    const { isAuthenticated, isLoading } = useAuthStore();
     const { isOpen } = useSidebar();
 
     const restaurantId = slug && extractIdFromSlug(String(slug));
+
+
 
     if (isLoading) {
         return (
@@ -38,21 +41,8 @@ const CreateEmployeePage: React.FC = () => {
         return null;
     }
 
-    if (!isAdminOrManager) {
-        return (
-            <div className="container mx-auto px-4 py-8">
-                <Card>
-                    <CardContent className="p-6 text-center">
-                        <h2 className="text-xl font-semibold text-red-600 mb-2">Acesso Negado</h2>
-                        <p>Você não tem permissão para acessar esta página.</p>
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
-
     return (
-        <div className="w-full flex flex-col h-screen">
+        <div className="overflow-hidden md:overflow-auto w-full flex flex-col h-screen">
             <Header />
 
             <div className={cn(
@@ -60,9 +50,12 @@ const CreateEmployeePage: React.FC = () => {
                 isOpen ? "ml-64" : "ml-0"
             )}>
                 <Sidebar />
-                <div className='w-full p-10 items-center justify-start'>
-                    <EmployeeForm restaurantId={String(restaurantId)} isEditMode={false} />
+                <div className="flex-1 flex items-center justify-center px-4 py-8">
+                    <div className="w-full max-w-4xl">
+                        <EmployeeForm restaurantId={String(restaurantId)} isEditMode={false} />
+                    </div>
                 </div>
+
             </div>
         </div>
     );

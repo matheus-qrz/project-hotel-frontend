@@ -1,19 +1,31 @@
 'use client';
 
-import React from 'react';
-import { useParams } from 'next/navigation';
-import { Card, CardContent } from '@/components/ui/card';
+import React, { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import EmployeeForm from '@/components/employee/EmployeeForm';
-import { useAuthCheck } from '@/hooks/sessionManager';
+import { extractIdFromSlug } from '@/utils/slugify';
+import { useAuthStore } from '@/stores/auth';
 
 export function EditEmployeePage() {
-    const params = useParams();
-    const unitId = params.unitId as string;
-    const employeeId = params.employeeId as string;
-    const { isAuthenticated, role, isLoading } = useAuthCheck();
+    const { slug, employeeId } = useParams();
+    const router = useRouter();
 
-    // Verificar se o usuário está autenticado como administrador
-    const isAuthorized = isAuthenticated && role === 'ADMIN';
+    const { user, token } = useAuthStore();
+    const [isLoading, setIsLoading] = useState(true);
+
+    const restaurantId = slug && extractIdFromSlug(String(slug));
+    const isAuthorized = user && user.role === 'ADMIN' || 'MANAGER';
+
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            if (!token || !isAuthorized) {
+                router.push('/admin/login');
+            }
+            setIsLoading(false);
+        }, 300);
+
+        return () => clearTimeout(timeout);
+    }, [token, isAuthorized, router]);
 
     if (isLoading) {
         return (
@@ -31,22 +43,13 @@ export function EditEmployeePage() {
         );
     }
 
-    if (!isAuthorized) {
-        return (
-            <div className="container mx-auto px-4 py-8">
-                <Card>
-                    <CardContent className="p-6 text-center">
-                        <h2 className="text-xl font-semibold text-red-600 mb-2">Acesso Negado</h2>
-                        <p>Você não tem permissão para acessar esta página.</p>
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
-
     return (
         <div className="container mx-auto px-4 py-8">
-            <EmployeeForm unitId={unitId} employeeId={employeeId} isEditMode={true} />
+            <EmployeeForm
+                restaurantId={String(restaurantId)}
+                employeeId={String(employeeId)}
+                isEditMode={true}
+            />
         </div>
     );
 }

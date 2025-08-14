@@ -3,7 +3,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Product } from '@/stores/products/productStore';
-import { formatCurrency } from '@/services/restaurant/services';
+import { formatCurrency } from '@/utils/formatCurrency';
 import { Pencil, Power } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 

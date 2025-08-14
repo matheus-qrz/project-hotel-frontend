@@ -16,7 +16,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { CreditCard, RefreshCw, Coffee, Utensils } from 'lucide-react';
-import { formatCurrency } from '@/services/restaurant/services';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 interface TablesRequestingCheckoutProps {
     restaurantUnitId: string;
@@ -45,13 +45,15 @@ export default function TablesRequestingCheckout({ restaurantUnitId }: TablesReq
     const [paymentMethod, setPaymentMethod] = useState<string>('');
     const [processingPayment, setProcessingPayment] = useState(false);
 
+    const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
     // Função para carregar mesas com pedidos ativos
     const loadActiveOrders = async () => {
         try {
             setRefreshing(true);
 
             // 1. Buscar mesas solicitando pagamento
-            const response = await fetch(`/restaurant/unit/${restaurantUnitId}/tables-checkout`);
+            const response = await fetch(`${API_URL}/restaurant/unit/${restaurantUnitId}/tables-checkout`);
 
             if (!response.ok) {
                 throw new Error('Erro ao buscar mesas');
@@ -64,7 +66,7 @@ export default function TablesRequestingCheckout({ restaurantUnitId }: TablesReq
 
             for (const tableNumber of data.tables) {
                 const tableOrdersResponse = await fetch(
-                    `/restaurant/unit/${restaurantUnitId}/table/${tableNumber}/orders`
+                    `${API_URL}/restaurant/unit/${restaurantUnitId}/table/${tableNumber}/orders`
                 );
 
                 if (tableOrdersResponse.ok) {
@@ -110,7 +112,7 @@ export default function TablesRequestingCheckout({ restaurantUnitId }: TablesReq
         setProcessingPayment(true);
 
         try {
-            const response = await fetch('/order/process-payment', {
+            const response = await fetch(`${API_URL}/order/process-payment`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

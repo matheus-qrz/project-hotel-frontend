@@ -22,11 +22,11 @@ const useFetchRestaurantInfo = () => {
                         title: "Acesso negado",
                         description: "Você precisa estar logado como administrador para criar unidades."
                     });
-                    router.push('/login');
+                    router.push('/');
                     return;
                 }
 
-                const response = await fetch(`/api/validate`, {
+                const response = await fetch(`/${API_URL}/validate`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -54,14 +54,14 @@ const useFetchRestaurantInfo = () => {
                     });
 
                     // Use o slug no redirecionamento
-                    router.push(`/admin/restaurant/${slug}/dashboard`);
+                    router.push(`/admin/restaurant/${restaurantId}/dashboard`);
                 } else {
                     toast.toast({
                         variant: "destructive",
                         title: "Acesso negado",
                         description: "Você precisa ser administrador de um restaurante para criar unidades."
                     });
-                    router.push('/login');
+                    router.push('/');
                 }
             } catch (error) {
                 console.error("Erro ao buscar informações do restaurante:", error);

@@ -1,7 +1,6 @@
 "use client"
 
-import { SidebarProvider } from "@/components/ui/sidebar"
-import Providers from "@/providers/providers"
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 export default function RestaurantUnitRegisterLayout({
     children,

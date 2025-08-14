@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { useAuthCheck } from '@/hooks/sessionManager';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
@@ -13,58 +12,17 @@ import RestaurantInfoForm from './RestaurantInfoForm';
 import RestaurantAddressForm from './RestaurantAddressForm';
 import RestaurantScheduleForm from './RestaurantScheduleForm';
 import AdminCredentialsForm from '@/components/users/admin/AdminCredentialsForm';
-import { useRestaurantStore } from '@/stores';
+import { useAuthStore, useRestaurantFormStore } from '@/stores';
 
 export default function MobileRestaurantRegisterContainer() {
     const router = useRouter();
-    const { registerAdminWithRestaurant } = useAuthCheck();
+    const { registerAdminWithRestaurant } = useAuthStore();
+    const { formData, currentStep, setFormStep, resetForm } = useRestaurantFormStore();
 
     // Estado para controlar o passo atual
     const [step, setStep] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
-    // Estado para dados do formulário (igual ao desktop)
-    const [formData, setFormData] = useState({
-        // Dados do responsável (ADMIN)
-        adminName: '',
-        adminCpf: '',
-
-        // Dados da loja (RESTAURANT)
-        cnpjPart1: '',
-        cnpjPart2: '',
-        cnpjPart3: '',
-        socialName: '',
-        name: '',
-        phone: '',
-        specialty: '',
-
-        // Endereço da loja
-        zipCode: '',
-        street: '',
-        number: '',
-        complement: '',
-
-        // Horários de funcionamento
-        schedules: [
-            // Formatos iniciais com horários padrão
-            {
-                days: ['sex', 'sab', 'dom'],
-                opens: '08:00',
-                closes: '14:00'
-            }
-        ],
-
-        // Credenciais de acesso
-        email: '',
-        password: '',
-        confirmPassword: ''
-    });
-
-    // Função genérica para atualizar o estado do formulário
-    const updateFormData = (data: Partial<typeof formData>) => {
-        setFormData(prev => ({ ...prev, ...data }));
-    };
 
     // Validação específica para cada passo
     const validateCurrentStep = (): boolean => {
@@ -208,22 +166,19 @@ export default function MobileRestaurantRegisterContainer() {
                 businessHours
             };
 
-            // Chamar a função de autenticação para registrar
             const result = await registerAdminWithRestaurant(payload);
 
             if (result.success) {
-                // Obter o ID do restaurante do store
-                const restaurantId = useRestaurantStore.getState().restaurantId;
+                resetForm();
 
-                // Redirecionar para dashboard após sucesso
+                const restaurantId = result.restaurant?._id;
                 if (restaurantId) {
-                    router.push(`/restaurant/${restaurantId}/dashboard`);
+                    router.push(`/admin/restaurant/${restaurantId}/dashboard`);
                 } else {
-                    // Fallback para a resposta da API se o store não tiver o ID ainda
-                    router.push(`/restaurant/${result.restaurant?._id}/dashboard`);
+                    setError("Cadastro feito, mas ID do restaurante não encontrado.");
                 }
             } else {
-                setError(result.message);
+                setError(result.message || "Erro ao registrar");
             }
         } catch (error: any) {
             console.error('Erro ao registrar:', error);

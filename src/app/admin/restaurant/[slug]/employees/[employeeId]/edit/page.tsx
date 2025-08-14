@@ -1,19 +1,20 @@
 'use client';
 
 import React from 'react';
+import { cn } from '@/lib/utils';
 import { useParams } from 'next/navigation';
+import { useAuthStore } from '@/stores';
+import { useSidebar } from '@/components/ui/sidebar';
 import { Card, CardContent } from '@/components/ui/card';
 import EmployeeForm from '@/components/employee/EmployeeForm';
-import { useAuthCheck } from '@/hooks/sessionManager';
 import { extractIdFromSlug } from '@/utils/slugify';
 import { Sidebar } from '@/components/dashboard';
 import Header from '@/components/header/Header';
-import { cn } from '@/lib/utils';
-import { useSidebar } from '@/components/ui/sidebar';
+
 
 export default function EditEmployeePage() {
     const { slug, employeeId } = useParams();
-    const { isAuthenticated, role, isLoading } = useAuthCheck();
+    const { isAuthenticated, role, isLoading } = useAuthStore();
     const { isOpen } = useSidebar();
     const restaurantId = slug && extractIdFromSlug(String(slug));
 
@@ -59,7 +60,9 @@ export default function EditEmployeePage() {
             )}>
                 <Sidebar />
                 <div className='w-full p-10 items-center justify-start'>
-                    <EmployeeForm restaurantId={String(restaurantId)} employeeId={String(employeeId)} isEditMode={true} />
+                    <>
+                        <EmployeeForm restaurantId={String(restaurantId)} employeeId={String(employeeId)} isEditMode={true} />
+                     </>
                 </div>
             </div>
         </div>

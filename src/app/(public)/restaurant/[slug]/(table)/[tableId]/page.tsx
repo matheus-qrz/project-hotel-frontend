@@ -2,24 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useRestaurantStore, useTableStore, useCartStore } from '@/stores/';
+import { useRestaurantStore, useTableStore, useCartStore } from '@/stores';
 import { extractIdFromSlug } from '@/utils/slugify';
 import { Button } from '@/components/ui/button';
 import { Book } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { GuestLogin, UserLogin } from '@/components/login';
-import { DelayedLoading } from '@/components/loading/DelayedLoading';
-import { v4 as uuidv4 } from 'uuid';
 import { Label } from '@/components/ui/label';
-
-interface GuestInfo {
-    id: string;
-    name: string;
-    email?: string;
-    phone?: string;
-    tableNumber: string;
-    restaurantId: string;
-}
+import { DelayedLoading } from '@/components/loading/DelayedLoading';
+import { GuestLogin } from '@/components/login';
+import { useGuestStore } from '@/stores/auth';
+import { v4 as uuidv4 } from 'uuid';
 
 export default function TableIdentificationPage() {
     const { slug, tableId } = useParams();
@@ -28,10 +19,15 @@ export default function TableIdentificationPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Stores
-    const { restaurant, fetchRestaurantData } = useRestaurantStore();
+    const { restaurant, fetchRestaurantBySlug } = useRestaurantStore();
     const { setTableInfo } = useTableStore();
     const { setTableInfo: setCartTableInfo } = useCartStore();
+    const {
+        guestInfo,
+        setGuestInfo,
+        setRestaurantId,
+        setTableId,
+    } = useGuestStore();
 
     useEffect(() => {
         const initializeData = async () => {
@@ -42,30 +38,17 @@ export default function TableIdentificationPage() {
 
             try {
                 setIsLoading(true);
-                await fetchRestaurantData(String(slug));
+                await fetchRestaurantBySlug(String(slug));
 
                 const restaurantId = extractIdFromSlug(String(slug));
+                const tableIdNum = Number(tableId);
 
-                setTableInfo(String(tableId), restaurantId);
-                setCartTableInfo(String(tableId), restaurantId);
+                setTableInfo(tableIdNum, restaurantId);
+                setCartTableInfo(tableIdNum, restaurantId);
+                setRestaurantId(restaurantId);
+                setTableId(tableIdNum);
 
-                console.log("ids: ", tableId, restaurantId);
-
-                // Verificar se já existe uma sessão de guest
-                const existingGuestInfo = localStorage.getItem('guest_info');
-                if (existingGuestInfo) {
-                    const guestData = JSON.parse(existingGuestInfo);
-                    // Atualizar informações da mesa se necessário
-                    if (guestData.tableId !== String(tableId) || guestData.restaurantId !== restaurantId) {
-                        const updatedGuestInfo: GuestInfo = {
-                            ...guestData,
-                            tableNumber: String(tableId),
-                            restaurantId: restaurantId
-                        };
-                        localStorage.setItem('guest_info', JSON.stringify(updatedGuestInfo));
-                    }
-                }
-
+                // Se o guestInfo já existe, manter (persist é automático)
             } catch (error: any) {
                 console.error('Erro ao carregar dados:', error);
                 setError(error.message || 'Erro ao carregar informações do restaurante.');
@@ -75,33 +58,24 @@ export default function TableIdentificationPage() {
         };
 
         initializeData();
-    }, [slug, tableId, fetchRestaurantData, setTableInfo, setCartTableInfo]);
+    }, [slug, tableId]);
 
     const navigateToMenu = () => {
         if (!slug) return;
         router.push(`/restaurant/${slug}/${tableId}/menu`);
     };
 
-    const handleLoginSuccess = () => {
-        navigateToMenu();
-    };
-
     const continueAsGuest = () => {
         const restaurantId = extractIdFromSlug(String(slug));
-
-        // Criar guest anônimo
-        const anonymousGuest: GuestInfo = {
+        const anonymousGuest = {
             id: uuidv4(),
             name: `Mesa ${tableId}`,
-            tableNumber: String(tableId),
-            restaurantId: restaurantId
+            joinedAt: new Date().toISOString(),
         };
 
-        localStorage.setItem('guest_info', JSON.stringify(anonymousGuest));
-
-        // Gerar token para guest anônimo
-        const guestToken = btoa(`${anonymousGuest.id}:${anonymousGuest.tableNumber}:${Date.now()}`);
-        localStorage.setItem('guest_token', guestToken);
+        setGuestInfo(anonymousGuest);
+        setRestaurantId(restaurantId);
+        setTableId(Number(tableId));
 
         navigateToMenu();
     };
@@ -117,10 +91,7 @@ export default function TableIdentificationPage() {
                     <h1 className="text-xl font-bold text-red-600 mb-2">Erro</h1>
                     <p className="text-gray-600">{error}</p>
                 </div>
-                <Button
-                    onClick={() => router.push('/')}
-                    variant="outline"
-                >
+                <Button onClick={() => router.push('/')} variant="outline">
                     Voltar à Página Inicial
                 </Button>
             </div>
@@ -141,32 +112,9 @@ export default function TableIdentificationPage() {
                 )}
             </div>
 
-            {/* <div className="flex-grow mb-6">
-                <Tabs defaultValue="user" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 mb-6">
-                        <TabsTrigger value="user">Usuário</TabsTrigger>
-                        <TabsTrigger value="guest">Convidado</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="user" className="space-y-4">
-                        <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                            <p className="text-sm">Faça login para acessar sua conta e visualizar histórico de pedidos.</p>
-                        </div>
-                        <UserLogin onLoginSuccess={handleLoginSuccess} />
-                    </TabsContent>
-
-                    <TabsContent value="guest" className="space-y-4">
-                        <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                            <p className="text-sm">Identifique-se para facilitar seus pedidos.</p>
-                        </div>
-                        <GuestLogin />
-                    </TabsContent>
-                </Tabs>
-            </div> */}
-
             <div className='flex flex-col flex-grow justify-start gap-2'>
                 <div className='flex flex-col items-center justify-center gap-4'>
-                    <Label className='font-bold text-xl'>Seja bem vindo, cliente!</Label>
+                    <Label className='font-bold text-xl'>Seja bem-vindo!</Label>
                     <div className="rounded-lg mb-8">
                         <p className="text-md">Identifique-se para facilitar seus pedidos.</p>
                     </div>
@@ -179,11 +127,8 @@ export default function TableIdentificationPage() {
                     <span className="mx-4 text-sm text-gray-500">ou</span>
                     <div className="flex-grow border-t border-gray-200"></div>
                 </div>
-                <Button
-                    onClick={continueAsGuest}
-                    variant="default"
-                    className="w-full"
-                >
+
+                <Button onClick={continueAsGuest} variant="default" className="w-full">
                     Ver Cardápio
                 </Button>
             </div>

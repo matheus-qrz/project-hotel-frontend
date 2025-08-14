@@ -1,6 +1,7 @@
 "use client"
 
 import { SidebarProvider } from "@/components/ui/sidebar"
+import { RoleGuard } from "@/hooks/useRoleGuard"
 
 export default function StatisticsLayout({
     children,
@@ -8,8 +9,10 @@ export default function StatisticsLayout({
     children: React.ReactNode
 }) {
     return (
-        <SidebarProvider>
-            {children}
-        </SidebarProvider>
+        <RoleGuard allowedRoles={['ADMIN']}>
+            <SidebarProvider>
+                {children}
+            </SidebarProvider>
+         </>
     )
 }

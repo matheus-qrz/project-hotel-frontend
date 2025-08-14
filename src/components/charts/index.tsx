@@ -13,8 +13,8 @@ import {
 } from "recharts";
 import { useTheme } from "next-themes";
 
-interface ChartData {
-    name: string;
+export interface ChartData {
+    month: string
     value: number;
 }
 
@@ -49,9 +49,10 @@ export function Chart({
     if (highlightIndex !== undefined) {
         indexToHighlight = highlightIndex;
     }
+
     // Caso contrário, se um mês atual for fornecido, encontre-o nos dados
     else if (currentMonth) {
-        const foundIndex = data.findIndex(item => item.name === currentMonth);
+        const foundIndex = data.findIndex(item => item.month === currentMonth);
         if (foundIndex >= 0) {
             indexToHighlight = foundIndex;
         }

@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UserLogin } from '@/components/login/UserLogin';
 import { GuestLogin } from '@/components/login/GuestLogin';
-import { useAuthCheck } from '@/hooks/sessionManager';
+import { useAuthStore } from '@/stores';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { extractIdFromSlug } from '@/utils/slugify';
@@ -13,8 +13,10 @@ import { extractIdFromSlug } from '@/utils/slugify';
 export function LoginPage() {
     const router = useRouter();
     const { slug, tableId } = useParams();
-    const { authenticateAsGuest, isAuthenticated, role, isLoading } = useAuthCheck();
+    const { isAuthenticated, role, isLoading } = useAuthStore();
     const [restaurantInfo, setRestaurantInfo] = useState<{ name: string } | null>(null);
+
+    const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
     const restaurantId = slug && extractIdFromSlug(String(slug));
 
@@ -41,7 +43,7 @@ export function LoginPage() {
     // Buscar informações do restaurante
     useEffect(() => {
         if (restaurantId) {
-            fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/restaurant/${restaurantId}`)
+            fetch(`${API_URL}/restaurant/${restaurantId}`)
                 .then(res => res.json())
                 .then(data => {
                     setRestaurantInfo(data);
@@ -56,21 +58,21 @@ export function LoginPage() {
     }, [restaurantId, tableId]);
 
     // Função para continuar sem login
-    const continueWithoutLogin = () => {
-        if (restaurantId && tableId && restaurantInfo) {
-            // Usar função do contexto de autenticação para autenticar como convidado anônimo
-            authenticateAsGuest(
-                String(tableId),
-                restaurantId,
-                restaurantInfo.name.toLowerCase().replace(/\s+/g, '-')
-            );
+    // const continueWithoutLogin = () => {
+    //     if (restaurantId && tableId && restaurantInfo) {
+    //         // Usar função do contexto de autenticação para autenticar como convidado anônimo
+    //         authenticateAsGuest(
+    //             Number(tableId),
+    //             restaurantId,
+    //             restaurantInfo.name.toLowerCase().replace(/\s+/g, '-')
+    //         );
 
-            router.push(`/restaurant/${restaurantId}/${tableId}/menu`);
-        } else if (restaurantId) {
-            // Mesmo sem tableId, permitir acesso ao menu
-            router.push(`/restaurant/${restaurantId}/${tableId}/menu`);
-        }
-    };
+    //         router.push(`/restaurant/${restaurantId}/${tableId}/menu`);
+    //     } else if (restaurantId) {
+    //         // Mesmo sem tableId, permitir acesso ao menu
+    //         router.push(`/restaurant/${restaurantId}/${tableId}/menu`);
+    //     }
+    // };
 
     // Mostrar loader enquanto verifica autenticação
     if (isLoading) {
@@ -120,14 +122,14 @@ export function LoginPage() {
                     </Tabs>
 
                     {/* Botão para continuar sem login */}
-                    <div className="mt-6">
+                    {/* <div className="mt-6">
                         <button
                             onClick={continueWithoutLogin}
                             className="w-full py-2 text-gray-600 text-sm underline hover:text-gray-900"
                         >
                             Continuar sem login
                         </button>
-                    </div>
+                    </div> */}
 
                     <div className="mt-8 text-center text-sm text-gray-500">
                         <p>

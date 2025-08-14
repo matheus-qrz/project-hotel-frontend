@@ -4,9 +4,8 @@ import { useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/useToast";
-import { useRestaurantUnitFormStore } from "@/stores";
+import { useAuthStore, useRestaurantUnitFormStore } from "@/stores";
 import { useEmployeeStore } from "@/stores/employees";
-import { useAuthCheck } from "@/hooks/sessionManager";
 
 interface Manager {
     id: string;
@@ -20,21 +19,21 @@ export default function UnitManagersForm({ restaurantId }: iUnitManagersForm) {
     const { employees, fetchEmployees, isLoading } = useEmployeeStore();
     const [availableManagers, setAvailableManagers] = useState<Manager[]>([]);
     const toast = useToast();
-    const { session } = useAuthCheck();
+    const { token } = useAuthStore();
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 // Obter o token de autenticação
-                if (!session?.token) {
+                if (!token) {
                     throw new Error('Token não encontrado');
                 }
 
-                if (!restaurantId || !session?.token) {
+                if (!restaurantId || !token) {
                     throw new Error('Informações de autenticação insuficientes');
                 }
 
-                await fetchEmployees(restaurantId, session?.token);
+                await fetchEmployees(restaurantId, token);
             } catch (error) {
                 console.error('Erro ao carregar gerentes:', error);
                 toast.toast({
@@ -46,7 +45,7 @@ export default function UnitManagersForm({ restaurantId }: iUnitManagersForm) {
         };
 
         fetchData();
-    }, [session, restaurantId]);
+    }, [token, restaurantId]);
 
     useEffect(() => {
         const managers = employees

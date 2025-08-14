@@ -36,3 +36,12 @@ export const extractNameFromSlug = (slug: string): string => {
         .join(' ')
         .trim();
 };
+
+/**
+ * Retorna o escopo da rota com base no caminho do navegador
+ */
+export function extractScopeFromPathname(pathname: string): "restaurant" | "unit" {
+    if (pathname.includes("/admin/restaurant/")) return "restaurant";
+    if (pathname.includes("/admin/unit/")) return "unit";
+    return "unit"; // fallback de segurança
+}

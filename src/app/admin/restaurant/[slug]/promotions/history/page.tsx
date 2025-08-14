@@ -26,7 +26,7 @@ export default function PromotionHistoryPage() {
     }
 
     if (!isAuthenticated || !isAdminOrManager) {
-        router.push('/login');
+        router.push('/');
         return null;
     }
 

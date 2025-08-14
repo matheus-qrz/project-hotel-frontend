@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/form';
 import { useProductStore } from '@/stores/products';
 import { extractIdFromSlug } from '@/utils/slugify';
-import { formatCurrency } from '@/services/restaurant/services';
+import { formatCurrency } from '@/utils/formatCurrency';
 import type { Product as StoreProduct } from '@/stores/products/productStore';
 import { useSession } from 'next-auth/react';
 

@@ -9,12 +9,12 @@ interface GuestInfo {
 }
 
 interface TableState {
-    tableId: string | null;
+    tableId: number | null;
     restaurantId: string | null;
     unitId: string | null;
     activeGuests: GuestInfo[];
 
-    setTableInfo: (tableId: string, restaurantId: string, unitId?: string) => void;
+    setTableInfo: (tableId: number, restaurantId: string, unitId?: string) => void;
     addGuest: (guestInfo: GuestInfo) => void;
     clearTableInfo: () => void;
 }
