@@ -1,18 +1,11 @@
-"use client"
+"use client";
 
-import { SidebarProvider } from "@/components/ui/sidebar"
-import { RoleGuard } from "@/hooks/useRoleGuard"
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 export default function EmployeesLayout({
-    children,
+  children,
 }: {
-    children: React.ReactNode
+  children: React.ReactNode;
 }) {
-    return (
-        <>
-            <SidebarProvider>
-                {children}
-            </SidebarProvider>
-         </>
-    )
+  return <SidebarProvider>{children}</SidebarProvider>;
 }

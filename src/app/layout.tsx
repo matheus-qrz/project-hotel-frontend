@@ -1,17 +1,15 @@
-'use client';
+"use client";
 
-import './globals.css'
-import type { ReactNode } from 'react';
+import "./globals.css";
+import type { ReactNode } from "react";
+import Providers from "@/providers/providers";
 
-export default function AppLayout({
-    children
-}: {
-    children: ReactNode
-}) {
-
-    return (
-        <>
-            {children}
-        </>
-    );
+export default function AppLayout({ children }: { children: ReactNode }) {
+  return (
+    <html>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
 }

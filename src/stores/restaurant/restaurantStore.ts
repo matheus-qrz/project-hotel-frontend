@@ -1,7 +1,8 @@
-// stores/restaurantStore.ts
+import { extractIdFromSlug } from "@/utils/slugify";
 import { create } from "zustand";
 import { useAuthStore } from "../auth";
 
+// types/restaurant.ts
 export interface Address {
     zipCode: string;
     street: string;
@@ -40,13 +41,14 @@ export interface Restaurant {
     updatedAt: string;
 }
 
+// stores/restaurantStore.ts
 interface RestaurantStore {
     restaurant: Restaurant | null;
     isLoading: boolean;
     error: string | null;
 
-    fetchRestaurantBySlug: (slug: string) => Promise<void>;
-    fetchRestaurantById: (id: string) => Promise<void>;
+    // Ações básicas
+    fetchRestaurantData: (slug: string) => Promise<void>;
     updateRestaurantInfo: (data: Partial<Restaurant>) => Promise<void>;
 
     // Ações específicas
@@ -69,56 +71,35 @@ interface RestaurantStore {
     isOpenNow: () => boolean;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
 export const useRestaurantStore = create<RestaurantStore>((set, get) => ({
     restaurant: null,
     isLoading: false,
     error: null,
 
-    fetchRestaurantBySlug: async (slug: string) => {
+    // useRestaurantStore.ts
+    fetchRestaurantData: async (slug: string) => {
         try {
             set({ isLoading: true, error: null });
 
-            const normalizedSlug = slug
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .toLowerCase();
+            // Garante que estamos usando apenas o slug básico
+            const cleanSlug = slug.split('?')[0]; // Remove query params se houver
 
-            const res = await fetch(`${API_URL}/restaurant/by-slug/${normalizedSlug}`, {
+            const response = await fetch(`${API_URL}/restaurant/by-slug/${cleanSlug}`, {
                 headers: {
-                    ...useAuthStore.getState().getHeaders()
+                    ...useAuthStore.getState().getHeaders(),
                 }
             });
 
-            if (!res.ok) throw new Error('Restaurante não encontrado');
-            const data = await res.json();
+            if (!response.ok) {
+                throw new Error('Falha ao carregar dados do restaurante');
+            }
 
+            const data = await response.json();
             set({ restaurant: data });
         } catch (error: any) {
-            set({ error: error.message || 'Erro ao buscar restaurante' });
-            throw error;
-        } finally {
-            set({ isLoading: false });
-        }
-    },
-
-    fetchRestaurantById: async (id: string) => {
-        try {
-            set({ isLoading: true, error: null });
-
-            const res = await fetch(`${API_URL}/restaurant/${id}`, {
-                headers: {
-                    ...useAuthStore.getState().getHeaders()
-                }
-            });
-
-            if (!res.ok) throw new Error('Restaurante não encontrado');
-            const data = await res.json();
-
-            set({ restaurant: data });
-        } catch (error: any) {
-            set({ error: error.message || 'Erro ao buscar restaurante' });
+            set({ error: error.message });
             throw error;
         } finally {
             set({ isLoading: false });
@@ -132,7 +113,7 @@ export const useRestaurantStore = create<RestaurantStore>((set, get) => ({
         try {
             set({ isLoading: true, error: null });
 
-            const res = await fetch(`${API_URL}/restaurant/${restaurant._id}`, {
+            const response = await fetch(`${API_URL}/restaurant/${restaurant._id}`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -141,84 +122,97 @@ export const useRestaurantStore = create<RestaurantStore>((set, get) => ({
                 body: JSON.stringify(data)
             });
 
-            if (!res.ok) {
-                const errorData = await res.json();
-                throw new Error(errorData.message || 'Erro ao atualizar restaurante');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Falha ao carregar dados do restaurante');
             }
 
-            const updated = await res.json();
-            set({ restaurant: { ...restaurant, ...updated } });
+            const updatedData = await response.json();
+            set({ restaurant: { ...restaurant, ...updatedData } });
         } catch (error: any) {
-            set({ error: error.message || 'Erro ao atualizar restaurante' });
+            set({ error: error.message });
             throw error;
         } finally {
             set({ isLoading: false });
         }
     },
 
-    updateBusinessHours: async (hours) => {
+    updateBusinessHours: async (hours: BusinessHours[]) => {
+        const { restaurant } = get();
+        if (!restaurant) return;
+
         await get().updateRestaurantInfo({ businessHours: hours });
     },
 
-    updateAddress: async (address) => {
+    updateAddress: async (address: Address) => {
+        const { restaurant } = get();
+        if (!restaurant) return;
+
         await get().updateRestaurantInfo({ address });
     },
 
-    updateAdminInfo: async (adminInfo) => {
+    updateAdminInfo: async (adminInfo: Partial<AdminInfo>) => {
         const { restaurant } = get();
         if (!restaurant) return;
+
         await get().updateRestaurantInfo({ admin: { ...restaurant.admin, ...adminInfo } });
     },
 
-    addManager: async (userId) => {
+    addManager: async (userId: string) => {
         const { restaurant } = get();
         if (!restaurant) return;
-        const updated = [...restaurant.managers, userId];
-        await get().updateRestaurantInfo({ managers: updated });
+
+        const managers = [...restaurant.managers, userId];
+        await get().updateRestaurantInfo({ managers });
     },
 
-    removeManager: async (userId) => {
+    removeManager: async (userId: string) => {
         const { restaurant } = get();
         if (!restaurant) return;
-        const updated = restaurant.managers.filter(id => id !== userId);
-        await get().updateRestaurantInfo({ managers: updated });
+
+        const managers = restaurant.managers.filter((id: string) => id !== userId);
+        await get().updateRestaurantInfo({ managers });
     },
 
-    addAttendant: async (userId) => {
+    addAttendant: async (userId: string) => {
         const { restaurant } = get();
         if (!restaurant) return;
-        const updated = [...restaurant.attendants, userId];
-        await get().updateRestaurantInfo({ attendants: updated });
+
+        const attendants = [...restaurant.attendants, userId];
+        await get().updateRestaurantInfo({ attendants });
     },
 
-    removeAttendant: async (userId) => {
+    removeAttendant: async (userId: string) => {
         const { restaurant } = get();
         if (!restaurant) return;
-        const updated = restaurant.attendants.filter(id => id !== userId);
-        await get().updateRestaurantInfo({ attendants: updated });
+
+        const attendants = restaurant.attendants.filter((id: string) => id !== userId);
+        await get().updateRestaurantInfo({ attendants });
     },
 
-    addUnit: async (unitId) => {
+    addUnit: async (unitId: string) => {
         const { restaurant } = get();
         if (!restaurant) return;
-        const updated = [...restaurant.units, unitId];
-        await get().updateRestaurantInfo({ units: updated });
+
+        const units = [...restaurant.units, unitId];
+        await get().updateRestaurantInfo({ units });
     },
 
-    removeUnit: async (unitId) => {
+    removeUnit: async (unitId: string) => {
         const { restaurant } = get();
         if (!restaurant) return;
-        const updated = restaurant.units.filter(id => id !== unitId);
-        await get().updateRestaurantInfo({ units: updated });
+
+        const units = restaurant.units.filter((id: string) => id !== unitId);
+        await get().updateRestaurantInfo({ units });
     },
 
     getBusinessHoursForDay: (day: string) => {
         const { restaurant } = get();
         if (!restaurant?.businessHours) return null;
 
-        return (
-            restaurant.businessHours.find((h) => h.days.includes(day.toLowerCase())) || null
-        );
+        return restaurant.businessHours.find((hours: any) =>
+            hours.days.includes(day.toLowerCase())
+        ) || null;
     },
 
     isOpenNow: () => {

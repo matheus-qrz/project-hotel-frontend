@@ -19,8 +19,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
 }
 
-
-// rotas onde será aplicado
 export const config = {
-    matcher: ['/admin/:path*'], // proteja tudo que começa com /admin
+    matcher: ['/admin/:path*'], 
 };
