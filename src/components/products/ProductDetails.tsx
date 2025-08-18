@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { ChevronLeft, Edit, Trash2, AlertCircle } from 'lucide-react';
-import { formatCurrency } from '@/services/restaurant/services';
+import { formatCurrency } from '@/utils/formatCurrency';
 import { extractIdFromSlug } from '@/utils/slugify';
 import { Card, CardContent } from "@/components/ui/card";
 import { MENU_CATEGORIES } from '@/components/products/types';
@@ -35,7 +35,7 @@ export default function ProductDetails() {
     // Verificação de autenticação
     useEffect(() => {
         if (status === "unauthenticated") {
-            router.push('/login');
+            router.push('/');
         }
     }, [status, router]);
 
@@ -108,7 +108,7 @@ export default function ProductDetails() {
                 description: "Produto excluído com sucesso",
             });
 
-            router.push(`/restaurant/${restaurantId}/products`);
+            router.push(`/admin/restaurant/${restaurantId}/products`);
         } catch (err) {
             console.error("Erro ao excluir produto:", err);
             toast({
@@ -200,7 +200,7 @@ export default function ProductDetails() {
                     O produto solicitado não foi encontrado. Verifique se o ID está correto ou retorne à lista de produtos.
                 </p>
                 <button
-                    onClick={() => router.push(`/restaurant/${restaurantId}/products`)}
+                    onClick={() => router.push(`/admin/restaurant/${restaurantId}/products`)}
                     className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md self-start"
                 >
                     Voltar à Lista
@@ -253,7 +253,7 @@ export default function ProductDetails() {
                                                 <Trash2 size={20} className="items-center justify-center" />
                                             </Button>
                                             <Button
-                                                onClick={() => router.push(`/restaurant/${restaurantId}/products/${productId}/edit`)}
+                                                onClick={() => router.push(`/admin/restaurant/${restaurantId}/products/${productId}/edit`)}
                                                 className="bg-blue-600 hover:bg-blue-700"
                                             >
                                                 <Edit size={20} className="items-center justify-center" />

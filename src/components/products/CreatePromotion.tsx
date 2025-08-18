@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/form';
 import { useProductStore } from '@/stores/products';
 import { extractIdFromSlug } from '@/utils/slugify';
-import { formatCurrency } from '@/services/restaurant/services';
+import { formatCurrency } from '@/utils/formatCurrency';
 import type { Product as StoreProduct } from '@/stores/products/productStore';
 import { useSession } from 'next-auth/react';
 
@@ -70,7 +70,7 @@ export default function CreatePromotion() {
     useEffect(() => {
         if (status === "authenticated") {
             if (session?.user?.role !== "ADMIN" && session?.user?.role !== "MANAGER") {
-                router.push(`/restaurant/${slug}/menu`);
+                router.push(`/admin/restaurant/${slug}/menu`);
             }
         }
     }, [session, status, router, restaurantId]);
@@ -145,7 +145,7 @@ export default function CreatePromotion() {
                 description: 'Promoção aplicada com sucesso.'
             });
 
-            router.push(`/restaurant/${slug}/products`);
+            router.push(`/admin/restaurant/${slug}/products`);
         } catch (error) {
             console.error('Erro ao aplicar promoção:', error);
             toast({
@@ -174,7 +174,7 @@ export default function CreatePromotion() {
                     O produto solicitado não foi encontrado. Verifique se o ID está correto ou retorne à lista de produtos.
                 </p>
                 <button
-                    onClick={() => router.push(`/restaurant/${restaurantId}/products`)}
+                    onClick={() => router.push(`/admin/restaurant/${slug}/products`)}
                     className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md self-start"
                 >
                     Voltar à Lista

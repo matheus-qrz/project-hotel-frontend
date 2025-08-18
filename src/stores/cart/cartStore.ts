@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { OrderItemStatusType } from '../order/types/order.types';
+import { generateOrGetGuestId } from '@/utils/guestId';
 
 interface Addon {
     id: string;
@@ -19,7 +20,7 @@ export interface CartItemProps {
     status: OrderItemStatusType;
     observations?: string;
     image?: string;
-    costPrice?: number;
+    costPrice: number;
     profit?: number;
     promotionalDiscount?: number;
 }
@@ -30,14 +31,9 @@ interface GuestInfo {
     joinedAt: string;
 }
 
-const calculateTotalPrice = (basePrice: number, addons: Addon[]): number => {
-    const addonsPrice = addons.reduce((total, addon) => total + addon.price, 0);
-    return basePrice + addonsPrice;
-};
-
 interface CartStore {
     items: CartItemProps[];
-    tableId: string | null;
+    tableId: number | null;
     restaurantId: string | null;
     unitId: string | null;
     guestInfo: GuestInfo | null;
@@ -54,7 +50,7 @@ interface CartStore {
     setObservations: (observations: string) => void;
     clearCart: () => void;
     initializeGuest: (guestInfo: GuestInfo) => void; // Armazene o guestInfo completo
-    setTableInfo: (tableId: string, restaurantId: string, unitId?: string) => void;
+    setTableInfo: (tableId: number, restaurantId: string, unitId?: string) => void;
     getGuestId: () => string | null;
     getTotal: () => number;
 }
@@ -64,6 +60,24 @@ type StorageType = {
     setItem: (name: string, value: string) => Promise<void>;
     removeItem: (name: string) => Promise<void>;
 };
+
+export const calculateItemTotal = ({
+    price,
+    quantity,
+    addons
+}: {
+    price: number;
+    quantity: number;
+    addons?: { price: number; quantity?: number }[];
+}) => {
+    const addonsTotal = addons?.reduce(
+        (sum, addon) => sum + (addon.price * (addon.quantity || 1)),
+        0
+    ) || 0;
+
+    return (price + addonsTotal) * quantity;
+};
+
 
 const customStorage: StorageType = {
     getItem: async (name: string) => {
@@ -125,23 +139,32 @@ export const useCartStore = create<CartStore>()(
             observations: '',
 
             initializeGuest: (guestInfo: { id: string; name: string; joinedAt: string }) => {
-                set({ guestInfo, items: [] }); // Armazene o guestInfo completo
+                set({ guestInfo, items: [] });
             },
 
             addItem: (item) => set((state) => {
                 const existingItem = state.items.find(i => i._id === item._id);
-                const totalPrice = calculateTotalPrice(item.price, item.addons || []);
 
                 if (existingItem) {
                     return {
                         items: state.items.map(i =>
                             i._id === item._id
-                                ? { ...i, quantity: i.quantity + item.quantity, price: totalPrice }
+                                ? {
+                                    ...i,
+                                    quantity: i.quantity + item.quantity,
+                                    addons: item.addons || i.addons,
+                                    price: i.price
+                                }
                                 : i
                         )
                     };
                 }
-                const newItem = { ...item, price: totalPrice };
+
+                const newItem = {
+                    ...item,
+                    price: item.price
+                };
+
                 const newItems = [...state.items, newItem];
                 return { items: newItems.slice(-20) };
             }),
@@ -171,17 +194,19 @@ export const useCartStore = create<CartStore>()(
                 })
             })),
 
-            updateItemAddons: (_id, addons) => set((state) => {
-                return {
+            updateItemAddons: (_id, addons) =>
+                set((state) => ({
                     items: state.items.map(item => {
                         if (item._id === _id) {
-                            const newPrice = calculateTotalPrice(item.price, addons);
-                            return { ...item, addons, price: newPrice };
+                            return {
+                                ...item,
+                                addons
+                            };
                         }
                         return item;
                     })
-                };
-            }),
+                })),
+
 
             setOrderType: (type) => set({ orderType: type }),
 
@@ -200,15 +225,14 @@ export const useCartStore = create<CartStore>()(
             }),
 
             getGuestId: () => {
-                const state = get();
-                return state.guestInfo?.id || null;
+                return generateOrGetGuestId();
             },
 
             getTotal: () => {
-                const state = get();
-                return state.items.reduce((total, item) =>
-                    total + (item.price * item.quantity), 0
-                );
+                const { items } = get();
+                return items.reduce((sum, item) =>
+                    sum + calculateItemTotal({ price: item.price, quantity: item.quantity, addons: item.addons }),
+                    0);
             }
         }),
         {

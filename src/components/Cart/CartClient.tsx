@@ -1,7 +1,7 @@
 // components/cart/CartClient.tsx
 'use client';
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,11 +18,12 @@ import {
     AlertDialogHeader,
     AlertDialogTitle
 } from "@/components/ui/alert-dialog";
-import CartItem from "@/components/cart/CartItem";
-import { formatCurrency } from "@/services/restaurant/services";
+import { CartItem } from "@/components/cart/CartItem";
 import { useCartStore, useOrderStore } from "@/stores";
 import { extractIdFromSlug } from "@/utils/slugify";
-import { OrderItemStatus, OrderStatus } from "@/stores/order/types/order.types";
+import { OrderItemStatus } from "@/stores/order/types/order.types";
+import { generateOrGetGuestId } from "@/utils/guestId";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 export function CartClient() {
     const router = useRouter();
@@ -44,21 +45,14 @@ export function CartClient() {
         getGuestId,
         getTotal,
         clearCart,
-        updateItemStatus,
-        setObservations: setCartObservations,
-        setOrderType: setCartOrderType
     } = useCartStore();
 
     const {
         order,
-        setOrders,
         fetchGuestOrders,
-        createOrder,
         requestCheckout,
-        updateOrder,
-        deleteOldOrders,
         cleanUpOrders,
-        addItemsToOrder
+        submitOrderUnified
     } = useOrderStore();
 
     const guestId = getGuestId();
@@ -71,7 +65,7 @@ export function CartClient() {
         const initialSync = async () => {
             try {
                 await fetchGuestOrders(
-                    guestId, String(tableId)
+                    guestId, Number(tableId)
                 );
             } catch (error) {
                 console.error('Erro na sincronização inicial:', error);
@@ -82,7 +76,7 @@ export function CartClient() {
     }, [restaurantId, tableId, guestId]);
 
     const submitOrder = async () => {
-        const guestId = getGuestId();
+        const guestId = generateOrGetGuestId();
         if (!guestId || !guestInfo) {
             setError("Identificação do convidado não encontrada");
             return;
@@ -92,19 +86,11 @@ export function CartClient() {
         setError(null);
 
         try {
-            deleteOldOrders();
-
-            await fetchGuestOrders(guestId, String(tableId));
-            const refreshedOrders = order;
-            const existingOrder = refreshedOrders.find(o =>
-                o.guestInfo.id === guestId &&
-                ['processing', 'payment_requested'].includes(o.status) &&
-                !o.isPaid
-            );
-
-            if (existingOrder) {
-                // Só adiciona os novos itens, sem sobrescrever os antigos
-                const newItems = items.map(item => ({
+            const orderData = {
+                restaurantId: String(restaurantId),
+                restaurantUnitId: undefined,
+                tableId: Number(tableId),
+                items: items.map(item => ({
                     ...item,
                     status: OrderItemStatus.ADDED,
                     createdAt: new Date(),
@@ -113,59 +99,28 @@ export function CartClient() {
                         status: OrderItemStatus.ADDED,
                         createdAt: new Date()
                     }))
-                }));
+                })),
+                guestInfo: {
+                    id: guestId,
+                    name: guestInfo.name,
+                    joinedAt: guestInfo.joinedAt
+                },
+                meta: {
+                    tableId: Number(tableId),
+                    guestId,
+                    orderType,
+                    observations,
+                    splitCount,
+                    orderCreatedAt: new Date()
+                },
+                totalAmount: getTotal()
+            };
 
-                console.log("restaurantId", restaurantId);
+            const submittedOrder = await submitOrderUnified(orderData);
 
-                // ✅ Usando a função correta da store
-                await addItemsToOrder(String(restaurantId), String(tableId), existingOrder._id, guestId, newItems, getTotal());
-
-                await fetchGuestOrders(guestId, String(tableId));
-
-                console.log("caiu corretamente");
-            } else {
-                // Cria um novo pedido
-                const orderData = {
-                    items: items.map(item => ({
-                        _id: item._id,
-                        name: item.name,
-                        price: item.price,
-                        quantity: item.quantity,
-                        status: OrderItemStatus.ADDED,
-                        createdAt: new Date(),
-                        addons: item.addons?.map(addon => ({
-                            ...addon,
-                            status: OrderItemStatus.ADDED,
-                            createdAt: new Date()
-                        })),
-                        observations: item.observations
-                    })),
-                    totalAmount: getTotal(),
-                    status: OrderStatus.PROCESSING,
-                    meta: {
-                        tableId: Number(tableId),
-                        guestId,
-                        orderType,
-                        observations,
-                        splitCount,
-                        orderCreatedAt: new Date()
-                    },
-                    guestInfo: {
-                        id: guestId,
-                        name: guestInfo.name,
-                        joinedAt: guestInfo.joinedAt
-                    }
-                };
-
-                const newOrder = await createOrder(
-                    orderData,
-                    String(restaurantId),
-                    String(tableId)
-                );
-
-                setOrders([...order, newOrder]);
-
-                await fetchGuestOrders(guestId, String(tableId));
+            if (!submittedOrder) {
+                setError("Falha ao enviar pedido.");
+                return;
             }
 
             setSubmissionSuccess(true);
@@ -184,14 +139,13 @@ export function CartClient() {
         }
     };
 
-
     useEffect(() => {
         const guestId = getGuestId();
         if (guestId && tableId) {
-            fetchGuestOrders(guestId, String(tableId));
+            fetchGuestOrders(guestId, Number(tableId));
 
             const syncInterval = setInterval(() => {
-                fetchGuestOrders(guestId, String(tableId));
+                fetchGuestOrders(guestId, Number(tableId));
             }, 30000); // Sincroniza a cada 30 segundos
 
             return () => clearInterval(syncInterval);
@@ -208,7 +162,7 @@ export function CartClient() {
 
         setIsFinalizingOrder(true);
         try {
-            await requestCheckout([String(orderId)], String(guestId), String(restaurantId), String(tableId), splitCount);
+            await requestCheckout([String(orderId)], String(guestId), String(restaurantId), Number(tableId), splitCount);
             setShowFinishDialog(false);
             clearCart();
             router.push(`/restaurant/${slug}/${tableId}/payment-requested`);
@@ -293,11 +247,13 @@ export function CartClient() {
                         key={item._id}
                         id={item._id}
                         name={item.name}
-                        image={item.image}
                         price={item.price}
+                        image={item.image}
+                        costPrice={item.costPrice}
                         quantity={item.quantity}
                         itemStatus={item.status || OrderItemStatus.PROCESSING}
                         guestId={getGuestId() || ''}
+                        addons={item.addons}
                     />
                 ))}
             </div>
@@ -407,6 +363,3 @@ export function CartClient() {
         </div>
     );
 }
-
-
-

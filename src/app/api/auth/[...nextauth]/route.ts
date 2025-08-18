@@ -1,151 +1,77 @@
 import NextAuth from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-
-interface iUser {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-    token: string;
-    restaurantId?: string;
-}
+import Credentials from "next-auth/providers/credentials";
 
 const handler = NextAuth({
-    providers: [
-        CredentialsProvider({
-            name: "Credentials",
-            credentials: {
-                email: { label: "Email", type: "email" },
-                password: { label: "Password", type: "password" }
-            },
-            async authorize(credentials) {
-                if (!credentials?.email || !credentials?.password) {
-                    throw new Error("Por favor, insira seu email e senha.");
-                }
+  pages: { signIn: "/login" },
+  session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
+  providers: [
+    Credentials({
+      id: "credentials",
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
 
-                try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+        if (!API_URL) throw new Error("API_URL ausente");
 
-                    const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
-                    console.log(`Tentando login em: ${baseUrl}/login`);
+        const res = await fetch(`${API_URL}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: credentials.email,
+            password: credentials.password,
+          }),
+        });
 
-                    const response = await fetch(`${baseUrl}/login`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            email: credentials.email,
-                            password: credentials.password
-                        }),
-                        signal: controller.signal
-                    });
+        if (!res.ok) return null;
+        const data = await res.json();
 
-                    clearTimeout(timeoutId);
+        if (!data?.user) return null;
 
-                    if (!response.ok) {
-                        console.log("Erro do servidor:", response.status);
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || "Credenciais inválidas");
-                    }
+        // filtre as roles que podem logar
+        if (!["ADMIN", "MANAGER"].includes(data.user.role)) return null;
 
-                    const data = await response.json();
-                    console.log("Dados do login:", JSON.stringify(data));
-
-                    // Verifica se é resposta de restaurant ou user
-                    if (data.restaurantInfo && data.user) {
-                        if (!["ADMIN", "MANAGER"].includes(data.user.role)) {
-                            throw new Error("Acesso negado.");
-                        }
-
-                        return {
-                            id: data.user.id,
-                            name: data.user.firstName,
-                            email: data.user.email,
-                            role: data.user.role,
-                            token: data.token,
-                            restaurantId: data.restaurantInfo.restaurantId,
-                            unitId: data.restaurantInfo.unitId || null
-                        } as iUser;
-                    }
-                    else if (data.user) {
-                        // Verifica se o usuário é ADMIN ou MANAGER
-                        if (data.user.role !== "ADMIN" && data.user.role !== "MANAGER") {
-                            throw new Error("Acesso negado. Apenas ADMIN e MANAGER podem acessar.");
-                        }
-
-                        return {
-                            id: data.user._id,
-                            name: data.user.firstName,
-                            email: data.user.email,
-                            role: data.user.role,
-                            token: data.token,
-                            restaurantId: data.user.restaurantId || data.user._id // Ajustado para usar restaurantId se disponível
-                        } as iUser;
-                    }
-
-                    throw new Error("Formato de resposta inválido");
-                } catch (error) {
-                    console.error("Erro de autenticação:", error);
-                    if (error instanceof Error && error.name === 'AbortError') {
-                        throw new Error("Timeout na conexão com o servidor");
-                    }
-                    throw new Error("Falha na autenticação");
-                }
-            }
-        })
-    ],
-    pages: {
-        signIn: "/login",
+        return {
+          id: data.user.id ?? data.user._id,
+          name: data.user.firstName,
+          email: data.user.email,
+          role: data.user.role,
+          token: data.token,
+          restaurantId:
+            data.restaurantInfo?.restaurantId ??
+            data.user.restaurantId ??
+            data.user._id,
+          restaurantName: data.restaurantInfo?.restaurantName,
+        };
+      },
+    }),
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = (user as any).id;
+        token.role = (user as any).role;
+        token.restaurantId = (user as any).restaurantId;
+        token.restaurantName = (user as any).restaurantName;
+        (token as any).token = (user as any).token;
+      }
+      return token;
     },
-    session: {
-        strategy: "jwt",
-        maxAge: 30 * 24 * 60 * 60 // 30 dias
+    async session({ session, token }) {
+      (session.user as any).id = (token as any).id;
+      (session.user as any).role = (token as any).role;
+      (session.user as any).restaurantId = (token as any).restaurantId;
+      (session.user as any).restaurantName = (token as any).restaurantName;
+      (session as any).token = (token as any).token;
+      return session;
     },
-    debug: process.env.NODE_ENV === "development",
-    // Aumentando o tempo de expiração do token
-    jwt: {
-        maxAge: 30 * 24 * 60 * 60, // 30 dias em segundos
-    },
-    cookies: {
-        sessionToken: {
-            name: `next-auth.session-token`,
-            options: {
-                httpOnly: true,
-                sameSite: "lax",
-                path: "/",
-                secure: process.env.NODE_ENV === "production",
-                maxAge: 30 * 24 * 60 * 60 // 30 dias
-            }
-        }
-    },
-    callbacks: {
-        async jwt({ token, user }) {
-            if (user) {
-                return {
-                    ...token,
-                    id: user.id,
-                    role: user.role,
-                    token: user.token,
-                    restaurantId: user.restaurantId
-                };
-            }
-            return token;
-        },
-        async session({ session, token }) {
-            return {
-                ...session,
-                user: {
-                    ...session.user,
-                    id: token.id,
-                    role: token.role,
-                    restaurantId: token.restaurantId
-                },
-                token: token.token
-            };
-        }
-    }
+  },
+  debug: true,
+  secret: process.env.NEXTAUTH_SECRET,
 });
 
 export { handler as GET, handler as POST };

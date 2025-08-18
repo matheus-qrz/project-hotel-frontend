@@ -6,6 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Plus, Minus } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 
+interface Addon {
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+}
+
 interface AddonQuantity {
     itemId: string;
     itemIndex: number;
@@ -13,7 +20,7 @@ interface AddonQuantity {
     quantity: number;
 }
 
-const PreOrderScreen = () => {
+export const PreOrderScreen = () => {
     const { slug, tableId } = useParams()
     const router = useRouter();
     const { products } = useProductStore();
@@ -36,28 +43,27 @@ const PreOrderScreen = () => {
             const product = getProductDetails(item._id);
             if (!product) return;
 
-            const itemAddons = product.additionalOptions
-                ?.filter(addon => {
-                    const addonQuantity = addonQuantities.find(
-                        aq => aq.itemId === item._id &&
-                            aq.itemIndex === itemIndex &&
-                            aq.id === addon.id
-                    );
-                    return addonQuantity && addonQuantity.quantity > 0;
-                })
-                .map(addon => {
-                    const quantity = addonQuantities.find(
-                        aq => aq.itemId === item._id &&
-                            aq.itemIndex === itemIndex &&
-                            aq.id === addon.id
-                    )?.quantity || 0;
-                    return {
-                        id: addon.id,
-                        name: addon.name,
-                        price: addon.price,
-                        quantity
-                    };
-                }) || [];
+            const itemAddons = (
+                product.additionalOptions
+                    ?.map(addon => {
+                        const quantity = addonQuantities.find(
+                            aq =>
+                                aq.itemId === item._id &&
+                                aq.itemIndex === itemIndex &&
+                                aq.id === addon.id
+                        )?.quantity || 0;
+
+                        return quantity > 0
+                            ? {
+                                id: addon.id,
+                                name: addon.name,
+                                price: addon.price,
+                                quantity
+                            }
+                            : null;
+                    })
+                    .filter((addon): addon is Addon => addon !== null)
+            ) || [];
 
             updateItemAddons(item._id, itemAddons);
         });
@@ -188,5 +194,3 @@ const PreOrderScreen = () => {
         </div>
     );
 };
-
-export default PreOrderScreen;

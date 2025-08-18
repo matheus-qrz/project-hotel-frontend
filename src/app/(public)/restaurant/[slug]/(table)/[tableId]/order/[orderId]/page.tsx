@@ -5,12 +5,13 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { extractIdFromSlug, extractNameFromSlug } from '@/utils/slugify';
 import OrderConfirmation from '@/components/order/OrderConfirmation';
 import { useOrderStore, Order } from '@/stores/order/orderStore';
-import { getRestaurantById } from '@/services/restaurant/services';
+import { useRestaurantStore } from '@/stores/restaurant';
 import { useCartStore } from '@/stores';
 
 export default function OrderPage() {
     const { slug, tableId, orderId, unitId } = useParams();
     const searchParams = useSearchParams();
+    const { fetchRestaurantById } = useRestaurantStore();
     const splitCount = searchParams.get('split') ? parseInt(searchParams.get('split')!) : 1;
     const router = useRouter();
 
@@ -25,7 +26,7 @@ export default function OrderPage() {
         name: string;
     } | null>(null);
 
-    const { order, fetchTableOrders } = useOrderStore();
+    const { order, fetchGuestOrders } = useOrderStore();
 
     const guestId = getGuestId();
 
@@ -43,21 +44,16 @@ export default function OrderPage() {
                 }
 
                 // Carregar dados do restaurante
-                const restaurant = await getRestaurantById(restaurantId);
-                if (!restaurant) {
+                const restaurant = await fetchRestaurantById(String(restaurantId));
+                if (!restaurantId) {
                     throw new Error("Restaurante não encontrado.");
                 }
                 setRestaurantData({
-                    id: restaurant._id,
-                    name: restaurant.name
+                    id: String(restaurantId),
+                    name: String(restaurantName)
                 });
 
-                // Carregar pedidos da mesa
-                if (unitId) {
-                    await fetchTableOrders(String(unitId), String(tableId), String(guestId));
-                } else {
-                    await fetchTableOrders(restaurantId, String(tableId), String(guestId));
-                }
+                await fetchGuestOrders(String(guestId), Number(tableId));
 
             } catch (err: any) {
                 console.error("Erro ao carregar dados:", err);
@@ -68,7 +64,7 @@ export default function OrderPage() {
         };
 
         loadData();
-    }, [restaurantId, tableId, fetchTableOrders]);
+    }, [restaurantId, tableId, fetchGuestOrders]);
 
     const handleBackToMenu = () => {
         router.push(`/restaurant/${slug}/${tableId}/menu`);
@@ -120,7 +116,7 @@ export default function OrderPage() {
             orderId={String(orderId)}
             restaurantId={String(restaurantId)}
             restaurantName={restaurantData?.name || String(restaurantName)}
-            tableId={String(tableId)}
+            tableId={Number(tableId)}
             splitCount={splitCount}
             onBackToMenu={handleBackToMenu}
         />

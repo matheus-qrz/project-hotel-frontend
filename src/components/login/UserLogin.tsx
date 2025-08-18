@@ -1,12 +1,12 @@
 "use client"
 
 import { useState } from 'react';
-import { useAuthCheck } from '@/hooks/sessionManager';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
+import { useAuthStore } from '@/stores';
 
 interface UserLoginProps {
     onLoginSuccess?: () => void;
@@ -15,17 +15,23 @@ interface UserLoginProps {
 export function UserLogin({ onLoginSuccess }: UserLoginProps) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const { login, isLoading, error } = useAuthCheck();
+    const { isLoading } = useAuthStore();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         console.log('UserLogin - Enviando formulário de login:', email);
 
         try {
-            // Usar o método login do hook useAuthCheck
-            const result = await login(email, password);
+            const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+            const response = await fetch(`${API_URL}/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
+            });
 
-            if (result && result.success) {
+            if (response) {
                 console.log('Login de usuário bem-sucedido');
                 if (onLoginSuccess) {
                     onLoginSuccess();
@@ -38,14 +44,6 @@ export function UserLogin({ onLoginSuccess }: UserLoginProps) {
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-                <Alert variant="destructive">
-                    <AlertDescription>
-                        {error || 'Falha ao fazer login. Por favor, verifique suas credenciais.'}
-                    </AlertDescription>
-                </Alert>
-            )}
-
             <div className="space-y-2">
                 <Label htmlFor="email">E-mail</Label>
                 <Input

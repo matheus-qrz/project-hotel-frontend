@@ -57,15 +57,18 @@ export default function MenuClient({ slug, initialCategories }: MenuClientProps)
   const { fetchGuestOrders, order } = useOrderStore();
 
   const restaurantName = slug && extractNameFromSlug(String(slug));
+
+  console.log(restaurantName)
+
   const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
   const totalPrice = getTotal();
 
   useEffect(() => {
     const guestId = getGuestId();
-    if (guestId) {
-      fetchGuestOrders(guestId, String(tableId));
+    if (guestId && tableId) {
+      fetchGuestOrders(guestId, Number(tableId));
     }
-  }, [slug, tableId]);
+  }, [slug, tableId, order.length]);
 
   const handleQuantityChange = (id: string, newQuantity: number) => {
     const product = products.find(p => p._id === id);
@@ -75,6 +78,7 @@ export default function MenuClient({ slug, initialCategories }: MenuClientProps)
       _id: product._id ?? '',
       name: product.name,
       price: product.price,
+      costPrice: product.costPrice ?? 0,
       quantity: newQuantity,
       image: product.image ?? '',
       status: "processing" as "processing",
@@ -126,7 +130,7 @@ export default function MenuClient({ slug, initialCategories }: MenuClientProps)
         <div className='flex flex-col gap-2 mb-4'>
           <div className='flex flex-row items-center justify-between'>
             <h1 className="text-2xl font-bold">{restaurantName}</h1>
-            <Button onClick={goToOrders} variant="default" className="ml-4" disabled={order.length === 0}>
+            <Button onClick={goToOrders} variant="default" className="ml-4">
               Meus Pedidos
             </Button>
           </div>

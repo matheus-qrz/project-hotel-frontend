@@ -1,6 +1,3 @@
-"use client"
-
-import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,7 +8,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RestaurantUnit } from "./AddRestaurantUnit";
 import { isValidCnpj } from "@/utils/formatCnpj";
 import { useToast } from "@/hooks/useToast";
 import { useRestaurantUnitFormStore } from "@/stores";

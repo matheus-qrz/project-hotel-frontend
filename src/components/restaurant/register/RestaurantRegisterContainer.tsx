@@ -5,7 +5,6 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useIsMobile } from '@/hooks/useMobile';
-import { useAuthCheck } from '@/hooks/sessionManager';
 import { Button } from '@/components/ui/button';
 import { useAuthStore, useRestaurantFormStore, useRestaurantStore } from '@/stores';
 
@@ -18,7 +17,7 @@ import AdminCredentialsForm from '@/components/users/admin/AdminCredentialsForm'
 
 export default function RestaurantRegisterContainer() {
     const router = useRouter();
-    const { registerAdminWithRestaurant } = useAuthCheck();
+    const { registerAdminWithRestaurant } = useAuthStore();
     const isMobile = useIsMobile();
 
     // Usar Zustand para gerenciar o estado do formulário
@@ -196,30 +195,19 @@ export default function RestaurantRegisterContainer() {
                 businessHours
             };
 
-            // Usar o hook de autenticação para registrar
             const result = await registerAdminWithRestaurant(payload);
 
             if (result.success) {
-                // Limpar o formulário após sucesso
                 resetForm();
 
-                // Obter o ID do restaurante do useRestaurantStore
-                const restaurantId = useRestaurantStore.getState().restaurant?._id;
-
-                if (result.token) {
-                    useAuthStore.getState().setToken(result.token);
-                    useAuthStore.getState().setUserRole('ADMIN');
-                }
-
-                // Redirecionar para o dashboard com o ID do restaurante
+                const restaurantId = result.restaurant?._id;
                 if (restaurantId) {
-                    router.push(`/restaurant/${restaurantId}/dashboard`);
+                    router.push(`/admin/restaurant/${restaurantId}/dashboard`);
                 } else {
-                    // Fallback para a resposta da API se o store não tiver o ID ainda
-                    router.push(`/restaurant/${result.restaurant?._id}/dashboard`);
+                    setError("Cadastro feito, mas ID do restaurante não encontrado.");
                 }
             } else {
-                setError(result.message);
+                setError(result.message || "Erro ao registrar");
             }
         } catch (error: any) {
             console.error('Erro durante o cadastro:', error);

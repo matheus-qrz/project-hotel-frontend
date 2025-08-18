@@ -14,14 +14,14 @@ import { ArrowRight } from "lucide-react";
 
 export function RecoverPassword() {
     const router = useRouter();
-    const apiUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+    const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
     const [email, setEmail] = useState("");
     const [error, setError] = useState("");
     const isMobile = useMediaQuery("(max-width: 768px)");
 
     const recoverPasswordMutation = useMutation({
         mutationFn: async (credentials: { email: string; }) => {
-            const response = await fetch(`${apiUrl}/recover-password`, {
+            const response = await fetch(`${API_URL}/recover-password`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

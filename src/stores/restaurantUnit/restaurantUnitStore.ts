@@ -1,7 +1,7 @@
-// src/stores/restaurantUnitStore.ts
+// src/stores${API_URL}/restaurantUnitStore.ts
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { useAuthStore } from '../index'; // Importe o authStore para acessar getHeaders
+import { useAuthStore } from '../index'; 
 
 export interface RestaurantUnit {
     _id: string;
@@ -26,13 +26,13 @@ export interface RestaurantUnit {
 
 interface RestaurantUnitState {
     units: RestaurantUnit[];
-    currentUnitId: string | null; // Alterado de currentRestaurantId para currentUnitId
-    fetchUnits: (restaurantId: string) => Promise<void>;
+    currentUnitId: string | null; 
+    fetchUnits: (restaurantId: string, token: string) => Promise<void>;
     fetchUnitByRestaurantId: (restaurantId: string) => Promise<string | null>;
     addUnit: (restaurantId: string, unitData: Omit<RestaurantUnit, 'id'>) => Promise<void>;
     updateUnit: (unitId: string, unitData: Partial<Omit<RestaurantUnit, 'id'>>) => Promise<void>;
     deleteUnit: (unitId: string, restaurantId: string) => Promise<void>;
-    setCurrentUnitId: (unitId: string | null) => void; // Alterado nome da função
+    setCurrentUnitId: (unitId: string | null) => void; 
 }
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
@@ -44,11 +44,12 @@ export const useRestaurantUnitStore = create<RestaurantUnitState>()(
             currentUnitId: null,
             setCurrentUnitId: (id) => set({ currentUnitId: id }),
 
-            fetchUnits: async (restaurantId: string) => {
+            fetchUnits: async (restaurantId: string, token: string) => {
                 try {
                     const headers = useAuthStore.getState().getHeaders();
                     const response = await fetch(`${API_URL}/restaurant/${restaurantId}/units?includeMatrix=true`, {
                         headers,
+                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
                     });
 
                     if (!response.ok) {
@@ -56,7 +57,6 @@ export const useRestaurantUnitStore = create<RestaurantUnitState>()(
                     }
 
                     const data = await response.json();
-                    // Certifique-se de que está acessando o array de unidades corretamente
                     const formattedUnits = data.units.map((unit: any) => ({
                         _id: unit._id,
                         name: unit.name,
@@ -79,6 +79,7 @@ export const useRestaurantUnitStore = create<RestaurantUnitState>()(
             fetchUnitByRestaurantId: async (restaurantId: string) => {
                 try {
                     const headers = useAuthStore.getState().getHeaders();
+;
                     const response = await fetch(`${API_URL}/restaurant/${restaurantId}/units`, {
                         headers,
                     });
@@ -140,6 +141,7 @@ export const useRestaurantUnitStore = create<RestaurantUnitState>()(
             updateUnit: async (unitId: string, unitData: Partial<Omit<RestaurantUnit, 'id'>>) => {
                 try {
                     const headers = useAuthStore.getState().getHeaders();
+;
                     const response = await fetch(`${API_URL}/unit/${unitId}`, {
                         method: 'PUT',
                         headers: {
@@ -166,7 +168,8 @@ export const useRestaurantUnitStore = create<RestaurantUnitState>()(
 
             deleteUnit: async (unitId: string, restaurantId: string) => {
                 try {
-                    const headers = useAuthStore.getState().getHeaders();
+                    const headers = useAuthStore.getState().getHeaders(); 
+
                     const response = await fetch(`${API_URL}/restaurant/${restaurantId}/units/${unitId}`, {
                         method: 'DELETE',
                         headers,

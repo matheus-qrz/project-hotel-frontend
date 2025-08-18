@@ -1,13 +1,14 @@
-// components/dashboard/CustomersDashboard.tsx
 'use client';
 
 import { useEffect, Suspense } from 'react';
 import dynamic from 'next/dynamic';
-import { Card } from "@/components/ui/card";
-import { Chart } from "@/components/charts";
+import { Card } from '@/components/ui/card';
+import { Chart } from '@/components/charts';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useMockedDashboardStore } from '@/stores';
+import { useDashboardStore } from '@/stores/dashboard';
+import { useRestaurantUnitStore } from '@/stores/restaurantUnit';
+import { TopCustomer } from '@/types/dashboard';
 
 const DelayedComponent = dynamic(
     () => import('@/components/loading/LoadingComponent').then(mod => mod.LoadingComponent),
@@ -15,17 +16,23 @@ const DelayedComponent = dynamic(
 );
 
 export function CustomersDashboard() {
-    const { data, isLoading, error, fetchDashboardData } = useMockedDashboardStore();
+    const { data, isLoading, error, fetchDashboardData } = useDashboardStore();
+    const unitId = useRestaurantUnitStore.getState().currentUnitId;
 
     useEffect(() => {
-        fetchDashboardData('mock-unit-id', 'customers');
-    }, []);
+        if (unitId) {
+            fetchDashboardData('unit', unitId, 'customers');
+        }
+    }, [unitId]);
 
     if (isLoading) {
-        <Suspense>
-            <DelayedComponent />
-        </Suspense>
-    };
+        return (
+            <Suspense>
+                <DelayedComponent />
+            </Suspense>
+        );
+    }
+
     if (error) return <div className="p-6 text-red-500">Erro: {error}</div>;
     if (!data?.customers) return <div className="p-6">Nenhum dado disponível</div>;
 
@@ -96,13 +103,18 @@ export function CustomersDashboard() {
                                 {format(new Date(2025, 3, 15), 'MMM dd, yyyy', { locale: ptBR })}
                             </p>
                         </div>
-                        <Chart
-                            data={customerReport.monthly}
-                            height={300}
-                            barColor="#1fc1dd"
-                            valuePrefix=""
-                            highlightColor="#e6f32b"
-                        />
+                        <div className='pt-28'>
+                            <Chart
+                                data={customerReport.monthly.map((item) => ({
+                                    month: item.month,
+                                    value: item.count
+                                }))}
+                                height={300}
+                                barColor="#1fc1dd"
+                                valuePrefix=""
+                                highlightColor="#e6f32b"
+                            />
+                        </div>
                     </Card>
                 </div>
 
@@ -110,9 +122,9 @@ export function CustomersDashboard() {
                     <Card className="bg-white shadow-sm p-6 rounded-lg">
                         <h3 className="text-gray-900 text-lg font-semibold mb-4">Top Clientes</h3>
                         <div className="space-y-2 max-h-[380px] overflow-y-auto">
-                            {topCustomers.map((customer, index) => (
-                                <Card className="bg-white shadow-sm p-6 rounded-lg">
-                                    <div key={index} className="flex items-center justify-between">
+                            {topCustomers.map((customer: TopCustomer, index: number) => (
+                                <Card key={index} className="bg-white shadow-sm p-6 rounded-lg">
+                                    <div className="flex items-center justify-between">
                                         <span className="text-gray-500 text-sm">{customer.name}</span>
                                         <span className="text-gray-900 font-medium">
                                             R$ {customer.value.toFixed(2)}

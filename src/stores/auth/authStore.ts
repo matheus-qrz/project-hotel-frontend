@@ -20,7 +20,12 @@ interface AuthState {
     guestInfo: GuestInfo | null;
     tableNumber: string | null;
 
+    isLoading: boolean;
+    setLoading: (v: boolean) => void;
+    withLoading: <T>(fn: () => Promise<T>) => Promise<T>;
+
     // Métodos existentes
+    setIsAuthenticated: (v: boolean) => void;
     setRestaurantId: (id: string) => void;
     setUnitId: (id: string) => void;
     setToken: (token: string, expiry?: number) => void;
@@ -34,6 +39,9 @@ interface AuthState {
     setGuestInfo: (info: GuestInfo) => void;
     setTableNumber: (tableNumber: string) => void;
     createGuestToken: () => string;
+
+    _hydrated: boolean;
+    setHydrated: () => void;
 }
 
 const SESSION_DURATION = 14 * 60 * 60 * 1000; // 14 horas em milissegundos
@@ -50,8 +58,21 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: false,
             guestInfo: null,
             tableNumber: null,
+            isLoading: false,
+            _hydrated: false,
+            
+            setIsAuthenticated: (v) => set({ isAuthenticated: v }),
+            setHydrated: () => set({ _hydrated: true }),
+            setLoading: (v) => set({ isLoading: v }),
+            withLoading: async (fn) => {
+                set({ isLoading: true });
+                try {
+                return await fn();
+                } finally {
+                set({ isLoading: false });
+                }
+            },
 
-            // Métodos existentes atualizados
             setRestaurantId: (id: string) => {
                 if (typeof id !== 'string') {
                     console.error('Invalid restaurant ID:', id);
@@ -115,7 +136,6 @@ export const useAuthStore = create<AuthState>()(
                 return Date.now() > tokenExpiry;
             },
 
-            // Novos métodos
             setGuestInfo: (info) => set({
                 guestInfo: info,
                 isGuest: true

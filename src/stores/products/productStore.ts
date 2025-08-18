@@ -2,13 +2,11 @@ import { create } from 'zustand';
 import { useAuthStore } from '../auth';
 import { PromotionData } from './types';
 
-// Define product interface based on backend models
 interface ComboOption {
-    name: string; // Nome da opção (ex: tipo de hambúrguer)
-    products: string[]; // IDs dos produtos que fazem parte desta opção
+    name: string; 
+    products: string[]; 
 }
 
-// Add to Product interface
 interface PromotionHistory {
     _id: string;
     discountPercentage: number;
@@ -26,6 +24,7 @@ export interface Product {
     category: string;
     description: string;
     price: number;
+    costPrice?: number;
     image: string;
     quantity: number;
     isAvailable: boolean;
@@ -100,8 +99,8 @@ export const useProductStore = create<ProductState>((set, get) => ({
             const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products`, {
                 method: 'GET',
                 headers: {
-                    'Content-Type': 'application/json'
-                }
+                    'Content-Type': 'application/json',
+                },
             });
 
             if (!response.ok) {
@@ -114,14 +113,13 @@ export const useProductStore = create<ProductState>((set, get) => ({
             console.error('Error fetching products:', error);
             set({
                 error: error instanceof Error ? error.message : 'Erro ao buscar produtos',
-                loading: false
+                loading: false,
             });
         }
     },
 
     fetchProductById: async (productId: string, restaurantId: string) => {
         set({ loading: true, error: null });
-        // Obtenha o token de autenticação
         try {
             const response = await fetch(`${API_URL}/restaurant/${restaurantId}/products/${productId}`, {
                 method: 'GET',
@@ -301,7 +299,6 @@ export const useProductStore = create<ProductState>((set, get) => ({
     },
 
     getPromotionHistory: async (productId, restaurantId) => {
-
         try {
             const response = await fetch(
                 `${API_URL}/restaurant/${restaurantId}/products/${productId}/promotions/history`,

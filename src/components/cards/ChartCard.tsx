@@ -1,43 +1,48 @@
 "use client";
 
-import React, { useEffect } from 'react';
-import { CircleDollarSign, TrendingUp } from 'lucide-react';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from "../ui/card";
-import { Chart } from '../charts';
-import { useDashboardStore } from '@/stores';
-import { useParams } from 'next/navigation';
-import { extractIdFromSlug } from '@/utils/slugify';
-import { formatCurrency } from '@/services/restaurant/services';
-import { DelayedLoading } from '../loading/DelayedLoading';
+import { useEffect } from "react";
+import { useParams } from "next/navigation";
+import { CircleDollarSign, TrendingUp } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { extractIdFromSlug, extractScopeFromPathname } from "@/utils/slugify";
+import { useDashboardStore } from "@/stores/dashboard";
+import { Chart } from "../charts";
+import { DelayedLoading } from "../loading/DelayedLoading";
+import { formatCurrency } from "@/utils/formatCurrency";
+import { MonthlyRevenueEntry } from "@/types/dashboard";
 
 export default function ChartCard() {
-    const { slug } = useParams();
-    const { financial, fetchFinancialData, isLoading, error } = useDashboardStore();
-    const restaurantId = slug && extractIdFromSlug(String(slug));
+    const { slug, unitId } = useParams();
+    const scope = extractScopeFromPathname(String(slug));
+    const restaurantId = extractIdFromSlug(String(slug));
+
+    const { data, isLoading, error, fetchDashboardData } = useDashboardStore();
 
     useEffect(() => {
-        if (restaurantId) {
-            fetchFinancialData(restaurantId);
+        if (scope) {
+            if (unitId) {
+                fetchDashboardData('unit', String(unitId), 'financial');
+            } else {
+                fetchDashboardData('restaurant', String(restaurantId), 'financial');
+            }
         }
-    }, [restaurantId, fetchFinancialData]);
+    }, []);
 
-    // Calcular variação percentual
-    const currentRevenue = financial.revenue;
-    const previousRevenue = financial.monthlyRevenue[financial.monthlyRevenue.length - 2]?.value || 0;
-    const percentageChange = previousRevenue ?
-        ((currentRevenue - previousRevenue) / previousRevenue * 100) :
-        0;
+    const financial = data.financial;
 
-    // Formatando dados para o Chart
-    const chartData = financial.monthlyRevenue?.map(item => ({
-        name: item.month,
+    const currentRevenue = financial?.summary.revenue ?? 0;
+    const previousRevenue = Array.isArray(financial?.monthlyRevenue)
+        ? financial.monthlyRevenue[financial.monthlyRevenue.length - 2]?.value ?? 0
+        : 0;
+
+    const percentageChange = previousRevenue
+        ? ((currentRevenue - previousRevenue) / previousRevenue) * 100
+        : 0;
+
+    const chartData = financial?.monthlyRevenue?.map((item: MonthlyRevenueEntry) => ({
+        month: item.month,
         value: item.value
-    })) || [];
+    })) ?? [];
 
     if (isLoading) return <DelayedLoading />;
     if (error) return <div>Erro ao carregar dados: {error}</div>;

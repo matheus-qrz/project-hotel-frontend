@@ -43,6 +43,13 @@ const formSchema = z.object({
     }, {
         message: 'Preço deve ser um número positivo',
     }),
+    costPrice: z.string().refine((val) => {
+        const numericString = val.replace(/[^\d.,]/g, '').replace(',', '.');
+        const number = parseFloat(numericString);
+        return !isNaN(number) && number >= 0;
+    }, {
+        message: 'Custo deve ser um número positivo',
+    }),
     description: z.string().optional(),
     quantity: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
         message: 'Quantidade deve ser um número positivo',
@@ -68,6 +75,7 @@ export default function ProductEdit() {
             name: '',
             category: '',
             price: '',
+            costPrice: '',
             description: '',
             quantity: '0',
             image: '',
@@ -77,7 +85,7 @@ export default function ProductEdit() {
 
     useEffect(() => {
         if (status === "unauthenticated") {
-            router.push('/login');
+            router.push('/');
         }
     }, [status, router]);
 
@@ -147,6 +155,7 @@ export default function ProductEdit() {
             const formattedData = {
                 ...values,
                 price: parseFloat(values.price.replace(/[^\d.,]/g, '').replace(',', '.')),
+                costPrice: parseFloat(values.price.replace(/[^\d.,]/g, '').replace(',', '.')),
                 quantity: parseInt(values.quantity),
             };
 
@@ -157,7 +166,7 @@ export default function ProductEdit() {
                 description: "Produto atualizado com sucesso",
             });
 
-            router.push(`/restaurant/${restaurantId}/products/${productId}`);
+            router.back();
         } catch (error) {
             console.error("Erro ao atualizar produto:", error);
             toast({
@@ -267,6 +276,20 @@ export default function ProductEdit() {
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Preço</FormLabel>
+                                                    <FormControl>
+                                                        <Input type='currency' {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <FormField
+                                            control={form.control}
+                                            name="costPrice"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Preço de custo</FormLabel>
                                                     <FormControl>
                                                         <Input type='currency' {...field} />
                                                     </FormControl>

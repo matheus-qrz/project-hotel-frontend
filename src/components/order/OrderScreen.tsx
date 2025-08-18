@@ -33,9 +33,11 @@ const OrdersScreen = () => {
 
     useEffect(() => {
         if (guestId && tableId) {
-            fetchGuestOrders(guestId, String(tableId));
+            fetchGuestOrders(guestId, Number(tableId));
         }
     }, [guestId, tableId]);
+
+    console.log("guestId", guestId)
 
     const handleCheckout = async () => {
         const orderId = order[0]._id;
@@ -47,7 +49,7 @@ const OrdersScreen = () => {
 
         setIsFinalizingOrder(true);
         try {
-            await requestCheckout([String(orderId)], String(guestId), String(restaurantId), String(tableId), splitCount);
+            await requestCheckout([String(orderId)], String(guestId), String(restaurantId), Number(tableId), splitCount);
             router.push(`/restaurant/${slug}/${tableId}/payment-requested`);
         } catch (error) {
             console.error("Erro ao solicitar fechamento:", error);
@@ -59,7 +61,7 @@ const OrdersScreen = () => {
     const handleRefresh = async () => {
         try {
             setIsRefreshing(true);
-            await fetchGuestOrders(String(guestId), String(tableId));
+            await fetchGuestOrders(String(guestId), Number(tableId));
             console.log('Atualização concluída');
         } catch (error) {
             console.error('Erro na atualização manual:', error);
@@ -112,10 +114,10 @@ const OrdersScreen = () => {
                                 })),
                                 createdAt:
                                     typeof order.createdAt === "string"
-                                        ? order.createdAt
-                                        : order.createdAt?.toISOString?.() ?? "",
+                                        ? new Date(order.createdAt)
+                                        : order.createdAt,
                             }}
-                            onStatusUpdate={() => fetchGuestOrders(String(guestId), String(tableId))}
+                            onStatusUpdate={() => fetchGuestOrders(String(guestId), Number(tableId))}
                         />
                     ))}
                     <div className="w-full mt-4 flex flex-col items-centerspace-x-2">

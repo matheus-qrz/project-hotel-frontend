@@ -55,7 +55,7 @@ interface PromotionStore {
     deletePromotion: (id: string) => Promise<void>;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 const token = useAuthStore.getState().token;
 
 export const usePromotionStore = create<PromotionStore>((set, get) => ({

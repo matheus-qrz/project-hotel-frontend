@@ -9,17 +9,17 @@ import { QrCode, Camera, ArrowLeft } from 'lucide-react';
 interface ScanClientProps {
     restaurantName: string;
     restaurantId: string;
-    tableId: string;
+    tableId: number;
 }
 
-export default function ScanClient({ restaurantName, restaurantId, tableId }: ScanClientProps) {
+export default function ScanClient({ restaurantName, tableId }: ScanClientProps) {
     const router = useRouter();
     const [error, setError] = useState<string | null>(null);
     const [scanMode, setScanMode] = useState<'manual' | 'camera'>('manual');
 
     // Função para validar e salvar o número da mesa
     const saveTableNumber = () => {
-        if (!tableId.trim()) {
+        if (!tableId) {
             setError('Por favor, informe o número da mesa');
             return;
         }
@@ -30,7 +30,7 @@ export default function ScanClient({ restaurantName, restaurantId, tableId }: Sc
         }
 
         // Salvar no localStorage
-        localStorage.setItem(`table-${restaurantName}`, tableId);
+        localStorage.setItem(`table-${restaurantName}`, String(tableId));
 
         // Redirecionar para o menu
         router.push(`/${restaurantName}/menu`);

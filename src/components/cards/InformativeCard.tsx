@@ -1,35 +1,35 @@
-// InformativeCard.tsx
 'use client';
 
-import React, { useEffect } from 'react'
-import { ShoppingBag, TrendingUp } from 'lucide-react';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from "../ui/card"
-import { Chart } from '../charts';
-import { useDashboardStore } from '@/stores';
-import { extractIdFromSlug } from '@/utils/slugify';
+import React, { useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import { ShoppingBag, TrendingUp } from 'lucide-react';
+
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Chart } from '../charts';
+import { extractIdFromSlug } from '@/utils/slugify';
+import { useDashboardStore } from '@/stores';
+import { OrdersDashboardData } from '@/types/dashboard';
 
 export default function InformativeCard() {
-    const { slug } = useParams();
-    const { orders, fetchOrdersData } = useDashboardStore();
+    const { slug, unitId } = useParams();
+    const { data, fetchDashboardData } = useDashboardStore();
+
     const restaurantId = slug && extractIdFromSlug(String(slug));
 
     useEffect(() => {
-        if (restaurantId) {
-            fetchOrdersData(restaurantId);
+        if (unitId) {
+            fetchDashboardData('unit', String(unitId), 'orders');
+        } else {
+            fetchDashboardData('restaurant', String(restaurantId), 'orders');
         }
-    }, [restaurantId]);
+    }, []);
 
-    // Formatando dados para o formato esperado pelo Chart
-    const chartData = orders.ordersByMonth?.map(item => ({
-        name: item.month,
+    const orders = data.orders as OrdersDashboardData;
+
+    const chartData = orders?.ordersByMonth?.map(item => ({
+        month: item.month,
         value: item.value
-    })) || [];
+    })) ?? [];
 
     return (
         <Card className="overflow-hidden border border-border bg-background">
@@ -50,7 +50,7 @@ export default function InformativeCard() {
                         <p className="text-sm text-gray-500">Realizados hoje</p>
                         <p className="flex items-center justify-center gap-1 text-green-500 font-medium">
                             <TrendingUp size={16} />
-                            {orders.inProgress + orders.approved}
+                            {(orders?.summary.inProgress ?? 0) + (orders?.summary.completed ?? 0)}
                         </p>
                     </div>
                     <div className="h-8 border-r border-border"></div>
@@ -58,7 +58,7 @@ export default function InformativeCard() {
                         <p className="text-sm text-gray-500">Cancelados</p>
                         <p className="flex items-center justify-center gap-1 text-red-600 font-medium">
                             <TrendingUp size={16} />
-                            {orders.cancelled}
+                            {orders?.summary.cancelled ?? 0}
                         </p>
                     </div>
                     <div className="h-8 border-r border-border"></div>
@@ -66,10 +66,11 @@ export default function InformativeCard() {
                         <p className="text-sm text-gray-500">Em produção</p>
                         <p className="flex items-center justify-center gap-1 text-yellow-600 font-medium">
                             <TrendingUp size={16} />
-                            {orders.inProgress}
+                            {orders?.summary.inProgress ?? 0}
                         </p>
                     </div>
                 </div>
+
                 <div className="p-4">
                     <p className="text-sm font-medium mb-4">Quantidade de pedidos realizados nos últimos 6 meses</p>
                     <div className="h-56 w-full">
@@ -78,11 +79,11 @@ export default function InformativeCard() {
                             barColor='#274754'
                             highlightColor='#E8C468'
                             currentMonth={new Date().toLocaleString('pt-BR', { month: 'short' })}
-                            valuePrefix=''
+                            valuePrefix=""
                         />
                     </div>
                 </div>
             </CardContent>
         </Card>
-    )
+    );
 }

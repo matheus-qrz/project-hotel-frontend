@@ -1,8 +1,6 @@
 'use client';
 
-import { SessionProvider } from 'next-auth/react';
 import { useState, useEffect } from 'react';
-import { Providers } from "@/providers/queryProvider";
 import { ToastProvider } from "@/components/toast/toastContext";
 
 export function ClientProviders({
@@ -24,12 +22,10 @@ export function ClientProviders({
     }
 
     return (
-        <SessionProvider>
-            <Providers>
-                <ToastProvider>
-                    {children}
-                </ToastProvider>
-            </Providers>
-        </SessionProvider>
+        <>
+            <ToastProvider>
+                {children}
+            </ToastProvider>
+        </>
     );
 }

@@ -3,13 +3,14 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore, useRestaurantStore } from '@/stores/index'; // Importa o authStore para obter o token
 import { useToast } from '@/hooks/useToast';
 import { generateRestaurantSlug } from '@/utils/slugify';
+import { useSession } from 'next-auth/react';
 
 const useFetchRestaurantInfo = () => {
     const router = useRouter();
     const { setUserRole, setRestaurantId } = useAuthStore();
-    const { restaurant } = useRestaurantStore();
-    const { token } = useAuthStore.getState();
     const toast = useToast();
+     const { data: session, status } = useSession();
+     const token = (session as any)?.token as string | undefined;
 
     const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
@@ -22,11 +23,11 @@ const useFetchRestaurantInfo = () => {
                         title: "Acesso negado",
                         description: "Você precisa estar logado como administrador para criar unidades."
                     });
-                    router.push('/login');
+                    router.push('/');
                     return;
                 }
 
-                const response = await fetch(`${API_URL}/validate`, {
+                const response = await fetch(`/${API_URL}/validate`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -54,14 +55,14 @@ const useFetchRestaurantInfo = () => {
                     });
 
                     // Use o slug no redirecionamento
-                    router.push(`/restaurant/${slug}/dashboard`);
+                    router.push(`/admin/restaurant/${restaurantId}/dashboard`);
                 } else {
                     toast.toast({
                         variant: "destructive",
                         title: "Acesso negado",
                         description: "Você precisa ser administrador de um restaurante para criar unidades."
                     });
-                    router.push('/login');
+                    router.push('/');
                 }
             } catch (error) {
                 console.error("Erro ao buscar informações do restaurante:", error);

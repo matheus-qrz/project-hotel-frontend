@@ -54,7 +54,7 @@ export default function UnitCard({
   };
 
   const handleViewDetails = () => {
-    router.push(`/restaurant/${slug}/units/${_id}`);
+    router.push(`/admin/restaurant/${slug}/units/${_id}`);
   };
 
   return (

@@ -1,91 +1,83 @@
-"use client"
+'use client';
 
 import { useState } from 'react';
-import { useAuthCheck } from '@/hooks/sessionManager';
-import { useParams } from 'next/navigation';
-import { useRouter } from 'next/navigation';
-import { useCartStore, useTableStore } from '@/stores';
-import { extractIdFromSlug, extractNameFromSlug } from '@/utils/slugify';
+import { useParams, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { v4 as uuidv4 } from 'uuid';
+import { extractIdFromSlug } from '@/utils/slugify';
+import { generateOrGetGuestId } from '@/utils/guestId';
+import { useGuestStore } from '@/stores/auth';
 
 export function GuestLogin() {
-    const { initializeGuest } = useCartStore();
-    const { addGuest } = useTableStore();
     const { slug, tableId } = useParams();
-    const [guestData, setGuestData] = useState({ name: '' });
     const router = useRouter();
-    const { authenticateAsGuest, isLoading, error } = useAuthCheck();
 
-    const handleGuestEntry = (name: string) => {
-        const guestId = uuidv4();
-        const joinedAt = new Date().toISOString();
-        const guestInfo = { id: guestId, name, joinedAt };
+    const [guestName, setGuestName] = useState('');
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-        initializeGuest(guestInfo);
-        addGuest(guestInfo);
-        console.log("Guest added:", guestInfo);
-    };
+    const {
+        setGuestInfo,
+        setTableId,
+        setRestaurantId,
+        setSessionId,
+    } = useGuestStore();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        if (!guestData.name.trim()) {
-            console.error("Por favor, forneça um nome válido.");
-            return;
-        }
+        if (!guestName.trim()) return;
 
         try {
-            const restaurantName = slug && extractNameFromSlug(String(slug));
+            setIsLoading(true);
+            setError('');
+
+            const guestId = generateOrGetGuestId();
+            const joinedAt = new Date().toISOString();
+
             const restaurantId = slug && extractIdFromSlug(String(slug));
 
-            if (!tableId) {
-                throw new Error('Número da mesa não encontrado.');
+            if (!restaurantId || !tableId || !guestId) {
+                throw new Error("Restaurante, mesa ou convidado inválidos.");
             }
 
-            const result = await authenticateAsGuest(
-                String(tableId),
-                String(restaurantId),
-                String(restaurantName),
-                { name: guestData.name }
-            );
+            const guestInfo = { id: String(guestId), name: guestName, joinedAt };
+            const sessionToken = btoa(`${guestId}:${tableId}:${Date.now()}`);
 
-            if (result.success) {
-                handleGuestEntry(guestData.name); // Armazenar guestInfo
-                router.push(`/restaurant/${slug}/${tableId}/menu`);
-            } else {
-                console.error('Falha na autenticação:', result);
-            }
+            // Salvar na store
+            setGuestInfo(guestInfo);
+            setTableId(Number(tableId));
+            setRestaurantId(String(restaurantId));
+            setSessionId(sessionToken); // útil para identificar sessão de pedido
+
+            router.push(`/restaurant/${slug}/${tableId}/menu`);
         } catch (err: any) {
-            console.error('Erro no login como convidado:', err);
+            console.error("Erro no login como convidado:", err);
+            setError("Erro ao identificar-se como convidado.");
+        } finally {
+            setIsLoading(false);
         }
-
-        console.log("guestInfo saved: ", guestData);
     };
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
                 <Alert variant="destructive">
-                    <AlertDescription>
-                        {error || 'Falha ao fazer login como convidado. Por favor, verifique suas informações.'}
-                    </AlertDescription>
+                    <AlertDescription>{error}</AlertDescription>
                 </Alert>
             )}
 
             <div className="space-y-2">
-                <Label htmlFor="name" className='text-md'>Nome</Label>
+                <Label htmlFor="name" className="text-md">Nome</Label>
                 <Input
                     id="name"
                     name="name"
                     type="text"
                     placeholder="Seu nome"
-                    value={guestData.name}
-                    onChange={(e) => setGuestData({ name: e.target.value })}
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
                     required
                 />
             </div>
@@ -93,7 +85,7 @@ export function GuestLogin() {
             <Button
                 type="submit"
                 className="w-full"
-                disabled={isLoading || !guestData.name.trim()}
+                disabled={isLoading || !guestName.trim()}
             >
                 {isLoading ? (
                     <>
