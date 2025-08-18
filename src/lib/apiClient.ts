@@ -1,8 +1,9 @@
 // lib/apiClient.ts
-import { useAuthStore } from "@/stores/auth";
+import { useSession } from "next-auth/react";
 
 export const apiClient = async (url: string, options: RequestInit = {}) => {
-    const token = useAuthStore.getState().token;
+      const { data: session } = useSession();
+      const token = (session as any)?.token as string | undefined;
 
     const headers: HeadersInit = {
         ...(options.headers || {}),

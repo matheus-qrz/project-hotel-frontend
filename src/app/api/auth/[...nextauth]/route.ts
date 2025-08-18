@@ -4,7 +4,6 @@ import Credentials from "next-auth/providers/credentials";
 const handler = NextAuth({
   pages: { signIn: "/login" },
   session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
-  // Removido: useSecureCookies e cookies customizados
   providers: [
     Credentials({
       id: "credentials",

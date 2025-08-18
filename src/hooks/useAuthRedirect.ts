@@ -1,15 +1,16 @@
 // hooks/useAuthRedirect.ts
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/stores/auth";
+import { useSession } from "next-auth/react";
 
 export const useAuthRedirect = () => {
-    const { token } = useAuthStore();
     const router = useRouter();
+      const { data: session } = useSession();
+      const token = (session as any)?.token as string | undefined;
 
     useEffect(() => {
         if (!token) {
-            router.push("/login"); // ou "/admin/login", conforme sua estrutura
+            router.push("/login"); 
         }
     }, [token, router]);
 };

@@ -1,6 +1,7 @@
 // stores/employeeStore.ts
 import { create } from 'zustand';
-import type { IRestaurantUnit } from '@/services/restaurant/types';
+import { Order } from '../order';
+import { RestaurantUnit } from '../restaurantUnit/restaurantUnitStore';
 
 export type Role = "ADMIN" | "MANAGER" | "ATTENDANT";
 
@@ -14,6 +15,23 @@ export interface IEmployee {
     restaurant?: string;
     restaurantUnit?: string;
     createdAt?: string;
+}
+
+export interface IRestaurantUnit {
+    _id: string;
+    address: {
+        zipCode: string;
+        street: string;
+        number: number;
+        complement: string;
+    };
+    cnpj: string;
+    socialName: string;
+    manager: string;
+    phone: string;
+    isMatrix?: boolean;
+    attendants: string[] | IEmployee[];
+    orders: string[] | Order[];
 }
 
 export interface ICreateEmployeeData {
@@ -30,14 +48,14 @@ export interface ICreateEmployeeData {
 
 interface EmployeeState {
     employees: IEmployee[];
-    units: IRestaurantUnit[];
+    units: RestaurantUnit[];
     isLoading: boolean;
     error: string | null;
 
     fetchEmployees: (restaurantId: string, token: string) => Promise<void>;
     fetchEmployeesByUnit: (unitId: string, token: string) => Promise<void>;
     fetchEmployeeById: (id: string, token: string) => Promise<IEmployee | null>;
-    setUnits: (units: IRestaurantUnit[]) => void;
+    setUnits: (units: RestaurantUnit[]) => void;
 
     addEmployee: (employeeData: ICreateEmployeeData, restaurantId: string, token: string) => Promise<void>;
     updateEmployee: (employeeId: string, employeeData: Partial<ICreateEmployeeData>, token: string) => Promise<void>;
@@ -52,7 +70,7 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
     isLoading: false,
     error: null,
 
-    setUnits: (units: IRestaurantUnit[]) => set({ units }),
+    setUnits: (units: RestaurantUnit[]) => set({ units }),
 
     fetchEmployees: async (restaurantId, token) => {
         set({ isLoading: true, error: null });
