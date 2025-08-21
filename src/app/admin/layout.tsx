@@ -1,15 +1,16 @@
 "use client";
 
-
+import AuthSessionBridge from "@/components/auth/AuthSessionBridge";
 
 export default function ProtectedLayout({
-    children,
+  children,
 }: {
-    children: React.ReactNode;
+  children: React.ReactNode;
 }) {
-    return (
-        <>
-            {children}
-         </>
-    );
+  return (
+    <>
+      <AuthSessionBridge />
+      {children}
+    </>
+  );
 }

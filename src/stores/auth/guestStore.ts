@@ -48,7 +48,7 @@ export const useGuestStore = create<GuestStore>()(
             },
         }),
         {
-            name: 'guest-storage', // chave usada no localStorage
+            name: 'guest-storage', 
         }
     )
 );

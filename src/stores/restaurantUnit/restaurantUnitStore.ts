@@ -36,6 +36,7 @@ interface RestaurantUnitState {
 }
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+const token = useAuthStore.getState().token;
 
 export const useRestaurantUnitStore = create<RestaurantUnitState>()(
     persist(

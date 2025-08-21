@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { Order } from '../order';
 import { RestaurantUnit } from '../restaurantUnit/restaurantUnitStore';
+import { useAuthStore } from '../auth';
 
 export type Role = "ADMIN" | "MANAGER" | "ATTENDANT";
 
@@ -63,6 +64,7 @@ interface EmployeeState {
 }
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+const token = useAuthStore.getState().token;
 
 export const useEmployeeStore = create<EmployeeState>((set, get) => ({
     employees: [],
