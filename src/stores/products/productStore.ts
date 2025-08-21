@@ -26,6 +26,7 @@ export interface Product {
     price: number;
     costPrice?: number;
     image: string;
+    imageBlur?: string;
     quantity: number;
     isAvailable: boolean;
     isOnPromotion: boolean;

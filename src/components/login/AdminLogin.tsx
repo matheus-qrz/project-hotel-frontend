@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth";
 import { DelayedLoading } from "@/components/loading/DelayedLoading";
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import { generateRestaurantSlug } from "@/utils/slugify";
 
 export function AdminLogin() {
@@ -17,7 +17,7 @@ export function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const { isLoading, setLoading } = useAuthStore();
+  const { isLoading, setLoading, updateFromSession } = useAuthStore();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -25,50 +25,32 @@ export function AdminLogin() {
     setError("");
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
-      const response = await fetch(`${baseUrl}/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Falha na autenticação");
-      }
-
       const result = await signIn("credentials", {
         email,
         password,
         redirect: false,
       });
+      if (!result || result.error)
+        throw new Error(result?.error || "Falha na autenticação");
 
-      if (result?.ok) {
-        const restaurantId = data.restaurantInfo?.restaurantId;
-        const restaurantName = data.restaurantInfo?.restaurantName;
+      // Sessão válida -> pega dados do NextAuth
+      const session = await getSession();
 
-        if (!restaurantId || !restaurantName) {
-          throw new Error("Informações do restaurante não encontradas");
-        }
+      // Mantém Zustand em sincronia
+      updateFromSession(session);
 
-        useAuthStore.getState().setToken(data.token);
-        useAuthStore.getState().setRestaurantId(restaurantId);
-        useAuthStore.getState().setUserRole(data.user.role);
-        useAuthStore.getState().setIsAuthenticated(true);
+      // Redireciona
+      const user = session?.user as any;
+      const slug = user?.restaurantName
+        ? generateRestaurantSlug(user.restaurantName, user.restaurantId)
+        : user?.restaurantId;
 
-        const slug = generateRestaurantSlug(restaurantName, restaurantId);
-
-        if (data.user.role === "ADMIN") {
-          router.push(`/admin/restaurant/${slug}/dashboard`);
-        } else if (data.user.role === "MANAGER") {
-          router.push(`/admin/restaurant/${slug}/manager`);
-        }
-      }
-    } catch (error) {
-      console.error("Erro durante login:", error);
+      if (user?.role === "ADMIN")
+        router.push(`/admin/restaurant/${slug}/dashboard`);
+      else if (user?.role === "MANAGER")
+        router.push(`/admin/restaurant/${slug}/manager`);
+    } catch (err) {
+      console.error(err);
       setError("Erro ao processar login");
     } finally {
       setLoading(false);

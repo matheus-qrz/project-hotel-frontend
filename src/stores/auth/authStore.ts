@@ -28,7 +28,7 @@ interface AuthState {
     setIsAuthenticated: (v: boolean) => void;
     setRestaurantId: (id: string) => void;
     setUnitId: (id: string) => void;
-    setToken: (token: string, expiry?: number) => void;
+    setToken: (token: string | null, role?: string | null) => void;
     setUserRole: (role: string) => void;
     updateFromSession: (session: Session | null) => void;
     clear: () => void;
@@ -83,11 +83,7 @@ export const useAuthStore = create<AuthState>()(
 
             setUnitId: (id) => set({ unitId: id }),
 
-            setToken: (token, expiry) => set({
-                token,
-                tokenExpiry: expiry || Date.now() + SESSION_DURATION,
-                isGuest: token.startsWith('guest_')
-            }),
+            setToken: (token, role) => set({ token: token, role: role ?? null }),
 
             setUserRole: (role) => set({ role }),
 

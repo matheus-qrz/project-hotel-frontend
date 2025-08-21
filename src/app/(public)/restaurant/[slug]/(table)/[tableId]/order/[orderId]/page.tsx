@@ -1,124 +1,123 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { extractIdFromSlug, extractNameFromSlug } from '@/utils/slugify';
-import OrderConfirmation from '@/components/order/OrderConfirmation';
-import { useOrderStore, Order } from '@/stores/order/orderStore';
-import { useRestaurantStore } from '@/stores/restaurant';
-import { useCartStore } from '@/stores';
+import React, { useEffect, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { extractIdFromSlug, extractNameFromSlug } from "@/utils/slugify";
+import OrderConfirmation from "@/components/order/OrderConfirmation";
+import { useOrderStore, Order } from "@/stores/order/orderStore";
+import { useRestaurantStore } from "@/stores/restaurant";
+import { useGuestStore } from "@/stores";
 
 export default function OrderPage() {
-    const { slug, tableId, orderId, unitId } = useParams();
-    const searchParams = useSearchParams();
-    const { fetchRestaurantById } = useRestaurantStore();
-    const splitCount = searchParams.get('split') ? parseInt(searchParams.get('split')!) : 1;
-    const router = useRouter();
+  const { slug, tableId, orderId, unitId } = useParams();
+  const searchParams = useSearchParams();
+  const { fetchRestaurantData } = useRestaurantStore();
+  const splitCount = searchParams.get("split")
+    ? parseInt(searchParams.get("split")!)
+    : 1;
+  const router = useRouter();
 
-    const {
-        getGuestId,
-    } = useCartStore();
+  const { guestInfo } = useGuestStore();
 
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [restaurantData, setRestaurantData] = useState<{
-        id: string;
-        name: string;
-    } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [restaurantData, setRestaurantData] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
-    const { order, fetchGuestOrders } = useOrderStore();
+  const { order, fetchGuestOrders } = useOrderStore();
 
-    const guestId = getGuestId();
+  const guestId = guestInfo?.id;
 
-    const restaurantId = slug && extractIdFromSlug(String(slug));
-    const restaurantName = slug && extractNameFromSlug(String(slug));
+  const restaurantId = slug && extractIdFromSlug(String(slug));
+  const restaurantName = slug && extractNameFromSlug(String(slug));
 
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                setIsLoading(true);
-                setError(null);
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
 
-                if (!restaurantId || !tableId) {
-                    throw new Error("Informações do restaurante não encontradas.");
-                }
+        if (!restaurantId || !tableId) {
+          throw new Error("Informações do restaurante não encontradas.");
+        }
 
-                // Carregar dados do restaurante
-                const restaurant = await fetchRestaurantById(String(restaurantId));
-                if (!restaurantId) {
-                    throw new Error("Restaurante não encontrado.");
-                }
-                setRestaurantData({
-                    id: String(restaurantId),
-                    name: String(restaurantName)
-                });
+        // Carregar dados do restaurante
+        const restaurant = await fetchRestaurantData(String(restaurantId));
+        if (!restaurantId) {
+          throw new Error("Restaurante não encontrado.");
+        }
+        setRestaurantData({
+          id: String(restaurantId),
+          name: String(restaurantName),
+        });
 
-                await fetchGuestOrders(String(guestId), Number(tableId));
-
-            } catch (err: any) {
-                console.error("Erro ao carregar dados:", err);
-                setError(err.message || "Erro ao carregar dados.");
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        loadData();
-    }, [restaurantId, tableId, fetchGuestOrders]);
-
-    const handleBackToMenu = () => {
-        router.push(`/restaurant/${slug}/${tableId}/menu`);
+        await fetchGuestOrders(String(guestId), Number(tableId));
+      } catch (err: any) {
+        console.error("Erro ao carregar dados:", err);
+        setError(err.message || "Erro ao carregar dados.");
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    if (isLoading) {
-        return (
-            <div className="container mx-auto px-4 py-8 max-w-md">
-                <div className="animate-pulse">
-                    <div className="h-16 w-16 bg-green-100 rounded-full mx-auto mb-4"></div>
-                    <div className="h-8 bg-gray-200 rounded w-3/4 mx-auto mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto mb-8"></div>
-                    <div className="h-48 bg-gray-200 rounded mb-6"></div>
-                    <div className="h-48 bg-gray-200 rounded mb-8"></div>
-                    <div className="h-12 bg-gray-200 rounded mb-3"></div>
-                    <div className="h-12 bg-gray-200 rounded"></div>
-                </div>
-            </div>
-        );
-    }
+    loadData();
+  }, [restaurantId, tableId, fetchGuestOrders]);
 
-    if (error) {
-        return (
-            <div className="container mx-auto px-4 py-8 max-w-md text-center">
-                <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-6">
-                    <h2 className="text-lg font-bold mb-2">Erro</h2>
-                    <p>{error}</p>
-                </div>
-            </div>
-        );
-    }
+  const handleBackToMenu = () => {
+    router.push(`/restaurant/${slug}/${tableId}/menu`);
+  };
 
-    // Encontrar o pedido específico nos pedidos carregados
-    const orderData = order.find((order: Order) => order._id === orderId);
-
-    if (!orderData) {
-        return (
-            <div className="container mx-auto px-4 py-8 max-w-md text-center">
-                <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 p-4 rounded-lg mb-6">
-                    <h2 className="text-lg font-bold mb-2">Pedido não encontrado</h2>
-                    <p>Não foi possível encontrar os detalhes deste pedido.</p>
-                </div>
-            </div>
-        );
-    }
-
+  if (isLoading) {
     return (
-        <OrderConfirmation
-            orderId={String(orderId)}
-            restaurantId={String(restaurantId)}
-            restaurantName={restaurantData?.name || String(restaurantName)}
-            tableId={Number(tableId)}
-            splitCount={splitCount}
-            onBackToMenu={handleBackToMenu}
-        />
+      <div className="container mx-auto max-w-md px-4 py-8">
+        <div className="animate-pulse">
+          <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-green-100"></div>
+          <div className="mx-auto mb-2 h-8 w-3/4 rounded bg-gray-200"></div>
+          <div className="mx-auto mb-8 h-4 w-1/2 rounded bg-gray-200"></div>
+          <div className="mb-6 h-48 rounded bg-gray-200"></div>
+          <div className="mb-8 h-48 rounded bg-gray-200"></div>
+          <div className="mb-3 h-12 rounded bg-gray-200"></div>
+          <div className="h-12 rounded bg-gray-200"></div>
+        </div>
+      </div>
     );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto max-w-md px-4 py-8 text-center">
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+          <h2 className="mb-2 text-lg font-bold">Erro</h2>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Encontrar o pedido específico nos pedidos carregados
+  const orderData = order.find((order: Order) => order._id === orderId);
+
+  if (!orderData) {
+    return (
+      <div className="container mx-auto max-w-md px-4 py-8 text-center">
+        <div className="mb-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-700">
+          <h2 className="mb-2 text-lg font-bold">Pedido não encontrado</h2>
+          <p>Não foi possível encontrar os detalhes deste pedido.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <OrderConfirmation
+      orderId={String(orderId)}
+      restaurantId={String(restaurantId)}
+      restaurantName={restaurantData?.name || String(restaurantName)}
+      tableId={Number(tableId)}
+      splitCount={splitCount}
+      onBackToMenu={handleBackToMenu}
+    />
+  );
 }

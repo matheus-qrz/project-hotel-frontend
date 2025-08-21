@@ -4,6 +4,8 @@ import { CartItemProps } from '../cart';
 import { useAuthStore } from '../auth';
 import { OrderItemStatus, OrderItemStatusType, OrderStatus, OrderStatusType, OrderType } from './types/order.types';
 import { v4 as uuidv4 } from 'uuid';
+import { useTableStore } from './tableStore';
+import { useSession } from 'next-auth/react';
 
 // ✅ Tipagens ajustadas com sessionId e store limpo (somente fluxo unificado)
 
@@ -80,7 +82,7 @@ interface OrderStore {
     fetchGuestOrders: (guestId: string, tableId: number) => Promise<Order[]>;
     fetchRestaurantUnitOrders: (restaurantId: string, unitId?: string) => Promise<void>;
     fetchOrderStats: (unitId: string) => Promise<void>;
-    requestCheckout: (orderIds: string[], guestId: string, restaurantId: string, tableId: number, splitCount?: number) => Promise<void>;
+    requestCheckout: (orderId: string, guestId: string, restaurantId: string, tableId: number, splitCount?: number) => Promise<void>;
     processPayment: (orderId: string, paymentData: {
         paymentMethod: string;
         processedBy?: string;
@@ -88,7 +90,7 @@ interface OrderStore {
         guestId: string;
     }) => Promise<void>;
     cancelOrder: (orderId: string, restaurantId: string, tableId: number) => Promise<void>;
-    cancelOrderItem: (orderId: string, itemId: string, restaurantId: string, tableId: number) => Promise<void>;
+    cancelOrderItem: (orderId: string, itemId: string, restaurantId: string, tableId: number, guestId?: string) => Promise<void>;
     updateOrderItem: (restaurantId: string, tableId: number, orderId: string, itemId: string, updates: {
         quantity?: number;
         observations?: string;
@@ -118,7 +120,6 @@ interface OrderStore {
 }
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
-
 const token = useAuthStore.getState().token;
 
 const customStorage = {
@@ -298,10 +299,13 @@ export const useOrderStore = create(
 
             fetchGuestOrders: async (guestId: string, tableId: number) => {
                 try {
+                    const restaurantId = useTableStore.getState().restaurantId;
+
+                    if (!restaurantId) throw new Error('restaurantId não definido no tableStore');
                     const sessionId = get().sessionId;
 
                     const response = await fetch(
-                        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/restaurant/table/${tableId}/guest/${guestId}/orders`,
+                        `${API_URL}/restaurant/${restaurantId}/${tableId}/guest/${guestId}/orders`,
                         {
                             headers: {
                                 'x-session-id': sessionId ?? ''
@@ -309,11 +313,13 @@ export const useOrderStore = create(
                         }
                     );
 
+                    if (!response.ok) throw new Error('Erro ao buscar pedidos');
+                    
                     const data = await response.json();
 
                     const orders = Array.isArray(data) ? data : [];
 
-                    set({ order: orders });
+                    set((state) => ({ previousOrders: state.order, order: orders }));
                     return orders;
                 } catch (error) {
                     console.error("Erro ao buscar pedidos do convidado:", error);
@@ -322,6 +328,9 @@ export const useOrderStore = create(
             },
 
             fetchRestaurantUnitOrders: async (restaurantId, unitId) => {
+        const { data: session } = useSession();
+        const token = (session as any)?.token as string | undefined;
+
                 try {
                     if (!unitId && !restaurantId) {
                         throw new Error("ID da unidade ou do restaurante é obrigatório.");
@@ -332,7 +341,6 @@ export const useOrderStore = create(
                         : restaurantId
                             ? `${API_URL}/restaurant/${restaurantId}/orders`
                             : (() => { throw new Error("ID da unidade ou do restaurante é obrigatório."); })();
-
 
                     const response = await fetch(endpoint, {
                         headers: {
@@ -386,14 +394,14 @@ export const useOrderStore = create(
                 }
             },
 
-            requestCheckout: async (orderIds: string[], guestId: string, restaurantId: string, tableId: number, splitCount?: number) => {
+            requestCheckout: async (orderId: string, guestId: string, restaurantId: string, tableId: number, splitCount?: number) => {
                 set({ isLoading: true, error: null });
                 try {
-                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/request-checkout`, {
+                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/request-checkout`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            orderIds,
+                            orderId,
                             guestId,
                             splitCount
                         })
@@ -404,13 +412,11 @@ export const useOrderStore = create(
                         throw new Error(errorData.message);
                     }
 
-                    const updatedOrders = await response.json();
 
+                    const updatedOrder = await response.json();
                     set(state => ({
-                        order: state.order.map(order =>
-                            updatedOrders.find((updated: Order) => updated._id === order._id) || order
-                        ),
-                        isLoading: false
+                    order: state.order.map(o => (o._id === updatedOrder._id ? updatedOrder : o)),
+                    isLoading: false,
                     }));
                 } catch (error: any) {
                     set({ error: error.message, isLoading: false });
@@ -458,10 +464,13 @@ export const useOrderStore = create(
                 }
             },
 
-            cancelOrder: async (orderId: string, restaurantId: string, tableId: number) => {
+            cancelOrder: async (orderId: string, restaurantId: string, tableId: number, guestId?: string) => {
                 try {
-                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/cancel`, {
-                        method: 'PATCH'
+                    const response = await fetch(
+                        `${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/cancel`, {
+                        method: 'POST',
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ guestId })
                     });
 
                     if (!response.ok) throw new Error('Falha ao cancelar pedido');
@@ -473,11 +482,11 @@ export const useOrderStore = create(
                 }
             },
 
-            cancelOrderItem: async (orderId: string, itemId: string, restaurantId: string, tableId: number) => {
+            cancelOrderItem: async (orderId: string, itemId: string, restaurantId: string, tableId: number, guestId?: string) => {
                 const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/item/${itemId}/cancel`, {
-                    method: "PATCH",
+                    method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ tableId }),
+                    body: JSON.stringify({ guestId }),
                 });
 
                 if (!response.ok) throw new Error("Erro ao cancelar item");
@@ -555,7 +564,8 @@ export const useOrderStore = create(
                 }
             },
 
-            updateOrderItem: async (restaurantId: string,
+            updateOrderItem: async (
+                restaurantId: string,
                 tableId: number,
                 orderId: string,
                 itemId: string,
@@ -563,7 +573,8 @@ export const useOrderStore = create(
                     quantity?: number;
                     observations?: string
                     status?: OrderItemStatusType;
-                }) => {
+                },
+                guestId?: string) => {
                 try {
                     let updatesWithStatus = { ...updates };
 
@@ -580,13 +591,14 @@ export const useOrderStore = create(
                         }
                     }
 
-                    const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/item/${itemId}/update`, {
+                    const response = await fetch(
+                        `${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/item/${itemId}`, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${token}`
                         },
-                        body: JSON.stringify(updatesWithStatus)
+                        body: JSON.stringify(guestId ? { ...updatesWithStatus, guestId } : updatesWithStatus)
                     });
 
                     if (!response.ok) {
