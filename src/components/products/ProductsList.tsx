@@ -56,6 +56,7 @@ import { extractIdFromSlug } from "@/utils/slugify";
 import { DelayedLoading } from "../loading/DelayedLoading";
 import { useAuthStore } from "@/stores";
 import { handleLogout } from "@/utils/handleLogout";
+import { useSession } from "next-auth/react";
 
 interface ProductsListProps {
   slug: string;
@@ -97,7 +98,8 @@ const CATEGORIES = [
 export default function ProductsList({ slug }: ProductsListProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const { isAuthenticated, isLoading: isAuthLoading } = useAuthStore();
+  const { isLoading: isAuthLoading } = useAuthStore();
+  const { data: session, status } = useSession();
   const { products, error, fetchProducts, deleteProduct } = useProductStore();
 
   // Estados locais para UI
@@ -112,10 +114,12 @@ export default function ProductsList({ slug }: ProductsListProps) {
 
   const restaurantId = slug && extractIdFromSlug(String(slug));
 
+  const token = (session as any)?.token as string | undefined;
+
   // Carregar produtos
   useEffect(() => {
     const loadProducts = async () => {
-      if (restaurantId && isAuthenticated) {
+      if (restaurantId && token) {
         setIsLoadingProducts(true);
         try {
           await fetchProducts(restaurantId);
@@ -138,7 +142,7 @@ export default function ProductsList({ slug }: ProductsListProps) {
     };
 
     loadProducts();
-  }, [restaurantId, showOnlyPromotions, isAuthenticated, fetchProducts]);
+  }, [restaurantId, showOnlyPromotions, token, fetchProducts]);
 
   // Lista de categorias disponíveis
   const categories = [
@@ -254,7 +258,7 @@ export default function ProductsList({ slug }: ProductsListProps) {
   }
 
   // Se não estiver autenticado, mostrar mensagem e botão para login
-  if (!isAuthenticated) {
+  if (status === "unauthenticated") {
     return (
       <Card>
         <CardContent className="p-8 pt-6 text-center">
@@ -264,7 +268,7 @@ export default function ProductsList({ slug }: ProductsListProps) {
             Sua sessão expirou ou você não está autenticado. Por favor, faça
             login novamente.
           </p>
-          <Button onClick={() => router.push("/")}>Fazer login</Button>
+          <Button onClick={() => router.push("/login")}>Fazer login</Button>
         </CardContent>
       </Card>
     );

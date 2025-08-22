@@ -25,7 +25,7 @@ export default function UnitsPage() {
   const restaurantId = slug && extractIdFromSlug(String(slug));
 
   useEffect(() => {
-    if (status !== "authenticated" || !restaurantId) return;
+    if (status === "unauthenticated" || !restaurantId) return;
 
     fetchUnits(restaurantId, String(token)).catch((err) => {
       console.error("Erro ao buscar unidades:", err);

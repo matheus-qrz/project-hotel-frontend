@@ -18,6 +18,7 @@ export default function ManagerPage() {
   const { isOpen } = useSidebar();
   const { slug } = useParams();
   const { data: session } = useSession();
+  const token = (session as any)?.token as string | undefined;
 
   useEffect(() => {
     const t = (session as any)?.token ?? null;
@@ -26,11 +27,14 @@ export default function ManagerPage() {
 
   const restaurantId = slug && extractIdFromSlug(String(slug));
 
+  if (!token || status === "unauthenticated") {
+    router.push("/login");
+    return null;
+  }
+
   if (isLoading) {
     return <DelayedLoading />;
   }
-
-  if (status !== "authenticated" || !restaurantId) return router.back();
 
   return (
     <div className="flex h-screen w-full flex-col overflow-y-hidden bg-background">

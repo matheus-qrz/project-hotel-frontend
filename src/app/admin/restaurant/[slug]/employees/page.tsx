@@ -10,13 +10,17 @@ import Header from "@/components/header/Header";
 import { Sidebar } from "@/components/dashboard/SideMenu";
 import { useSidebar } from "@/components/ui/sidebar";
 import { DelayedLoading } from "@/components/loading/DelayedLoading";
+import { useSession } from "next-auth/react";
 
 export default function EmployeesPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isLoading } = useAuthStore();
   const { isOpen } = useSidebar();
 
-  if (!isAuthenticated) {
+  const { data: session } = useSession();
+  const token = (session as any)?.token as string | undefined;
+
+  if (!token || status === "unauthenticated") {
     router.push("/login");
     return null;
   }

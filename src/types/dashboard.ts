@@ -31,6 +31,10 @@ export interface FinancialSummary {
     cost: number;
     profit: number;
     discounts: number;
+    salesCount?: number;         // total de vendas/pedidos pagos no período
+    breakEvenPoint?: number;     // ponto de equilíbrio (R$)
+    previousRevenue?: number;    // faturamento do mês anterior (se vier pronto)
+    previousCost?: number;       // custo do mês anterior (para variação de CMV/CMO)
 }
 
 export interface MonthlyRevenueEntry {

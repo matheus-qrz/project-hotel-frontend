@@ -12,22 +12,26 @@ import { extractIdFromSlug } from "@/utils/slugify";
 import PromotionsPage from "@/components/promotion/PromotionsPage";
 import PromotionHistory from "@/components/promotion/PromotionHistory";
 import { useAuthStore } from "@/stores";
+import { useSession } from "next-auth/react";
 
 export default function PromotionHistoryPage() {
   const router = useRouter();
   const { slug } = useParams();
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isLoading } = useAuthStore();
   const { isOpen } = useSidebar();
 
   const restaurantId = extractIdFromSlug(String(slug));
 
-  if (isLoading) {
-    return <DelayedLoading />;
+  const { data: session, status } = useSession();
+  const token = (session as any)?.token as string | undefined;
+
+  if (!token || status === "unauthenticated") {
+    router.push("/login");
+    return null;
   }
 
-  if (!isAuthenticated) {
-    router.push("/");
-    return null;
+  if (isLoading) {
+    return <DelayedLoading />;
   }
 
   return (

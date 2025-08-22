@@ -43,10 +43,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     }).format(price);
   };
 
-  const blurProps = product.imageBlur
-    ? { placeholder: "blur" as const, blurDataURL: product.imageBlur }
-    : {};
-
   return (
     <Card
       className={`flex h-full flex-col overflow-hidden border border-gray-300 shadow-md ${product.isOnPromotion ? "bg-red-50" : ""}`}

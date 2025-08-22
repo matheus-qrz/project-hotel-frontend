@@ -64,7 +64,6 @@ interface EmployeeState {
 }
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
-const token = useAuthStore.getState().token;
 
 export const useEmployeeStore = create<EmployeeState>((set, get) => ({
     employees: [],

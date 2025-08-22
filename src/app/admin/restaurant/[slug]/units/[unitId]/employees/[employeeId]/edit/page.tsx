@@ -19,8 +19,8 @@ export function EditEmployeePage() {
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      if (status !== "authenticated" || !token) {
-        router.push("/admin/login");
+      if (status === "unauthenticated" || !token) {
+        router.push("/login");
       }
     }, 300);
 

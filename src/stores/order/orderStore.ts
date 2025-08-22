@@ -328,9 +328,11 @@ export const useOrderStore = create(
             },
 
             fetchRestaurantUnitOrders: async (restaurantId, unitId) => {
-        const { data: session } = useSession();
-        const token = (session as any)?.token as string | undefined;
-
+                const token = useAuthStore.getState().token;
+                if (!token) {
+                    return;
+                }
+                
                 try {
                     if (!unitId && !restaurantId) {
                         throw new Error("ID da unidade ou do restaurante é obrigatório.");
@@ -348,6 +350,8 @@ export const useOrderStore = create(
                             'Content-Type': 'application/json'
                         }
                     });
+
+                    if (response.status === 304) return;
 
                     if (!response.ok) throw new Error('Erro ao buscar pedidos');
 

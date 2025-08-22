@@ -1,22 +1,21 @@
-// app/restaurant/[restaurantId]/units/[unitId]/employees/page.tsx
 "use client";
 
 import React from "react";
+import { cn } from "@/lib/utils";
 import { useParams, useRouter } from "next/navigation";
 import Header from "@/components/header/Header";
 import { Sidebar } from "@/components/dashboard/SideMenu";
 import { useSidebar } from "@/components/ui/sidebar";
-import { cn } from "@/lib/utils";
-import { DelayedLoading } from "@/components/loading/DelayedLoading";
-import { extractIdFromSlug } from "@/utils/slugify";
-import PromotionsPage from "@/components/promotion/PromotionsPage";
 import { useAuthStore } from "@/stores";
 import { useSession } from "next-auth/react";
+import { DelayedLoading } from "@/components/loading/DelayedLoading";
+import UnitDetails from "@/components/units/UnitDetails";
 
-export default function PromotionsManagementPage() {
+export default function UnitDetailsPage() {
+  const { unitId } = useParams();
+  const router = useRouter();
   const { isLoading } = useAuthStore();
   const { isOpen } = useSidebar();
-  const router = useRouter();
 
   const { data: session, status } = useSession();
   const token = (session as any)?.token as string | undefined;
@@ -31,7 +30,7 @@ export default function PromotionsManagementPage() {
   }
 
   return (
-    <div className="flex h-screen w-full flex-col">
+    <div className="min-h-screen bg-background">
       <Header />
 
       <div
@@ -43,8 +42,8 @@ export default function PromotionsManagementPage() {
         <Sidebar />
 
         <div className="w-full flex-1 overflow-auto">
-          <div className="mx-auto w-full px-6 py-4">
-            <PromotionsPage />
+          <div className="mx-auto max-w-5xl px-6 py-4">
+            <UnitDetails unitId={String(unitId)} />
           </div>
         </div>
       </div>

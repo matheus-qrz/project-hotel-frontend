@@ -37,7 +37,6 @@ const StatusTexts = {
 export function OrderHistory({ slug }: OrderHistoryProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { order, fetchRestaurantUnitOrders } = useOrderStore();
-  const { tableId } = useTableStore();
   const { currentUnitId } = useRestaurantUnitStore();
 
   const restaurantId = slug && extractIdFromSlug(String(slug));

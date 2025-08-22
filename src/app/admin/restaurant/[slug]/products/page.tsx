@@ -1,52 +1,61 @@
 // app/restaurant/[restaurantId]/products/page.tsx
-'use client';
+"use client";
 
-import React from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { ChevronLeft } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useAuthStore } from '@/stores';
-import Header from '@/components/header/Header';
-import { Sidebar } from '@/components/dashboard/SideMenu';
-import { useSidebar } from '@/components/ui/sidebar';
-import ProductsList from '@/components/products/ProductsList';
-import { DelayedLoading } from '@/components/loading/DelayedLoading';
+import React from "react";
+import { useParams, useRouter } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores";
+import Header from "@/components/header/Header";
+import { Sidebar } from "@/components/dashboard/SideMenu";
+import { useSidebar } from "@/components/ui/sidebar";
+import ProductsList from "@/components/products/ProductsList";
+import { DelayedLoading } from "@/components/loading/DelayedLoading";
+import { useSession } from "next-auth/react";
 
 export default function ProductsPage() {
-    const { isLoading, isAuthenticated } = useAuthStore();
-    const router = useRouter();
-    const { isOpen } = useSidebar();
-    const { slug } = useParams();
+  const { isLoading } = useAuthStore();
+  const router = useRouter();
+  const { isOpen } = useSidebar();
+  const { slug } = useParams();
 
-    if (isLoading) {
-        return <DelayedLoading />;
-    }
+  const { data: session } = useSession();
+  const token = (session as any)?.token as string | undefined;
 
-    if (!isAuthenticated) {
-        router.push('/');
-        return null;
-    }
+  if (!token) {
+    router.push("/login");
+    return null;
+  }
 
-    return (
-        <div className="flex flex-col h-screen bg-background w-full">
-            <Header />
-            <div className={cn("flex flex-col w-full transition-all duration-300", isOpen ? "ml-64" : "ml-0")}>
-                <Sidebar />
+  if (isLoading) {
+    return <DelayedLoading />;
+  }
 
-                <div className="px-8 py-6">
-                    <div className="flex items-center mb-6">
-                        <button
-                            onClick={() => window.history.back()}
-                            className="text-gray-600 mr-4"
-                        >
-                            <ChevronLeft size={24} />
-                        </button>
-                        <h1 className="text-2xl font-bold">Produtos</h1>
-                    </div>
+  return (
+    <div className="flex h-screen w-full flex-col bg-background">
+      <Header />
+      <div
+        className={cn(
+          "flex w-full flex-col transition-all duration-300",
+          isOpen ? "ml-64" : "ml-0",
+        )}
+      >
+        <Sidebar />
 
-                    <ProductsList slug={String(slug)} />
-                </div>
-            </div>
+        <div className="px-8 py-6">
+          <div className="mb-6 flex items-center">
+            <button
+              onClick={() => window.history.back()}
+              className="mr-4 text-gray-600"
+            >
+              <ChevronLeft size={24} />
+            </button>
+            <h1 className="text-2xl font-bold">Produtos</h1>
+          </div>
+
+          <ProductsList slug={String(slug)} />
         </div>
-    );
+      </div>
+    </div>
+  );
 }

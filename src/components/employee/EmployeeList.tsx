@@ -53,8 +53,7 @@ export default function EmployeeList() {
   const { slug } = useParams();
   const { toast } = useToast();
 
-  const { isAuthenticated, token, setIsAuthenticated, setToken } =
-    useAuthStore();
+  const { token, setToken } = useAuthStore();
   const { data: session, status } = useSession();
   const sessionToken = (session as any)?.token as string | undefined;
 
@@ -75,19 +74,11 @@ export default function EmployeeList() {
   useEffect(() => {
     if (status === "authenticated") {
       if (sessionToken && token !== sessionToken) setToken(sessionToken);
-      if (!isAuthenticated) setIsAuthenticated(true);
     }
-  }, [
-    status,
-    sessionToken,
-    token,
-    isAuthenticated,
-    setIsAuthenticated,
-    setToken,
-  ]);
+  }, [status, sessionToken, token, setToken]);
 
   useEffect(() => {
-    if (status !== "authenticated") return;
+    if (status === "unauthenticated") return;
     if (!restaurantId || !sessionToken) return;
 
     fetchEmployees(restaurantId, sessionToken).catch(() => {
@@ -97,7 +88,7 @@ export default function EmployeeList() {
         variant: "destructive",
       });
     });
-  }, [restaurantId, isAuthenticated, sessionToken]);
+  }, [restaurantId, status, sessionToken]);
 
   useEffect(() => {
     const query = searchQuery.toLowerCase();

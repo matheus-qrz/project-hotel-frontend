@@ -1,20 +1,20 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
-import { useAuthStore } from '@/stores/auth';
-import { AdminLogin } from '@/components/login';
-import { DelayedLoading } from '@/components/loading/DelayedLoading';
+import { useAuthStore } from "@/stores/auth";
+import { AdminLogin } from "@/components/login";
+import { DelayedLoading } from "@/components/loading/DelayedLoading";
 
 export default function LoginPage() {
-    const { isLoading } = useAuthStore();
+  const { isLoading } = useAuthStore();
 
-    if (isLoading) {
-        return <DelayedLoading />;
-    }
+  if (isLoading) {
+    return <DelayedLoading />;
+  }
 
-    return (
-        <>
-            <AdminLogin />
-        </>
-    );
+  return (
+    <>
+      <AdminLogin />
+    </>
+  );
 }

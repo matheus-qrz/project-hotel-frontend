@@ -11,18 +11,22 @@ import { Sidebar } from "@/components/dashboard/SideMenu";
 import { useSidebar } from "@/components/ui/sidebar";
 import { DelayedLoading } from "@/components/loading/DelayedLoading";
 import EditProduct from "@/components/products/EditProduct";
+import { useSession } from "next-auth/react";
 
 export default function EditProductsPage() {
-  const { isAuthenticated, isLoading } = useAuthStore();
-  const router = useRouter();
+  const { isLoading } = useAuthStore();
   const { isOpen } = useSidebar();
+  const router = useRouter();
+
+  const { data: session, status } = useSession();
+  const token = (session as any)?.token as string | undefined;
 
   if (isLoading) {
     return <DelayedLoading />;
   }
 
-  if (!isAuthenticated) {
-    router.push("/");
+  if (!token || status === "unauthenticated") {
+    router.push("/login");
     return null;
   }
 
