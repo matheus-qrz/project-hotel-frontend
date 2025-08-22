@@ -2,7 +2,7 @@
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 
-export default function RestaurantUnitListLayout({
+export default function RestaurantUnitDetailsLayout({
   children,
 }: {
   children: React.ReactNode;

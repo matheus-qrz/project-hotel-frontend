@@ -16,7 +16,6 @@ interface AuthState {
     role: string | null;
     tokenExpiry: number | null;
     isGuest: boolean;
-    isAuthenticated: boolean;
     guestInfo: GuestInfo | null;
     tableNumber: string | null;
 
@@ -25,7 +24,6 @@ interface AuthState {
     withLoading: <T>(fn: () => Promise<T>) => Promise<T>;
 
     // Métodos existentes
-    setIsAuthenticated: (v: boolean) => void;
     setRestaurantId: (id: string) => void;
     setUnitId: (id: string) => void;
     setToken: (token: string | null, role?: string | null) => void;
@@ -55,13 +53,11 @@ export const useAuthStore = create<AuthState>()(
             role: null,
             tokenExpiry: null,
             isGuest: false,
-            isAuthenticated: false,
             guestInfo: null,
             tableNumber: null,
             isLoading: false,
             _hydrated: false,
             
-            setIsAuthenticated: (v) => set({ isAuthenticated: v }),
             setHydrated: () => set({ _hydrated: true }),
             setLoading: (v) => set({ isLoading: v }),
             withLoading: async (fn) => {

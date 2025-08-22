@@ -9,14 +9,23 @@ import { useAuthStore } from "@/stores";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { extractIdFromSlug } from "@/utils/slugify";
+import { useSession } from "next-auth/react";
 
 export function LoginPage() {
   const router = useRouter();
   const { slug, tableId } = useParams();
-  const { isAuthenticated, role, isLoading } = useAuthStore();
+  const { role, isLoading } = useAuthStore();
   const [restaurantInfo, setRestaurantInfo] = useState<{ name: string } | null>(
     null,
   );
+
+  const { data: session, status } = useSession();
+  const token = (session as any)?.token as string | undefined;
+
+  if (!token || status === "unauthenticated") {
+    router.push("/login");
+    return null;
+  }
 
   const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
@@ -24,7 +33,7 @@ export function LoginPage() {
 
   // Redirecionar se já estiver autenticado
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
+    if (!isLoading && status === "authenticated") {
       if (role === "ADMIN") {
         router.push(`/admin/restaurant/${slug}/dashboard`);
       } else if (role === "MANAGER") {
@@ -40,7 +49,7 @@ export function LoginPage() {
         }
       }
     }
-  }, [isAuthenticated, slug, role, isLoading, router, restaurantId]);
+  }, [status, slug, role, isLoading, router, restaurantId]);
 
   // Buscar informações do restaurante
   useEffect(() => {

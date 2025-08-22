@@ -26,7 +26,6 @@ export default function StatisticsDashboardPage() {
   const { isLoading } = useAuthStore();
   const router = useRouter();
   const { isOpen } = useSidebar();
-  const { slug } = useParams();
 
   const { data: session, status } = useSession();
   const token = (session as any)?.token as string | undefined;
@@ -34,9 +33,8 @@ export default function StatisticsDashboardPage() {
   if (isLoading) {
     return <div>Loading...</div>;
   }
-
-  if (status !== "authenticated") {
-    router.push("/");
+  if (!token || status === "unauthenticated") {
+    router.push("/login");
     return null;
   }
 

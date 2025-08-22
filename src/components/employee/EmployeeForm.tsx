@@ -32,9 +32,9 @@ export default function EmployeeForm({
   const router = useRouter();
   const { slug } = useParams();
   const { toast } = useToast();
-  const { addEmployee, fetchEmployeeById, updateEmployee, units, setUnits } =
+  const { addEmployee, fetchEmployeeById, updateEmployee, setUnits } =
     useEmployeeStore();
-  const { fetchUnitByRestaurantId } = useRestaurantUnitStore();
+  const { fetchUnitByRestaurantId, units } = useRestaurantUnitStore();
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [restaurantName, setRestaurantName] = useState("");

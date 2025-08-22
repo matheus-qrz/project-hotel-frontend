@@ -5,7 +5,6 @@ export const handleLogout = async (redirectUrl = "/login") => {
     const store = useAuthStore.getState();
 
     // 1) zera estado em memória (sincrono p/ evitar flicker)
-    store.setIsAuthenticated(false);
     store.setToken("");
     store.setUserRole("");
     store.setRestaurantId("");

@@ -7,35 +7,43 @@ import { useRestaurantStore } from "@/stores";
 import { useEffect } from "react";
 import { extractNameFromSlug } from "@/utils/slugify";
 import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 export default function Header() {
   const route = useRouter();
   const { toggle, isOpen } = useSidebar();
   const { slug } = useParams();
   const { restaurant, fetchRestaurantData } = useRestaurantStore();
+  const { data: session } = useSession();
 
   console.log("Restaurant Slug:", slug);
 
   // Seu componente
-  useEffect(
-    () => {
-      const loadRestaurant = async () => {
-        try {
-          console.log("Tentando carregar restaurante com slug:", slug);
-          await fetchRestaurantData(String(slug));
-        } catch (error) {
-          console.error("Erro ao carregar restaurante:", error);
-        }
-      };
+  useEffect(() => {
+    const loadRestaurant = async () => {
+      try {
+        console.log("Tentando carregar restaurante com slug:", slug);
+        await fetchRestaurantData(String(slug));
+      } catch (error) {
+        console.error("Erro ao carregar restaurante:", error);
+      }
+    };
 
-      loadRestaurant();
-    },
-    [
-      /* suas dependências */
-    ],
-  );
+    loadRestaurant();
+  }, []);
 
-  // Use o nome do restaurante do store se disponível, senão use o nome extraído do slug
+  function redirectToHomePage() {
+    if (session) {
+      if (session?.user.role === "ADMIN") {
+        return route.push(`/admin/restaurant/${slug}/dashboard`);
+      } else if (session.user.role === "MANAGER") {
+        return route.push(`/admin/restaurant/${slug}/dashboard`);
+      } else {
+        return route.push(`/admin/restaurant/${slug}/attendant`);
+      }
+    }
+  }
+
   const displayName =
     restaurant?.name || (slug ? extractNameFromSlug(String(slug)) : "");
 
@@ -55,7 +63,7 @@ export default function Header() {
 
       <h2
         className="cursor-pointer text-center text-xl font-medium text-primary"
-        onClick={() => route.push(`/admin/restaurant/${slug}/dashboard`)}
+        onClick={() => redirectToHomePage()}
       >
         {displayName}
       </h2>

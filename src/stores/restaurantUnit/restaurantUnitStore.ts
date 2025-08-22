@@ -27,6 +27,7 @@ export interface RestaurantUnit {
 interface RestaurantUnitState {
     units: RestaurantUnit[];
     currentUnitId: string | null; 
+    fetchUnitById: (unitId: string, token: string) => Promise<RestaurantUnit | null>;
     fetchUnits: (restaurantId: string, token: string) => Promise<void>;
     fetchUnitByRestaurantId: (restaurantId: string) => Promise<string | null>;
     addUnit: (restaurantId: string, unitData: Omit<RestaurantUnit, 'id'>) => Promise<void>;
@@ -44,6 +45,47 @@ export const useRestaurantUnitStore = create<RestaurantUnitState>()(
             units: [],
             currentUnitId: null,
             setCurrentUnitId: (id) => set({ currentUnitId: id }),
+
+             fetchUnitById: async (unitId: string, token: string) => {
+             try {
+             const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL as string;
+             const baseHeaders = useAuthStore.getState().getHeaders();
+            
+             const res = await fetch(`${API_URL}/units/${unitId}`, {
+              headers: { ...baseHeaders, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+             });
+        
+            
+             if (!res.ok) throw new Error('Erro ao buscar unidade');
+             const data = await res.json();
+            
+             const normalized: RestaurantUnit = {
+             _id: data._id,
+             name: data.name,
+             manager: data.manager ?? '',
+             cnpj: data.cnpj ?? '',
+             status: (data.status ?? 'inactive') as RestaurantUnit['status'],
+             isTopSeller: !!data.isTopSeller,
+             isMatrix: !!data.isMatrix,
+             address: data.address ?? undefined,
+             };
+            
+             set((state) => {
+             const idx = state.units.findIndex((u) => u._id === normalized._id);
+             if (idx >= 0) {
+             const copy = [...state.units];
+             copy[idx] = { ...copy[idx], ...normalized };
+             return { units: copy };
+             }
+             return { units: [...state.units, normalized] };
+             });
+            
+             return normalized;
+             } catch (error) {
+             console.error('Erro ao buscar unidade por ID:', error);
+             return null;
+             }
+             },
 
             fetchUnits: async (restaurantId: string, token: string) => {
                 try {

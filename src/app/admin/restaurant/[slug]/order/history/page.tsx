@@ -19,13 +19,14 @@ export default function OrderHistoryPage() {
   const { isOpen } = useSidebar();
 
   const { data: session, status } = useSession();
+  const token = (session as any)?.token as string | undefined;
 
   if (isLoading) {
     return <DelayedLoading />;
   }
 
-  if (status !== "authenticated" || session.user.role === "ATTENDANT") {
-    router.push("/");
+  if (!token || status === "unauthenticated") {
+    router.push("/login");
     return null;
   }
 

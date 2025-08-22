@@ -66,7 +66,7 @@ export default function AddRestaurantUnit({
   restaurantId,
 }: iAddRestaurantUnit) {
   useFetchRestaurantInfo();
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isLoading } = useAuthStore();
   const { unitData, resetForm } = useRestaurantUnitFormStore();
   const router = useRouter();
   const { toast } = useToast();
@@ -78,11 +78,11 @@ export default function AddRestaurantUnit({
   const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push("/");
+    if (status === "unauthenticated") {
+      router.push("/login");
       return;
     }
-  }, [isLoading, isAuthenticated]);
+  }, [isLoading, status]);
 
   const handleNext = () => {
     if (step === 1) {
