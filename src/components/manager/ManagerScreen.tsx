@@ -56,6 +56,8 @@ const StatusColors: Record<OrderStatusType, string> = {
   [OrderStatus.PAID]: "bg-gray-200 text-gray-800",
 };
 
+const EDITABLE_TO_COMPLETE = new Set(["processing", "added", "reduced"]);
+
 export default function ManagerScreen({ slug }: ManagerScreenProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [everCompletedByOrder, setEverCompletedByOrder] = useState<
@@ -132,23 +134,6 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
     });
   }, [order, previousOrders]);
 
-  const cameFromCompleted = (order: Order, previousOrders: Order[]) => {
-    // 1) Preferência por flag explícita, se existir
-    // (caso você decida marcar isso no backend/meta futuramente)
-    // @ts-ignore - meta opcional
-    if (order?.meta?.passedCompleted) return true;
-
-    // 2) Verifica no snapshot anterior se esse pedido estava COMPLETED
-    const prev = previousOrders?.find((o) => o._id === order._id);
-    if (prev?.status === OrderStatus.COMPLETED) return true;
-
-    // 3) Fallbacks defensivos (casos de inconsistência)
-    if (prev?.items?.some((i) => i.status === "completed")) return true;
-    if (order.items?.some((i) => i.status === "completed")) return true;
-
-    return false;
-  };
-
   const handleRefresh = async () => {
     if (!restaurantId) return;
     setIsRefreshing(true);
@@ -170,10 +155,7 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
     if (!targetOrder || !restaurantId) return;
 
     try {
-      // 1) muda o status do PEDIDO
-      await updateOrderStatus(String(restaurantId), targetOrder._id, newStatus);
-
-      // 2) só muda ITEM quando o status tem equivalente em item
+      // mapeia status equivalente de item
       let itemStatus: OrderItemStatusType | null = null;
       if (newStatus === OrderStatus.PROCESSING)
         itemStatus = OrderItemStatus.PROCESSING;
@@ -181,14 +163,72 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
         itemStatus = OrderItemStatus.COMPLETED;
       else if (newStatus === OrderStatus.CANCELLED)
         itemStatus = OrderItemStatus.CANCELLED;
-      else itemStatus = null; // PAYMENT_REQUESTED, PAID => não mexe nos itens
+
+      // Estados que não mexem em item
+      if (
+        newStatus === OrderStatus.PAYMENT_REQUESTED ||
+        newStatus === OrderStatus.PAID
+      ) {
+        await updateOrderStatus(
+          String(restaurantId),
+          targetOrder._id,
+          newStatus,
+        );
+        return;
+      }
+
+      // 👉 COMPLETED / CANCELLED: primeiro itens, depois pedido
+      if (
+        newStatus === OrderStatus.COMPLETED ||
+        newStatus === OrderStatus.CANCELLED
+      ) {
+        const targets =
+          newStatus === OrderStatus.COMPLETED
+            ? // completar somente itens editáveis e com quantidade > 0
+              targetOrder.items.filter(
+                (it) =>
+                  EDITABLE_TO_COMPLETE.has(it.status) && (it.quantity ?? 0) > 0,
+              )
+            : // cancelar tudo que ainda não esteja cancelled/completed
+              targetOrder.items.filter(
+                (it) => it.status !== "completed" && it.status !== "cancelled",
+              );
+
+        if (itemStatus) {
+          await Promise.allSettled(
+            targets.map((it) =>
+              updateOrderItem(
+                String(restaurantId),
+                tableId,
+                targetOrder._id,
+                it._id,
+                { status: itemStatus },
+              ),
+            ),
+          );
+        }
+
+        await updateOrderStatus(
+          String(restaurantId),
+          targetOrder._id,
+          newStatus,
+        );
+        return;
+      }
+
+      // PROCESSING (ou outros que tenham equivalente de item): pedido primeiro, depois itens (se houver)
+      await updateOrderStatus(String(restaurantId), targetOrder._id, newStatus);
 
       if (itemStatus) {
-        await Promise.all(
-          targetOrder.items.map((it) =>
+        const targets = targetOrder.items.filter(
+          (it) => it.status !== "cancelled" && (it.quantity ?? 0) > 0,
+        );
+
+        await Promise.allSettled(
+          targets.map((it) =>
             updateOrderItem(
               String(restaurantId),
-              Number(tableId),
+              tableId,
               targetOrder._id,
               it._id,
               { status: itemStatus },
@@ -381,7 +421,7 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
   };
 
   return (
-    <div className="h-full max-h-screen w-full overflow-auto overflow-x-hidden bg-gray-50">
+    <div className="h-screen max-h-screen w-full overflow-auto overflow-x-hidden bg-gray-50">
       <div className="mx-auto h-screen w-full p-4">
         {/* Cabeçalho com botão atualizar */}
         <div className="mb-4 flex items-center justify-between px-6">

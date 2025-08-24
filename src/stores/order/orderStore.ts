@@ -122,6 +122,16 @@ interface OrderStore {
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 const token = useAuthStore.getState().token;
 
+function getSessionId(restaurantId: string, tableId: number, guestId: string) {
+  const key = `sess:${restaurantId}:${tableId}:${guestId}`;
+  let sid = localStorage.getItem(key);
+  if (!sid) {
+    sid = crypto.randomUUID();
+    localStorage.setItem(key, sid);
+  }
+  return sid;
+}
+
 const customStorage = {
     getItem: async (name: string) => {
         try {
@@ -237,25 +247,23 @@ export const useOrderStore = create(
                 meta,
                 totalAmount
             }) => {
+                const sid = getSessionId(String(restaurantId), Number(meta.tableId), guestInfo.id);
+
                 try {
-                    let sessionId = get().sessionId;
-
-                    if (!sessionId) {
-                        sessionId = uuidv4();
-                        get().setSessionId(sessionId);
-                    }
-
                     const response = await fetch(`${API_URL}/restaurant/${restaurantId}/order/initiate`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-session-id': sid,                 
+                            Authorization: `Bearer ${token}`,    
+                        },
                         body: JSON.stringify({
                             restaurantId,
                             restaurantUnitId,
                             guestInfo,
                             meta,
                             items,
-                            totalAmount,
-                            sessionId
+                            totalAmount
                         })
                     });
 
@@ -314,7 +322,7 @@ export const useOrderStore = create(
                     );
 
                     if (!response.ok) throw new Error('Erro ao buscar pedidos');
-                    
+
                     const data = await response.json();
 
                     const orders = Array.isArray(data) ? data : [];
@@ -596,7 +604,7 @@ export const useOrderStore = create(
                     }
 
                     const response = await fetch(
-                        `${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/item/${itemId}`, {
+                        `${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/items/${itemId}`, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',

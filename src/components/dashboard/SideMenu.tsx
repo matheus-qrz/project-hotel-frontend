@@ -27,9 +27,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { signOut } from "next-auth/react";
 import { useAuthStore } from "@/stores";
 import { handleLogout } from "@/utils/handleLogout";
+import { useSession } from "next-auth/react";
 
 interface NavItem {
   title: string;
@@ -47,7 +47,9 @@ export function Sidebar({ className }: SidebarProps) {
   const pathname = usePathname();
   const { setTheme } = useTheme();
   const { isOpen } = useSidebar();
-  const { role } = useAuthStore();
+  const { data: session } = useSession();
+
+  const role = session?.user.role;
 
   if (!isOpen) {
     return null;
