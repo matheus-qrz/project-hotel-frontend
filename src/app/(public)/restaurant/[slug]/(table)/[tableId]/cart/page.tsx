@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { extractIdFromSlug } from "@/utils/slugify";
-import { CartClient } from "@/components/cart";
+import { CartClient } from "@/components/cart/index";
 import { useProductStore } from "@/stores/products";
 
 export default function CartPage() {
