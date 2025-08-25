@@ -3,9 +3,8 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { CartItemProps } from '../cart';
 import { useAuthStore } from '../auth';
 import { OrderItemStatus, OrderItemStatusType, OrderStatus, OrderStatusType, OrderType } from './types/order.types';
-import { v4 as uuidv4 } from 'uuid';
 import { useTableStore } from './tableStore';
-import { useSession } from 'next-auth/react';
+import { getOrCreateOrderSessionId } from '@/utils/session';
 
 // ✅ Tipagens ajustadas com sessionId e store limpo (somente fluxo unificado)
 
@@ -121,6 +120,7 @@ interface OrderStore {
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 const token = useAuthStore.getState().token;
+const sessionId = getOrCreateOrderSessionId();
 
 const customStorage = {
     getItem: async (name: string) => {
@@ -238,28 +238,29 @@ export const useOrderStore = create(
                 totalAmount
             }) => {
                 try {
-                    let sessionId = get().sessionId;
-
-                    if (!sessionId) {
-                        sessionId = uuidv4();
-                        get().setSessionId(sessionId);
-                    }
-
                     const response = await fetch(`${API_URL}/restaurant/${restaurantId}/order/initiate`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${token}`,
+                            'x-session-id': sessionId ?? '',  
+                        },
                         body: JSON.stringify({
                             restaurantId,
-                            restaurantUnitId,
+                            restaurantUnitId: restaurantUnitId ?? restaurantId, // se tiver unidade, mande aqui; o backend já cai pro restaurantId se vier vazio
                             guestInfo,
                             meta,
                             items,
                             totalAmount,
-                            sessionId
-                        })
+                            // sessionId: NÃO precisa no body
+                        }),
                     });
 
-                    if (!response.ok) throw new Error('Erro ao enviar pedido');
+
+                    if (!response.ok) {
+                        const err = await response.json().catch(() => ({}));
+                        throw new Error(err?.message || 'Erro ao enviar pedido');
+                    }
 
                     const order = await response.json();
 
@@ -314,7 +315,7 @@ export const useOrderStore = create(
                     );
 
                     if (!response.ok) throw new Error('Erro ao buscar pedidos');
-                    
+
                     const data = await response.json();
 
                     const orders = Array.isArray(data) ? data : [];
@@ -596,7 +597,7 @@ export const useOrderStore = create(
                     }
 
                     const response = await fetch(
-                        `${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/item/${itemId}`, {
+                        `${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/items/${itemId}`, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',

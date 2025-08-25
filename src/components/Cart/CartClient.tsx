@@ -27,7 +27,7 @@ import { formatCurrency } from "@/utils/formatCurrency";
 
 export function CartClient() {
   const router = useRouter();
-  const { slug, tableId } = useParams();
+  const { slug, tableId, unitId } = useParams();
   const [observations, setObservations] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
@@ -80,9 +80,8 @@ export function CartClient() {
     setError(null);
 
     try {
-      const orderData = {
+      const orderData: any = {
         restaurantId: String(restaurantId),
-        restaurantUnitId: undefined,
         tableId: Number(tableId),
         items: items.map((item) => ({
           ...item,
@@ -109,6 +108,8 @@ export function CartClient() {
         },
         totalAmount: getTotal(),
       };
+
+      if (unitId) orderData.restaurantUnitId = String(unitId);
 
       const submittedOrder = await submitOrderUnified(orderData);
 
