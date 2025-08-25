@@ -18,7 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CartItem } from "@/components/cart/index";
+import { CartItem } from "@/components/cart/CartItem";
 import { useCartStore, useGuestStore, useOrderStore } from "@/stores";
 import { extractIdFromSlug } from "@/utils/slugify";
 import { OrderItemStatus } from "@/stores/order/types/order.types";

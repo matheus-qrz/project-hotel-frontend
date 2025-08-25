@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Order, OrderItem } from "./types";
 import { useOrderStore } from "@/stores";
 import { extractIdFromSlug } from "@/utils/slugify";
-import { StatusTexts } from "@/components/cart/index";
+import { StatusTexts } from "@/components/cart/constants";
 import { Trash2, AlertCircle } from "lucide-react";
 import {
   AlertDialog,
