@@ -25,7 +25,7 @@ import { OrderItemStatus } from "@/stores/order/types/order.types";
 import { generateOrGetGuestId } from "@/utils/guestId";
 import { formatCurrency } from "@/utils/formatCurrency";
 
-export function CartClient() {
+export const CartClient = () => {
   const router = useRouter();
   const { slug, tableId, unitId } = useParams();
   const [observations, setObservations] = useState("");
@@ -387,4 +387,4 @@ export function CartClient() {
       </AlertDialog>
     </div>
   );
-}
+};
