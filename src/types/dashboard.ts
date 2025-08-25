@@ -88,32 +88,28 @@ export interface CustomersDashboardData {
 }
 
 // --- Promoções ---
+export type MonthlyUsagePoint = { month: string; value: number };
+
 export type TopPromotion = {
-    name: string;
-    totalSold: number;
-    revenue?: number;
+  id?: string;
+  name: string;
+  totalSold: number;
 };
 
-export type PromotionMonthlyReport = {
-    month: string;
-    value: number
-}[];
-
-export interface PromotionsDashboardData {
-    totalPromotions: number;
-    activePromotions: number;
-    expiredPromotions: number;
-    conversionRate: number;
-    conversionChange: number;
-    avgDiscount: number;
-    discountChange: number;
-    roi: number;
-    roiChange: number;
-    cpa: number;
-    cpaChange: number;
-    revenue: number;
-    revenueChange: number;
-    topPromotions: TopPromotion[];
-    monthlyUsage: PromotionMonthlyReport[];
+export interface PromotionsSummary {
+  activePromotions: number;
+  conversionRate: number;
+  conversionChange: number;
+  avgDiscount: number;
+  discountChange: number;
+  roi: number;
+  roiChange: number;
+  cpa: number;
+  cpaChange: number;
+  revenue: number;
+  revenueChange: number;
+  monthlyUsage: MonthlyUsagePoint[];
+  topPromotions: TopPromotion[];
 }
+
 

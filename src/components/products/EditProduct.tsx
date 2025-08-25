@@ -249,9 +249,9 @@ export default function ProductEdit() {
                 {/* Left Column - Image */}
                 <div className="space-y-4">
                   <div className="aspect-square w-full overflow-hidden rounded-lg bg-gray-100">
-                    {/* 1) Se escolheu arquivo agora: usa <img> com blob URL (apenas preview) */}
+                    {/* 1) Se escolheu arquivo agora: usa <Image> com blob URL (apenas preview) */}
                     {previewUrl ? (
-                      <img
+                      <Image
                         src={previewUrl}
                         alt="Preview"
                         className="h-full w-full object-cover"

@@ -3,9 +3,8 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { CartItemProps } from '../cart';
 import { useAuthStore } from '../auth';
 import { OrderItemStatus, OrderItemStatusType, OrderStatus, OrderStatusType, OrderType } from './types/order.types';
-import { v4 as uuidv4 } from 'uuid';
 import { useTableStore } from './tableStore';
-import { useSession } from 'next-auth/react';
+import { getOrCreateOrderSessionId } from '@/utils/session';
 
 // ✅ Tipagens ajustadas com sessionId e store limpo (somente fluxo unificado)
 
@@ -121,16 +120,7 @@ interface OrderStore {
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 const token = useAuthStore.getState().token;
-
-function getSessionId(restaurantId: string, tableId: number, guestId: string) {
-  const key = `sess:${restaurantId}:${tableId}:${guestId}`;
-  let sid = localStorage.getItem(key);
-  if (!sid) {
-    sid = crypto.randomUUID();
-    localStorage.setItem(key, sid);
-  }
-  return sid;
-}
+const sessionId = getOrCreateOrderSessionId();
 
 const customStorage = {
     getItem: async (name: string) => {
@@ -247,27 +237,30 @@ export const useOrderStore = create(
                 meta,
                 totalAmount
             }) => {
-                const sid = getSessionId(String(restaurantId), Number(meta.tableId), guestInfo.id);
-
                 try {
                     const response = await fetch(`${API_URL}/restaurant/${restaurantId}/order/initiate`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'x-session-id': sid,                 
-                            Authorization: `Bearer ${token}`,    
+                            Authorization: `Bearer ${token}`,
+                            'x-session-id': sessionId ?? '',  
                         },
                         body: JSON.stringify({
                             restaurantId,
-                            restaurantUnitId,
+                            restaurantUnitId: restaurantUnitId ?? restaurantId, // se tiver unidade, mande aqui; o backend já cai pro restaurantId se vier vazio
                             guestInfo,
                             meta,
                             items,
-                            totalAmount
-                        })
+                            totalAmount,
+                            // sessionId: NÃO precisa no body
+                        }),
                     });
 
-                    if (!response.ok) throw new Error('Erro ao enviar pedido');
+
+                    if (!response.ok) {
+                        const err = await response.json().catch(() => ({}));
+                        throw new Error(err?.message || 'Erro ao enviar pedido');
+                    }
 
                     const order = await response.json();
 

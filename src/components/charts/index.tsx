@@ -23,10 +23,12 @@ interface ReusableChartProps {
   height?: number | string;
   barColor: string; // Cor principal para todas as barras
   highlightColor?: string; // Cor para destacar (se não fornecida, usa a cor principal)
+  showValueLabels?: boolean;
   currentMonth?: string; // Mês atual para destacar (se não fornecido, usa o último mês)
   valuePrefix?: string; // Prefixo para valores (ex: "R$", "")
   highlightIndex?: number; // Índice opcional para destacar uma barra específica
   hideLegend?: boolean; // Opção para esconder a legenda
+  yDomain?: [number, number] | "auto";
 }
 
 function normalizeMonth(m?: string) {
@@ -40,9 +42,11 @@ export function Chart({
   height = 300,
   barColor,
   highlightColor,
+  showValueLabels = true,
   currentMonth,
   valuePrefix = "R$",
   highlightIndex,
+  yDomain = "auto",
 }: ReusableChartProps) {
   const [mounted, setMounted] = useState(false);
   const { theme } = useTheme();
@@ -82,6 +86,13 @@ export function Chart({
   // Obtém o valor máximo para configurar o domínio
   const maxValue = Math.max(...data.map((item) => item.value || 0));
 
+  const values = data.map((d) => Number(d.value || 0));
+  const max = Math.max(0, ...values);
+  const domain: [number, number] =
+    yDomain === "auto" ? [0, max === 0 ? 1 : Math.ceil(max * 1.1)] : yDomain;
+
+  const hasData = max > 0;
+
   // Define a cor do texto baseada no tema
   const textColor = isDarkTheme ? "#FAFAFA" : "#171717"; // Usando valores do tema
   const tooltipTextColor = isDarkTheme ? "#3F3F46" : "#e2e8f0";
@@ -114,7 +125,7 @@ export function Chart({
             />
             <YAxis
               hide
-              domain={[0, maxValue * 1.1]}
+              domain={domain}
             />
             <Tooltip
               formatter={(value) => [formatValue(value as number), ""]}
@@ -129,8 +140,9 @@ export function Chart({
             />
             <Bar
               dataKey="value"
-              radius={[4, 4, 0, 0]}
+              radius={[6, 6, 0, 0]}
               barSize={56}
+              minPointSize={hasData ? 0 : 2}
             >
               {data.map((entry, index) => (
                 <Cell

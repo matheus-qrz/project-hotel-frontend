@@ -1,45 +1,32 @@
-import { SignJWT, jwtVerify } from "jose";
-import { cookies } from "next/headers";
+// src/utils/orderSession.ts
+export const ORDER_SESSION_KEY = 'orderSessionId';
 
-const secretKey = process.env.NEXTAUTH_SECRET;
-const encodedKey = new TextEncoder().encode(secretKey);
-
-export async function createSession(userId: string) {
-    const session = await encrypt({ userId });
-
-    (await cookies()).set("session", session, {
-        httpOnly: true,
-        secure: true,
-    });
+function genId() {
+  try {
+    // moderno e único:
+    return crypto.randomUUID();
+  } catch {
+    // fallback
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
 }
 
-export async function deleteSession() {
-    (await cookies()).delete("session");
+export function getOrCreateOrderSessionId(): string {
+  if (typeof window === 'undefined') {
+    // em SSR não crie nada; deixe para o cliente
+    return '';
+  }
+  let id = localStorage.getItem(ORDER_SESSION_KEY);
+  if (!id) {
+    id = genId();
+    try { localStorage.setItem(ORDER_SESSION_KEY, id); } catch {}
+  }
+  return id;
 }
 
-type SessionPayload = {
-    userId: string;
-};
-
-export async function encrypt(payload: SessionPayload) {
-    return new SignJWT(payload)
-        .setProtectedHeader({ alg: "HS256" })
-        .setIssuedAt()
-        .sign(encodedKey);
-}
-
-export async function decrypt(session: string | undefined = "") {
-    if (!session || session.trim() === "") {
-        return null;
-    }
-
-    try {
-        const { payload } = await jwtVerify(session, encodedKey, {
-            algorithms: ["HS256"],
-        });
-        return payload;
-    } catch (error) {
-        console.log("Failed to verify session");
-        return null;
-    }
+// use só quando quiser *invalidar* a sessão do pedido (ex.: ao fechar a conta/mesa)
+export function clearOrderSessionId() {
+  if (typeof window !== 'undefined') {
+    try { localStorage.removeItem(ORDER_SESSION_KEY); } catch {}
+  }
 }
