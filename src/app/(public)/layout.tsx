@@ -1,23 +1,21 @@
-import RootLayout from "@/layout";
 import "../globals.css";
 
 export const metadata = {
-    title: "Seu Garçom",
-    description: "Frontend",
+  title: "Seu Garçom",
+  description: "Frontend",
 };
 
-export default function PublicLayout({
-    children,
-    params
+export default async function PublicLayout({
+  children,
+  params,
 }: {
-    children: React.ReactNode,
-    params: { locale: string }
+  children: React.ReactNode;
+  params: Promise<{ locale?: string }>;
 }) {
-    return (
-        <html lang={params.locale}>
-            <RootLayout>
-                {children}
-            </RootLayout>
-        </html>
-    );
+  const { locale } = await params;
+  return (
+    <html lang={locale ?? "pt-BR"}>
+      <body>{children}</body>
+    </html>
+  );
 }

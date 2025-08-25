@@ -8,10 +8,11 @@ import { useSession } from "next-auth/react";
 import { DelayedLoading } from "@/components/loading/DelayedLoading";
 import { useAuthStore } from "@/stores";
 
-export function EditEmployeePage() {
+export default function EditEmployeePage() {
   const { slug, employeeId } = useParams();
   const router = useRouter();
   const { isLoading } = useAuthStore();
+
   const { data: session, status } = useSession();
   const token = (session as any)?.token as string | undefined;
 

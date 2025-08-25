@@ -1,4 +1,4 @@
-import { CustomersDashboardData, FinancialDashboardData, OrdersDashboardData, PromotionsDashboardData } from '@/types/dashboard';
+import { CustomersDashboardData, FinancialDashboardData, OrdersDashboardData, PromotionsSummary } from '@/types/dashboard';
 import { create } from 'zustand';
 
 interface DashboardState {
@@ -6,7 +6,7 @@ interface DashboardState {
         orders: OrdersDashboardData,
         financial?: FinancialDashboardData;
         customers?: CustomersDashboardData;
-        promotions?: PromotionsDashboardData;
+        promotions?: PromotionsSummary;
     };
     isLoading: boolean;
     error: string | null;

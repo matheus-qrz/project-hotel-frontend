@@ -34,8 +34,7 @@ const StatusTexts = {
   paid: "Pago",
 };
 
-export function OrderHistory({ slug }: OrderHistoryProps) {
-  const [isRefreshing, setIsRefreshing] = useState(false);
+export default function OrderHistory({ slug }: OrderHistoryProps) {
   const { order, fetchRestaurantUnitOrders } = useOrderStore();
   const { currentUnitId } = useRestaurantUnitStore();
 
@@ -54,31 +53,6 @@ export function OrderHistory({ slug }: OrderHistoryProps) {
       return () => clearInterval(interval);
     }
   }, [restaurantId, currentUnitId]);
-
-  const handleRefresh = async () => {
-    if (!restaurantId) {
-      console.log("Faltam parâmetros para atualização:", {
-        restaurantId,
-        currentUnitId,
-      });
-      return;
-    }
-
-    console.log("Iniciando atualização manual com:", {
-      restaurantId,
-      currentUnitId,
-    });
-
-    try {
-      await fetchRestaurantUnitOrders(
-        restaurantId,
-        currentUnitId ? String(currentUnitId) : "",
-      );
-      console.log("Atualização concluída");
-    } catch (error) {
-      console.error("Erro na atualização manual:", error);
-    }
-  };
 
   const getStatusColor = (status: OrderStatus) => {
     const colors = {
@@ -175,33 +149,18 @@ export function OrderHistory({ slug }: OrderHistoryProps) {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gray-50">
-      <div className="mx-auto w-full p-6">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Histórico de Pedidos</h1>
-          <Button
-            onClick={handleRefresh}
-            className="flex items-center gap-2"
-            variant="outline"
-            disabled={isRefreshing}
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
-            />
-            {isRefreshing ? "Atualizando..." : "Atualizar Pedidos"}
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-6 md:grid-cols-2">
-          <div className="min-h-[calc(100vh-200px)] overflow-y-auto rounded-lg bg-white p-6 shadow-sm">
-            <h2 className="sticky top-0 mb-6 bg-white py-2 text-lg font-semibold">
+    <div className="h-screen w-full bg-gray-50">
+      <div className="mx-auto w-full p-2">
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-2">
+          <div className="max-h-[calc(100vh-200px)] overflow-y-auto rounded-lg bg-white p-6 shadow-sm">
+            <h2 className="top-0 mb-6 bg-white py-2 text-xl font-semibold">
               Pagos
             </h2>
             <div className="space-y-4">{renderOrders(["paid"])}</div>
           </div>
 
-          <div className="min-h-[calc(100vh-200px)] overflow-y-auto rounded-lg bg-white p-6 shadow-sm">
-            <h2 className="sticky top-0 mb-6 bg-white py-2 text-lg font-semibold">
+          <div className="max-h-[calc(100vh-200px)] overflow-y-auto rounded-lg bg-white p-6 shadow-sm">
+            <h2 className="top-0 mb-6 bg-white py-2 text-xl font-semibold">
               Cancelados
             </h2>
             <div className="space-y-4">{renderOrders(["cancelled"])}</div>
@@ -211,5 +170,3 @@ export function OrderHistory({ slug }: OrderHistoryProps) {
     </div>
   );
 }
-
-export default OrderHistory;

@@ -27,7 +27,7 @@ import {
   OrderStatusType,
   OrderItemStatusType,
 } from "@/stores/order/types/order.types";
-import { clearSessionId } from "@/utils/session";
+import { clearOrderSessionId } from "@/utils/session";
 
 interface ManagerScreenProps {
   slug: string;
@@ -175,11 +175,7 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
           targetOrder._id,
           newStatus,
         );
-        clearSessionId(
-          String(restaurantId),
-          Number(tableId),
-          String(targetOrder.guestInfo.id),
-        );
+        clearOrderSessionId();
         return;
       }
 

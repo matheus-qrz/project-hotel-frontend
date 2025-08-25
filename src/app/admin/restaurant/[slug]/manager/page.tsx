@@ -17,15 +17,13 @@ export default function ManagerPage() {
   const router = useRouter();
   const { isOpen } = useSidebar();
   const { slug } = useParams();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const token = (session as any)?.token as string | undefined;
 
   useEffect(() => {
     const t = (session as any)?.token ?? null;
     useAuthStore.getState().setToken(t);
   }, [session]);
-
-  const restaurantId = slug && extractIdFromSlug(String(slug));
 
   if (!token || status === "unauthenticated") {
     router.push("/login");

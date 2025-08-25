@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Book } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { DelayedLoading } from "@/components/loading/DelayedLoading";
-import { GuestLogin } from "@/components/login";
+import GuestLogin from "@/components/login/GuestLogin";
 import { useGuestStore } from "@/stores/auth/guestStore";
 import { v4 as uuidv4 } from "uuid";
 

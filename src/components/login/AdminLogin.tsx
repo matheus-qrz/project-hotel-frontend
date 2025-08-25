@@ -12,7 +12,7 @@ import { DelayedLoading } from "@/components/loading/DelayedLoading";
 import { getSession, signIn } from "next-auth/react";
 import { generateRestaurantSlug } from "@/utils/slugify";
 
-export function AdminLogin() {
+export default function AdminLogin() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -162,7 +162,7 @@ export function AdminLogin() {
             <p>Não tem uma conta?</p>
             <Link
               href="/admin/register"
-              className="mt-2 block rounded-md border border-gray-300 px-4 py-2 hover:bg-gray-50"
+              className="text-md mt-2 block rounded-md border border-gray-300 px-4 py-2 font-semibold text-primary hover:bg-primary hover:text-secondary"
             >
               Criar uma conta agora
             </Link>
