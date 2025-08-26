@@ -1,21 +1,18 @@
+// app/auth/redirect/page.tsx
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
-import { generateRestaurantSlug } from "@/utils/slugify";
 
-export default async function AfterLogin() {
+export default async function AuthRedirect() {
   const session = await getServerSession(authOptions);
+  if (!session) redirect("/login?error=SessionMissing");
 
-  if (!session?.user) redirect("/login");
+  const slug =
+    (session.user as any)?.restaurantSlug || (session as any).restaurantSlug;
 
-  const u: any = session.user;
-  const slug = u?.restaurantName
-    ? generateRestaurantSlug(u.restaurantName, u.restaurantId)
-    : u?.restaurantId;
+  if (!slug) {
+    redirect("/admin/register?missing=slug");
+  }
 
-  if (u?.role === "ADMIN") redirect(`/admin/restaurant/${slug}/dashboard`);
-  if (u?.role === "MANAGER") redirect(`/admin/restaurant/${slug}/manager`);
-
-  // fallback:
-  redirect("/");
+  redirect(`/admin/restaurant/${encodeURIComponent(slug)}/dashboard`);
 }

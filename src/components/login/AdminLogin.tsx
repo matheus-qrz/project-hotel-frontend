@@ -25,31 +25,11 @@ export default function AdminLogin() {
     setError("");
 
     try {
-      const result = await signIn("credentials", {
+      await signIn("credentials", {
         email,
         password,
-        redirect: true,
-        callbackUrl: "/auth/redirect",
+        redirect: false,
       });
-      if (!result || result.error)
-        throw new Error(result?.error || "Falha na autenticação");
-
-      // Sessão válida -> pega dados do NextAuth
-      const session = await getSession();
-
-      // Mantém Zustand em sincronia
-      updateFromSession(session);
-
-      // Redireciona
-      const user = session?.user as any;
-      const slug = user?.restaurantName
-        ? generateRestaurantSlug(user.restaurantName, user.restaurantId)
-        : user?.restaurantId;
-
-      if (user?.role === "ADMIN")
-        router.push(`/admin/restaurant/${slug}/dashboard`);
-      else if (user?.role === "MANAGER")
-        router.push(`/admin/restaurant/${slug}/manager`);
     } catch (err) {
       console.error(err);
       setError("Erro ao processar login");
