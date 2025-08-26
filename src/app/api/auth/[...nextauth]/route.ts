@@ -3,7 +3,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_API_URL!;
-const LOGIN_PATH = process.env.BACKEND_LOGIN_PATH || "/auth/login"; // ajuste se seu backend usa outro path
+const LOGIN_PATH = process.env.BACKEND_LOGIN_PATH || "/login"; // ajuste se seu backend usa outro path
 
 function pickToken(d: any) {
   return d?.token ?? d?.access_token ?? d?.jwt ?? d?.data?.token ?? null;
