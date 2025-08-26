@@ -3,7 +3,7 @@ import { type NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
 const BACKEND = (process.env.NEXT_PUBLIC_BACKEND_API_URL || "").replace(/\/+$/, "");
-const LOGIN_PATH = process.env.BACKEND_LOGIN_PATH || "/api/auth/login"; // ajuste se precisar
+const LOGIN_PATH = process.env.BACKEND_LOGIN_PATH || "/login"; // ajuste se precisar
 
 function pickToken(d: any) {
   return d?.token ?? d?.access_token ?? d?.jwt ?? d?.data?.token ?? null;
