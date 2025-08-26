@@ -1,44 +1,44 @@
-'use client';
+// app/api/auth/error/page.tsx  (ou mova para /auth/error, ver nota no fim)
+import Link from "next/link";
 
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+type Search = { error?: string };
 
-export default function AuthError() {
-    const searchParams = useSearchParams();
-    const [error, setError] = useState<string>('');
+function mapError(code?: string) {
+  switch (code) {
+    case "Configuration":
+      return {
+        title: "Configuração inválida",
+        msg: "Verifique as credenciais do provedor.",
+      };
+    case "AccessDenied":
+      return { title: "Acesso negado", msg: "Sua conta não tem permissão." };
+    case "Verification":
+      return { title: "Link inválido/expirado", msg: "Solicite um novo link." };
+    default:
+      return { title: "Falha na autenticação", msg: "Tente novamente." };
+  }
+}
 
-    useEffect(() => {
-        const errorParam = searchParams.get('error');
-        if (errorParam) {
-            switch (errorParam) {
-                case 'CredentialsSignin':
-                    setError('Email ou senha inválidos');
-                    break;
-                case 'SessionRequired':
-                    setError('Login necessário para acessar esta página');
-                    break;
-                default:
-                    setError(`Erro de autenticação: ${errorParam}`);
-                    break;
-            }
-        } else {
-            setError('Ocorreu um erro durante a autenticação');
-        }
-    }, [searchParams]);
+export default async function ErrorPage({
+  searchParams,
+}: {
+  searchParams: Promise<Search>;
+}) {
+  const { error } = await searchParams;
+  const { title, msg } = mapError(error);
 
-    return (
-        <div className="flex flex-col items-center justify-center min-h-screen p-4">
-            <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-md">
-                <h1 className="text-2xl font-bold text-red-600 mb-4">Erro de autenticação</h1>
-                <p className="text-gray-700 mb-6">{error}</p>
-                <Link
-                    href="/login"
-                    className="block w-full py-2 px-4 text-center bg-black text-white rounded hover:bg-gray-800"
-                >
-                    Voltar para o login
-                </Link>
-            </div>
-        </div>
-    );
+  return (
+    <main className="mx-auto max-w-md p-6">
+      <h1 className="text-xl font-semibold">{title}</h1>
+      <p className="mt-2 text-muted-foreground">{msg}</p>
+      <div className="mt-6">
+        <Link
+          href="/login"
+          className="underline"
+        >
+          Voltar ao login
+        </Link>
+      </div>
+    </main>
+  );
 }

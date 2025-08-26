@@ -1,5 +1,6 @@
 // next.config.ts
 import type { NextConfig } from 'next';
+import path from 'path';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -11,6 +12,15 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'backend-production-1beb9.up.railway.app', pathname: '/**' },
       { protocol: 'https', hostname: 'seugarcom-frontend-a2wf99iwv-seugarcomprods-projects.vercel.app', pathname: '/**' }
     ],
+  },
+
+  webpack: (config) => {
+    // ✅ alias absoluto: '@/...' -> 'src/...'
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      '@': path.resolve(__dirname, 'src'),
+    };
+    return config;
   },
 
   async rewrites() {

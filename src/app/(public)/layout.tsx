@@ -1,3 +1,4 @@
+import QueryProvider from "@/providers/queryProvider";
 import "../globals.css";
 
 export const metadata = {
@@ -15,7 +16,9 @@ export default async function PublicLayout({
   const { locale } = await params;
   return (
     <html lang={locale ?? "pt-BR"}>
-      <body>{children}</body>
+      <body>
+        <QueryProvider>{children}</QueryProvider>
+      </body>
     </html>
   );
 }
