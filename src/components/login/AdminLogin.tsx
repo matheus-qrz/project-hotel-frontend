@@ -11,9 +11,10 @@ import { useAuthStore } from "@/stores/auth";
 import { DelayedLoading } from "@/components/loading/DelayedLoading";
 import { getSession, signIn } from "next-auth/react";
 import { generateRestaurantSlug } from "@/utils/slugify";
+import { useToast } from "@/hooks/useToast";
 
 export default function AdminLogin() {
-  const router = useRouter();
+  const toast = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -28,11 +29,16 @@ export default function AdminLogin() {
       await signIn("credentials", {
         email,
         password,
-        redirect: false,
+        redirect: true,
       });
     } catch (err) {
       console.error(err);
       setError("Erro ao processar login");
+      toast.toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível realizar o login",
+      });
     } finally {
       setLoading(false);
     }
