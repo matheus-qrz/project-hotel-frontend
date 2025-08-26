@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
     // se você em algum lugar usar URL ABSOLUTA do backend:
     remotePatterns: [
       { protocol: 'https', hostname: 'backend-production-1beb9.up.railway.app', pathname: '/**' },
-      { protocol: 'https', hostname: 'https://frontend-5byjf0k1a-seugarcomprods-projects.vercel.app/', pathname: '/**' }
+      { protocol: 'https', hostname: 'frontend-5byjf0k1a-seugarcomprods-projects.vercel.app/', pathname: '/**' }
     ],
   },
 
