@@ -28,7 +28,8 @@ export default function AdminLogin() {
       const result = await signIn("credentials", {
         email,
         password,
-        redirect: false,
+        redirect: true,
+        callbackUrl: "/auth/redirect",
       });
       if (!result || result.error)
         throw new Error(result?.error || "Falha na autenticação");
