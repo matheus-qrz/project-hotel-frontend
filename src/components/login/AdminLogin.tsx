@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
@@ -9,8 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth";
 import { DelayedLoading } from "@/components/loading/DelayedLoading";
-import { getSession, signIn } from "next-auth/react";
-import { generateRestaurantSlug } from "@/utils/slugify";
+import { signIn } from "next-auth/react";
 import { useToast } from "@/hooks/useToast";
 
 export default function AdminLogin() {
@@ -30,6 +28,7 @@ export default function AdminLogin() {
         email,
         password,
         redirect: true,
+        callbackUrl: "/auth/redirect",
       });
     } catch (err) {
       console.error(err);

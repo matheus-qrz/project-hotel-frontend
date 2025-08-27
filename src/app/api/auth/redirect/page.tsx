@@ -1,18 +1,36 @@
 // app/auth/redirect/page.tsx
-import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+"use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { generateRestaurantSlug } from "@/utils/slugify";
 
-export default async function AuthRedirect() {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/login?error=SessionMissing");
+export default function AuthRedirect() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
 
-  const slug =
-    (session.user as any)?.restaurantSlug || (session as any).restaurantSlug;
+  useEffect(() => {
+    if (status === "loading") return;
 
-  if (!slug) {
-    redirect("/admin/register?missing=slug");
-  }
+    const user = session?.user as any;
+    const info = user?.restaurantInfo;
+    const role = user?.role as string | undefined;
 
-  redirect(`/admin/restaurant/${encodeURIComponent(slug)}/dashboard`);
+    const slug =
+      user?.restaurantSlug ??
+      (info
+        ? generateRestaurantSlug(info.restaurantName, info.restaurantId)
+        : null);
+
+    // Destino por role
+    const path = slug
+      ? role === "MANAGER"
+        ? `/admin/restaurant/${slug}/manager`
+        : `/admin/restaurant/${slug}/dashboard`
+      : "/admin";
+
+    router.replace(path);
+  }, [status, session, router]);
+
+  return null;
 }
