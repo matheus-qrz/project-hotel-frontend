@@ -56,6 +56,6 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  pages: { signIn: "/admin/login" },
+  pages: { signIn: "/login" },
   debug: process.env.NODE_ENV !== "production",
 };
