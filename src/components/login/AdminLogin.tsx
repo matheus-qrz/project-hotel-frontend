@@ -8,10 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth";
 import { DelayedLoading } from "@/components/loading/DelayedLoading";
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import { useToast } from "@/hooks/useToast";
+import { generateRestaurantSlug } from "@/utils/slugify";
+import { useRouter } from "next/navigation";
 
 export default function AdminLogin() {
+  const router = useRouter();
   const toast = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,20 +27,33 @@ export default function AdminLogin() {
     setError("");
 
     try {
-      await signIn("credentials", {
+      const result = await signIn("credentials", {
         email,
         password,
-        redirect: true,
-        callbackUrl: "/auth/redirect",
+        redirect: false,
       });
+      if (!result || result.error)
+        throw new Error(result?.error || "Falha na autenticação");
+
+      // Sessão válida -> pega dados do NextAuth
+      const session = await getSession();
+
+      // Mantém Zustand em sincronia
+      updateFromSession(session);
+
+      // Redireciona
+      const user = session?.user as any;
+      const slug = user?.restaurantName
+        ? generateRestaurantSlug(user.restaurantName, user.restaurantId)
+        : user?.restaurantId;
+
+      if (user?.role === "ADMIN")
+        router.push(`/admin/restaurant/${slug}/dashboard`);
+      else if (user?.role === "MANAGER")
+        router.push(`/admin/restaurant/${slug}/manager`);
     } catch (err) {
       console.error(err);
       setError("Erro ao processar login");
-      toast.toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível realizar o login",
-      });
     } finally {
       setLoading(false);
     }
