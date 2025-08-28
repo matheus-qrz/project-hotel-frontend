@@ -63,7 +63,7 @@ export default function EmployeeList() {
 
   const [filteredEmployees, setFilteredEmployees] = useState(employees);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRole, setSelectedRole] = useState<string>("");
+  const [selectedRole, setSelectedRole] = useState<string>("ALL");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<IEmployee | null>(
     null,
@@ -103,7 +103,8 @@ export default function EmployeeList() {
         (employee.email || "").toLowerCase().includes(query) ||
         formatRole(role).toLowerCase().includes(query);
 
-      const matchesRole = selectedRole === "ALL" || role === selectedRole;
+      const matchesRole =
+        selectedRole === "ALL" || selectedRole === "" || role === selectedRole;
 
       return matchesSearch && matchesRole;
     });
