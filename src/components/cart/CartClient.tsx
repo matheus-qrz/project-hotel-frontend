@@ -83,6 +83,7 @@ export const CartClient = () => {
       const orderData: any = {
         restaurantId: String(restaurantId),
         tableId: Number(tableId),
+        isGuest: guestInfo ? true : false,
         items: items.map((item) => ({
           ...item,
           status: OrderItemStatus.ADDED,
