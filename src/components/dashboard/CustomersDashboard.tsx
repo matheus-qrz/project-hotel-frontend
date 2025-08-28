@@ -70,8 +70,6 @@ export function CustomersDashboard() {
   }
 
   if (error) return <div className="p-3 text-red-500">Erro: {error}</div>;
-  if (!data?.customers)
-    return <div className="p-3">Nenhum dado disponível</div>;
 
   const { summary, customerReport, topCustomers } =
     data.customers as CustomersDashboardData;

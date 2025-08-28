@@ -68,8 +68,6 @@ export function PromotionsDashboard() {
 
   if (isLoading) return <DelayedLoading />;
   if (error) return <div className="p-3 text-red-500">Erro: {error}</div>;
-  if (!data?.promotions)
-    return <div className="p-3">Nenhum dado disponível</div>;
 
   const {
     activePromotions = 0,
