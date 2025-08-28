@@ -121,7 +121,7 @@ export function PromotionsDashboard() {
   const avgUses = totalUses / (series.length || 1);
 
   // top promoções com participação
-  const topSorted = [...promotions.topPromotions].sort(
+  const topSorted = [...(promotions.topPromotions ?? [])].sort(
     (a, b) => (b?.totalSold ?? 0) - (a?.totalSold ?? 0),
   );
   const topTotal =

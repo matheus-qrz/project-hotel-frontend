@@ -40,7 +40,7 @@ function buildLastMonthsSeries(
   const start = startOfMonth(subMonths(new Date(), monthsCount - 1));
   const look = new Map(
     source.map((it) => [
-      String(it.month).toLowerCase().slice(0, 3),
+      String(it.month).substring(0, 3).toLowerCase(),
       Number(it.count) || 0,
     ]),
   );
