@@ -25,7 +25,7 @@ import { OrderItemStatus } from "@/stores/order/types/order.types";
 import { generateOrGetGuestId } from "@/utils/guestId";
 import { formatCurrency } from "@/utils/formatCurrency";
 
-export function CartClient() {
+export const CartClient = () => {
   const router = useRouter();
   const { slug, tableId, unitId } = useParams();
   const [observations, setObservations] = useState("");
@@ -83,6 +83,7 @@ export function CartClient() {
       const orderData: any = {
         restaurantId: String(restaurantId),
         tableId: Number(tableId),
+        isGuest: guestInfo ? true : false,
         items: items.map((item) => ({
           ...item,
           status: OrderItemStatus.ADDED,
@@ -387,4 +388,4 @@ export function CartClient() {
       </AlertDialog>
     </div>
   );
-}
+};

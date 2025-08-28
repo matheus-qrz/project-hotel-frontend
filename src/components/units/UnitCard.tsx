@@ -1,24 +1,36 @@
-'use client'
+"use client";
 
 import { useEffect, useState } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowRight, Flame } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useParams, useRouter } from "next/navigation";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Flame, Pencil, Trash2, Eye } from "lucide-react";
+import { formatCnpj } from "@/utils/formatCnpj";
 
 export type UnitStatus = "active" | "outOfHours" | "inactive";
 
 export interface UnitCardProps {
   _id: string;
   name: string;
-  manager: string;
-  cnpj: string;
+  manager?: string;
+  cnpj?: string;
   status: UnitStatus;
   isMatrix?: boolean;
   isTopSeller?: boolean;
   isSelected: boolean;
   selectAll: boolean;
   onToggleSelection: (checked: boolean) => void;
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 export default function UnitCard({
@@ -27,21 +39,24 @@ export default function UnitCard({
   manager,
   cnpj,
   status,
+  isMatrix = false,
   isTopSeller = false,
   isSelected,
   selectAll,
-  onToggleSelection
+  onToggleSelection,
+  onDelete,
 }: UnitCardProps) {
   const router = useRouter();
   const { slug } = useParams();
   const [selected, setSelected] = useState(isSelected);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (selectAll && !selected) {
       setSelected(true);
       onToggleSelection(true);
     }
-  }, [selectAll]);
+  }, [selectAll]); // eslint-disable-line
 
   useEffect(() => {
     setSelected(isSelected);
@@ -53,51 +68,110 @@ export default function UnitCard({
     onToggleSelection(newSelected);
   };
 
-  const handleViewDetails = () => {
-    router.push(`/admin/restaurant/${slug}/units/${_id}`);
-  };
+  const goDetails = () => router.push(`/admin/restaurant/${slug}/units/${_id}`);
+  const goEdit = () => router.push(`/admin/restaurant/${slug}/units/${_id}`); // edição já ocorre na tela de detalhes
+
+  const statusDot = {
+    active: "bg-green-500",
+    outOfHours: "bg-amber-500",
+    inactive: "bg-red-500",
+  }[status];
 
   return (
-    <div className="border border-border rounded-lg shadow-sm bg-background hover:bg-accent/50 transition-colors">
-      <div className="p-4">
-        <div className="flex flex-col">
-          {isTopSeller && (
-            <div className="flex items-center gap-1.5 text-amber-500 text-sm mb-2">
-              <Flame size={16} />
-              <span>Número #1 em vendas no mês</span>
-            </div>
-          )}
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium text-primary">{name}</h3>
-            <Checkbox checked={selected} onCheckedChange={handleSelectionChange} />
+    <div className="bg-card/60 hover:bg-accent/40 group h-28 rounded-lg border border-border transition-colors">
+      <div className="flex items-center gap-3 px-4 py-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className={`h-2.5 w-2.5 rounded-full ${statusDot}`} />
+            <h3 className="truncate text-lg font-medium text-foreground">
+              {name}
+            </h3>
+
+            {isMatrix && (
+              <Badge className="rounded-full px-2 py-0.5 text-[10px]">
+                Matriz
+              </Badge>
+            )}
+            {isTopSeller && (
+              <Badge className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px]">
+                <Flame className="h-3 w-3" />
+                Destaque
+              </Badge>
+            )}
           </div>
-          <div className="mt-6 py-2">
-            <div className="border border-b border-gray-200" />
-          </div>
-          <div className="flex mt-2 justify-between">
-            <div className="flex gap-x-32">
-              <div>
-                <p className="text-sm text-muted-foreground">Gerente responsável</p>
-                <p className="text-sm text-primary">{manager}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">CNPJ</p>
-                <p className="text-sm text-primary">{cnpj}</p>
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <Button
-                variant="ghost"
-                className="text-sm text-primary hover:text-primary/80 flex items-center gap-2"
-                onClick={handleViewDetails}
-              >
-                Ver detalhes
-                <ArrowRight size={16} />
-              </Button>
-            </div>
+
+          <div className="mt-8 flex flex-wrap gap-x-6 text-sm text-muted-foreground">
+            <span>
+              Gerente:{" "}
+              <span className="text-foreground">
+                {manager && manager.trim() ? manager : "Sem gerente"}
+              </span>
+            </span>
+            <span>
+              CNPJ:{" "}
+              <span className="text-foreground">
+                {formatCnpj(String(cnpj)) || "—"}
+              </span>
+            </span>
           </div>
         </div>
+
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={goDetails}
+            title="Ver detalhes"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={goEdit}
+            title="Editar"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-red-600 hover:text-red-700"
+            onClick={() => setConfirmOpen(true)}
+            title="Excluir"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
+
+      <AlertDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir unidade?</AlertDialogTitle>
+          </AlertDialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Esta ação não poderá ser desfeita.
+          </p>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={async () => {
+                if (onDelete) await onDelete(_id);
+                setConfirmOpen(false);
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

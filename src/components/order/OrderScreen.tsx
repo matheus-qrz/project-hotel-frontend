@@ -18,7 +18,7 @@ import { Label } from "../ui/label";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
 
-const OrdersScreen = () => {
+export const OrdersScreen = () => {
   const router = useRouter();
   const { slug, tableId } = useParams();
   const { order, requestCheckout, fetchGuestOrders } = useOrderStore();
@@ -211,5 +211,3 @@ const OrdersScreen = () => {
     </div>
   );
 };
-
-export default OrdersScreen;

@@ -80,7 +80,6 @@ export default function ChartCard() {
   // para destacar a barra do mês atual
   const currentMonthAbbr = MONTHS_PT[new Date().getMonth()];
 
-  if (isLoading) return <DelayedLoading />;
   if (error) return <div>Erro ao carregar dados: {error}</div>;
 
   return (
@@ -125,6 +124,11 @@ export default function ChartCard() {
             Faturamento dos últimos 6 meses
           </p>
           <div className="h-56 w-full">
+            {isLoading && (
+              <div className="bg-background/60 absolute inset-0 z-10 grid place-items-center backdrop-blur-[1px]">
+                <DelayedLoading minHeight="100%" />
+              </div>
+            )}
             <Chart
               data={chartData}
               barColor="#14b8a6"

@@ -1,21 +1,25 @@
-import RootLayout from "@/layout";
+import QueryProvider from "@/providers/queryProvider";
 import "../globals.css";
 
 export const metadata = {
-    title: "Seu Garçom",
-    description: "Frontend",
+  title: "Seu Garçom",
+  description: "Frontend",
 };
 
-export default function PublicLayout({
-    children,
-    params
+export default async function PublicLayout({
+  children,
+  params,
 }: {
-    children: React.ReactNode,
-    params: { locale: string }
+  children: React.ReactNode;
+  params: Promise<{ locale?: string }>;
 }) {
-    return (
-        <RootLayout params={params}>
-            {children}
-        </RootLayout>
-    );
+  const { locale } = await params;
+  return (
+    <html lang={locale ?? "pt-BR"}>
+      <body>
+        <QueryProvider>{children}</QueryProvider>
+      </body>
+    </html>
+  );
 }
+

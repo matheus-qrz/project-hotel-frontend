@@ -4,14 +4,14 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserLogin } from "@/components/login/UserLogin";
-import { GuestLogin } from "@/components/login/GuestLogin";
+import GuestLogin from "@/components/login/GuestLogin";
 import { useAuthStore } from "@/stores";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { extractIdFromSlug } from "@/utils/slugify";
 import { useSession } from "next-auth/react";
 
-export function LoginPage() {
+export default function LoginPage() {
   const router = useRouter();
   const { slug, tableId } = useParams();
   const { role, isLoading } = useAuthStore();

@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
@@ -10,10 +9,13 @@ import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth";
 import { DelayedLoading } from "@/components/loading/DelayedLoading";
 import { getSession, signIn } from "next-auth/react";
+import { useToast } from "@/hooks/useToast";
 import { generateRestaurantSlug } from "@/utils/slugify";
+import { useRouter } from "next/navigation";
 
-export function AdminLogin() {
+export default function AdminLogin() {
   const router = useRouter();
+  const toast = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -162,7 +164,7 @@ export function AdminLogin() {
             <p>Não tem uma conta?</p>
             <Link
               href="/admin/register"
-              className="mt-2 block rounded-md border border-gray-300 px-4 py-2 hover:bg-gray-50"
+              className="text-md mt-2 block rounded-md border border-gray-300 px-4 py-2 font-semibold text-primary hover:bg-primary hover:text-secondary"
             >
               Criar uma conta agora
             </Link>

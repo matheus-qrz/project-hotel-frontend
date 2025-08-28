@@ -73,6 +73,7 @@ export function FinancialDashboard() {
   const cost = summary.cost ?? 0;
   const profit = summary.profit ?? 0;
   const discounts = summary.discounts ?? 0;
+  const avgTicket = summary.totalOrders > 0 ? revenue / summary.totalOrders : 0;
 
   const previousRevenue =
     (summary as any).previousRevenue ?? // se chegar do backend
@@ -154,13 +155,11 @@ export function FinancialDashboard() {
         </Card>
 
         <Card className="col-span-12 rounded-lg bg-white p-3 shadow-sm sm:col-span-6 lg:col-span-4 xl:col-span-2">
-          <p className="text-sm text-gray-500">Descontos</p>
+          <p className="text-sm text-gray-500">Margem de Lucro</p>
           <p className="text-xl font-semibold text-gray-900">
-            {BRL.format(discounts)}
+            {marginPct.toFixed(1)}%
           </p>
-          <p className="text-sm text-gray-400">
-            Taxa {discountRatePct.toFixed(1)}%
-          </p>
+          <p className="text-sm text-gray-400">Lucro sobre Receita</p>
         </Card>
 
         <Card className="col-span-12 rounded-lg bg-white p-3 shadow-sm sm:col-span-6 lg:col-span-4 xl:col-span-2">
@@ -172,11 +171,11 @@ export function FinancialDashboard() {
         </Card>
 
         <Card className="col-span-12 rounded-lg bg-white p-3 shadow-sm sm:col-span-6 lg:col-span-4 xl:col-span-2">
-          <p className="text-sm text-gray-500">Custo Total</p>
+          <p className="text-sm text-gray-500">Ticket Médio</p>
           <p className="text-xl font-semibold text-gray-900">
-            {BRL.format(cost)}
+            {BRL.format(avgTicket)}
           </p>
-          <p className="text-sm text-gray-400">Base do CMV+CMO</p>
+          <p className="text-sm text-gray-400">{summary.totalOrders} pedidos</p>
         </Card>
       </div>
 

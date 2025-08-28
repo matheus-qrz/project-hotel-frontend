@@ -122,6 +122,25 @@ const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 const token = useAuthStore.getState().token;
 const sessionId = getOrCreateOrderSessionId();
 
+function sortOrdersDesc(a: Order, b: Order) {
+  const au = new Date(a.updatedAt ?? a.createdAt ?? 0).getTime();
+  const bu = new Date(b.updatedAt ?? b.createdAt ?? 0).getTime();
+  return bu - au; 
+}
+
+function mergeOrders(prev: Order[], incoming: Order[]) {
+  const byId = new Map<string, Order>();
+  // antigos primeiro…
+  for (const o of prev) byId.set(String(o._id), o);
+  // …novos por cima (substituem versões antigas)
+  for (const o of incoming) byId.set(String(o._id), o);
+  return Array.from(byId.values()).sort(sortOrdersDesc);
+}
+
+function upsertOne(prev: Order[], next: Order) {
+  return mergeOrders(prev, [next]);
+}
+
 const customStorage = {
     getItem: async (name: string) => {
         try {
@@ -243,16 +262,16 @@ export const useOrderStore = create(
                         headers: {
                             'Content-Type': 'application/json',
                             Authorization: `Bearer ${token}`,
-                            'x-session-id': sessionId ?? '',  
+                            'x-session-id': sessionId,  
                         },
                         body: JSON.stringify({
+                            _id: get().currentOrderId,
                             restaurantId,
-                            restaurantUnitId: restaurantUnitId ?? restaurantId, // se tiver unidade, mande aqui; o backend já cai pro restaurantId se vier vazio
+                            restaurantUnitId: restaurantUnitId ?? restaurantId,
                             guestInfo,
                             meta,
                             items,
                             totalAmount,
-                            // sessionId: NÃO precisa no body
                         }),
                     });
 
@@ -356,10 +375,10 @@ export const useOrderStore = create(
 
                     if (!response.ok) throw new Error('Erro ao buscar pedidos');
 
-                    const data = await response.json();
+                    const fetched: Order[] = await response.json();
                     set((state) => ({
-                        previousOrders: state.order,
-                        order: data
+                        previousOrders: mergeOrders(state.order ?? [], fetched),
+                        order: fetched
                     }));
                 } catch (error: any) {
                     console.error('Erro ao buscar pedidos:', error);

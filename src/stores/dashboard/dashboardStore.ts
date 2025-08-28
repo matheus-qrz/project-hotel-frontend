@@ -1,4 +1,4 @@
-import { CustomersDashboardData, FinancialDashboardData, OrdersDashboardData, PromotionsDashboardData } from '@/types/dashboard';
+import { CustomersDashboardData, FinancialDashboardData, OrdersDashboardData, PromotionsSummary } from '@/types/dashboard';
 import { create } from 'zustand';
 
 interface DashboardState {
@@ -6,7 +6,7 @@ interface DashboardState {
         orders: OrdersDashboardData,
         financial?: FinancialDashboardData;
         customers?: CustomersDashboardData;
-        promotions?: PromotionsDashboardData;
+        promotions?: PromotionsSummary;
     };
     isLoading: boolean;
     error: string | null;
@@ -31,28 +31,25 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     error: null,
 
     fetchDashboardData: async (scope, id, type) => {
-        set({ isLoading: true, error: null });
+    try {
+        const res = await fetch(`${API_URL}/dashboard/${scope}/${id}/${type}`);
+        const result = await res.json();
 
-        try {
-            const response = await fetch(
-                `${API_URL}/dashboard/${scope}/${id}/${type}`
-            );
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || 'Erro ao buscar dados do dashboard');
-            }
-
-            set((state) => ({
-                data: {
-                    ...state.data,
-                    [type]: data
-                },
-                isLoading: false
-            }));
-        } catch (error: any) {
-            console.error("Erro no fetchDashboardData:", error);
-            set({ isLoading: false, error: error.message });
-        }
+        set((state) => ({
+        data: {
+            ...state.data,
+            [type]: result, 
+        },
+        isLoading: false,
+        error: null,
+        }));
+    } catch (error: any) {
+        console.error("Erro ao buscar dashboard:", error);
+        set(() => ({
+        isLoading: false,
+        error: "Erro ao buscar dados do dashboard",
+        }));
     }
+    }
+
 }));

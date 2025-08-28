@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Button } from "../ui/button";
-import { useAuthStore } from "@/stores";
 import { useSession } from "next-auth/react";
 
 // API URL

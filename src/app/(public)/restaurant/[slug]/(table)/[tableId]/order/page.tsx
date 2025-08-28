@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useOrderStore } from "@/stores/order/orderStore";
-import { useCartStore, useGuestStore } from "@/stores";
-import OrdersScreen from "@/components/order/OrderScreen";
+import { useGuestStore } from "@/stores";
+import { OrdersScreen } from "@/components/order/OrderScreen";
 
 export default function OrderPage() {
   const { tableId } = useParams();

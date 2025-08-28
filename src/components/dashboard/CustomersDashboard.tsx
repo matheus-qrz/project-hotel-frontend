@@ -13,6 +13,7 @@ import type {
   CustomersSummary,
   TopCustomer,
 } from "@/types/dashboard";
+import { useRestaurantStore } from "@/stores";
 
 const DelayedComponent = dynamic(
   () =>
@@ -39,7 +40,7 @@ function buildLastMonthsSeries(
   const start = startOfMonth(subMonths(new Date(), monthsCount - 1));
   const look = new Map(
     source.map((it) => [
-      String(it.month).toLowerCase().slice(0, 3),
+      String(it.month).substring(0, 3).toLowerCase(),
       Number(it.count) || 0,
     ]),
   );
@@ -56,9 +57,11 @@ function buildLastMonthsSeries(
 export function CustomersDashboard() {
   const { data, isLoading, error, fetchDashboardData } = useDashboardStore();
   const unitId = useRestaurantUnitStore.getState().currentUnitId;
+  const restaurantId = useRestaurantStore.getState().restaurant?._id;
 
   useEffect(() => {
     if (unitId) fetchDashboardData("unit", unitId, "customers");
+    else fetchDashboardData("restaurant", String(restaurantId), "customers");
   }, [unitId, fetchDashboardData]);
 
   if (isLoading) {
@@ -70,14 +73,14 @@ export function CustomersDashboard() {
   }
 
   if (error) return <div className="p-3 text-red-500">Erro: {error}</div>;
-  if (!data?.customers)
-    return <div className="p-3">Nenhum dado disponível</div>;
 
-  const { summary, customerReport, topCustomers } =
-    data.customers as CustomersDashboardData;
+  if (!data.customers)
+    return <div className="p-3">Nenhum dado de clientes</div>;
+
+  const { summary, customerReport, topCustomers } = data.customers;
 
   // --- KPIs (defensivo contra NaN) ---
-  const s: CustomersSummary = summary as CustomersSummary;
+  const s: CustomersSummary = summary satisfies CustomersSummary;
 
   const total = Number(s.total ?? 0);
   const totalChange = Number(s.totalChange ?? 0);

@@ -112,17 +112,6 @@ export default function PromotionsPage() {
 
   return (
     <div className="container mx-auto p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Gerenciar Promoções</h1>
-        <Button
-          onClick={() =>
-            router.push(`/admin/restaurant/${slug}/promotions/history`)
-          }
-        >
-          Histórico de Promoções
-        </Button>
-      </div>
-
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
@@ -134,7 +123,7 @@ export default function PromotionsPage() {
 
         <TabsContent value="active">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {activePromotions ? (
+            {activePromotions && activePromotions.length > 0 ? (
               activePromotions.map((product) => (
                 <PromotionCard
                   key={product._id}
@@ -157,17 +146,19 @@ export default function PromotionsPage() {
                 />
               ))
             ) : (
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <CircleDollarSign
-                    size={48}
-                    className="mx-auto mb-4 text-gray-300"
-                  />
-                  <h3 className="mb-2 text-lg font-medium">
-                    Não há produtos em promoção ativos.
-                  </h3>
-                </CardContent>
-              </Card>
+              <div className="col-span-1 md:col-span-2 lg:col-span-3">
+                <Card className="flex h-96 flex-col items-center justify-center">
+                  <CardContent className="p-6 text-center">
+                    <CircleDollarSign
+                      size={48}
+                      className="mx-auto mb-4 text-gray-300"
+                    />
+                    <h3 className="mb-2 text-lg font-medium">
+                      Não há produtos em promoção ativos.
+                    </h3>
+                  </CardContent>
+                </Card>
+              </div>
             )}
           </div>
         </TabsContent>

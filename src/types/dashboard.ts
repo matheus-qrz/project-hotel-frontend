@@ -31,6 +31,7 @@ export interface FinancialSummary {
     cost: number;
     profit: number;
     discounts: number;
+    totalOrders: number;
     salesCount?: number;         // total de vendas/pedidos pagos no período
     breakEvenPoint?: number;     // ponto de equilíbrio (R$)
     previousRevenue?: number;    // faturamento do mês anterior (se vier pronto)
@@ -96,12 +97,20 @@ export type TopPromotion = {
   totalSold: number;
 };
 
+export type UsageByType = {
+  type?: string;
+  name?: string;
+  uses: number;
+  revenue?: number;
+};
+
 export interface PromotionsSummary {
   activePromotions: number;
   conversionRate: number;
   conversionChange: number;
   avgDiscount: number;
   discountChange: number;
+  usageByType?: UsageByType;
   roi: number;
   roiChange: number;
   cpa: number;

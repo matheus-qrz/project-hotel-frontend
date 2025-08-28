@@ -1,51 +1,36 @@
+"use client";
+
+import dynamic from "next/dynamic";
+import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+type Props = {
+  minHeight?: number | string;
+  className?: string;
+};
 
 export function LoadingComponent() {
-    return (
-        <div className="flex flex-col items-center justify-center min-h-[400px]">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-2" />
-            <span className="text-sm text-gray-600 font-medium">Carregando...</span>
-        </div>
-    );
+  return (
+    <div className="grid h-full min-h-[120px] w-full place-items-center">
+      <Loader2 className="text-foreground/80 h-6 w-6 animate-spin" />
+      <span className="sr-only">Carregando…</span>
+    </div>
+  );
 }
 
-import dynamic from 'next/dynamic';
-import { Suspense } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-
-const DelayedComponent = dynamic(
-    () => import('@/components/loading/LoadingComponent').then(mod => mod.LoadingComponent),
-    {
-        loading: () => (
-            <div className="container mx-auto px-4 py-6 w-[785px]">
-                <Card className="w-full bg-white">
-                    <CardContent className="p-6">
-                        <div className="flex flex-col items-center justify-center h-[400px]">
-                            <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-2" />
-                            <span className="text-sm text-gray-600 font-medium">Carregando...</span>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        )
-    }
-);
-
-export function DelayedLoading() {
-    return (
-        <Suspense fallback={
-            <div className="container mx-auto px-4 py-6 w-[785px]">
-                <Card className="w-full bg-white">
-                    <CardContent className="p-6">
-                        <div className="flex flex-col items-center justify-center h-[400px]">
-                            <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-2" />
-                            <span className="text-sm text-gray-600 font-medium">Carregando...</span>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        }>
-            <DelayedComponent />
-        </Suspense>
-    );
+export function DelayedLoading({ minHeight = 120, className }: Props) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className={cn("grid h-full w-full place-items-center", className)}
+      style={{
+        minHeight: typeof minHeight === "number" ? `${minHeight}px` : minHeight,
+      }}
+    >
+      <Loader2 className="text-foreground/80 h-6 w-6 animate-spin" />
+      <span className="sr-only">Carregando…</span>
+    </div>
+  );
 }

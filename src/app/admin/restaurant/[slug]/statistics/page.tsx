@@ -1,7 +1,7 @@
 // app/restaurant/[restaurantId]/products/page.tsx
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
@@ -54,6 +54,8 @@ export default function StatisticsDashboardPage() {
     [],
   );
 
+  const tabsScrollRef = useRef<HTMLDivElement>(null);
+
   // --- Atalhos: Ctrl+←/→ e 1..4
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -86,6 +88,17 @@ export default function StatisticsDashboardPage() {
     }
   };
 
+  useEffect(() => {
+    const active = tabsScrollRef.current?.querySelector<HTMLElement>(
+      '[data-state="active"]',
+    );
+    active?.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest",
+    });
+  }, [activeTab]);
+
   return (
     <div className="flex min-h-screen w-full flex-col bg-[radial-gradient(2000px_700px_at_50%_-200px,rgba(31,193,221,0.08),transparent)]">
       <Header />
@@ -99,7 +112,6 @@ export default function StatisticsDashboardPage() {
         <Sidebar />
 
         <main className="relative px-4 py-4 md:px-8 md:py-6">
-          {/* Top bar */}
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-3 p-2">
               <Button
@@ -136,35 +148,50 @@ export default function StatisticsDashboardPage() {
             <Tabs
               value={activeTab}
               onValueChange={(v) => setActiveTab(v as DashboardTab)}
-              className="w-full"
+              className="max-w-lg"
             >
-              <TabsList
-                className={cn(
-                  "flex w-full items-center justify-start gap-2 rounded-full border border-zinc-200 bg-white/70 p-1 shadow-sm backdrop-blur",
-                  "dark:border-zinc-800 dark:bg-zinc-900/70",
-                )}
-              >
-                {tabs.map(({ value, label, icon: Icon }) => (
-                  <TabsTrigger
-                    key={value}
-                    value={value}
+              {/* wrapper com scroll e fades no mobile */}
+              <div className="relative -mx-4 sm:mx-0">
+                <div
+                  ref={tabsScrollRef}
+                  className="no-scrollbar overflow-x-auto scroll-smooth px-4 sm:px-0"
+                >
+                  <TabsList
                     className={cn(
-                      "group relative inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition",
-                      "data-[state=active]:bg-zinc-900 data-[state=active]:text-white",
-                      "hover:bg-zinc-100 data-[state=active]:hover:bg-zinc-900/90",
-                      "dark:hover:bg-zinc-800 dark:data-[state=active]:bg-zinc-100 dark:data-[state=active]:text-zinc-900",
+                      // mobile: carrossel horizontal; desktop: normal
+                      "flex min-w-max flex-nowrap gap-2 rounded-full border border-zinc-200 bg-white/70 p-1 shadow-sm backdrop-blur",
+                      "dark:border-zinc-800 dark:bg-zinc-900/70",
                     )}
-                    aria-label={label}
-                    title={label}
                   >
-                    <Icon
-                      size={16}
-                      className="opacity-80"
-                    />
-                    {label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+                    {tabs.map(({ value, label, icon: Icon }) => (
+                      <TabsTrigger
+                        key={value}
+                        value={value}
+                        className={cn(
+                          // impede encolher e permite snap
+                          "shrink-0 snap-start",
+                          "group relative inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition",
+                          "data-[state=active]:bg-zinc-900 data-[state=active]:text-white",
+                          "hover:bg-zinc-100 data-[state=active]:hover:bg-zinc-900/90",
+                          "dark:hover:bg-zinc-800 dark:data-[state=active]:bg-zinc-100 dark:data-[state=active]:text-zinc-900",
+                        )}
+                        aria-label={label}
+                        title={label}
+                      >
+                        <Icon
+                          size={16}
+                          className="opacity-80"
+                        />
+                        {label}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </div>
+
+                {/* fades laterais (mobile) */}
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-white/70 to-transparent dark:from-zinc-900/70 sm:hidden" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-white/70 to-transparent dark:from-zinc-900/70 sm:hidden" />
+              </div>
             </Tabs>
           </div>
 

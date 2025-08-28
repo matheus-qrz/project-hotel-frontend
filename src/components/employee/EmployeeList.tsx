@@ -47,6 +47,7 @@ import { formatRole } from "@/utils/formatRole";
 import { extractIdFromSlug } from "@/utils/slugify";
 import { useAuthStore } from "@/stores";
 import { useSession } from "next-auth/react";
+import { DelayedLoading } from "../loading/DelayedLoading";
 
 export default function EmployeeList() {
   const router = useRouter();
@@ -62,7 +63,7 @@ export default function EmployeeList() {
 
   const [filteredEmployees, setFilteredEmployees] = useState(employees);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRole, setSelectedRole] = useState<string>("");
+  const [selectedRole, setSelectedRole] = useState<string>("ALL");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<IEmployee | null>(
     null,
@@ -102,7 +103,8 @@ export default function EmployeeList() {
         (employee.email || "").toLowerCase().includes(query) ||
         formatRole(role).toLowerCase().includes(query);
 
-      const matchesRole = selectedRole === "ALL" || role === selectedRole;
+      const matchesRole =
+        selectedRole === "ALL" || selectedRole === "" || role === selectedRole;
 
       return matchesSearch && matchesRole;
     });
@@ -196,26 +198,7 @@ export default function EmployeeList() {
   };
 
   if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="h-8 w-48 animate-pulse rounded bg-gray-200"></div>
-          <div className="h-10 w-32 animate-pulse rounded bg-gray-200"></div>
-        </div>
-
-        <div className="mb-4 h-10 w-full animate-pulse rounded bg-gray-200"></div>
-
-        <div className="rounded-md border">
-          <div className="h-12 animate-pulse border-b bg-gray-100"></div>
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div
-              key={i}
-              className="h-16 animate-pulse border-b bg-gray-50"
-            ></div>
-          ))}
-        </div>
-      </div>
-    );
+    return <DelayedLoading />;
   }
 
   if (error) {
@@ -230,10 +213,16 @@ export default function EmployeeList() {
   }
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 px-3">
       <div className="mb-6 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-        <h2 className="text-2xl font-bold text-primary">Funcionários</h2>
-        <div className="flex gap-2">
+        <div className="flex w-full flex-row items-center justify-between">
+          <Button
+            onClick={goToCreate}
+            className="flex items-center gap-2"
+          >
+            <PlusCircle size={18} />
+            <span>Novo Funcionário</span>
+          </Button>
           <Button
             variant="outline"
             onClick={handleRefresh}
@@ -242,13 +231,6 @@ export default function EmployeeList() {
           >
             <RefreshCcw size={18} />
             <span className="hidden sm:inline">Atualizar</span>
-          </Button>
-          <Button
-            onClick={goToCreate}
-            className="flex items-center gap-2"
-          >
-            <PlusCircle size={18} />
-            <span>Novo Funcionário</span>
           </Button>
         </div>
       </div>

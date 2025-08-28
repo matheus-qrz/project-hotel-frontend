@@ -6,8 +6,16 @@ import { Chart } from "@/components/charts";
 import { format, addMonths, startOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DelayedLoading } from "../loading/DelayedLoading";
-import { useDashboardStore, useRestaurantUnitStore } from "@/stores";
-import type { PromotionsSummary, TopPromotion } from "@/types/dashboard";
+import {
+  useDashboardStore,
+  useRestaurantStore,
+  useRestaurantUnitStore,
+} from "@/stores";
+import type {
+  PromotionsSummary,
+  TopPromotion,
+  UsageByType,
+} from "@/types/dashboard";
 
 const BRL = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -51,52 +59,53 @@ const SEG_COLORS = [
   "#f472b6",
 ];
 
-type UsageByType = {
-  type?: string;
-  name?: string;
-  uses: number;
-  revenue?: number;
-};
-
 export function PromotionsDashboard() {
   const { data, isLoading, error, fetchDashboardData } = useDashboardStore();
   const unitId = useRestaurantUnitStore.getState().currentUnitId;
+  const restaurantId = useRestaurantStore.getState().restaurant?._id;
 
   useEffect(() => {
     if (unitId) fetchDashboardData("unit", unitId, "promotions");
+    else fetchDashboardData("restaurant", String(restaurantId), "promotions");
   }, [unitId, fetchDashboardData]);
 
   if (isLoading) return <DelayedLoading />;
   if (error) return <div className="p-3 text-red-500">Erro: {error}</div>;
-  if (!data?.promotions)
-    return <div className="p-3">Nenhum dado disponível</div>;
 
-  const {
-    activePromotions = 0,
-    conversionRate = 0,
-    conversionChange = 0,
-    avgDiscount = 0,
-    discountChange = 0,
-    roi = 0,
-    roiChange = 0,
-    cpa = 0,
-    cpaChange = 0,
-    revenue = 0,
-    revenueChange = 0,
-    monthlyUsage = [],
-    topPromotions = [],
-    // opcional do backend
-    usageByType: usageRaw = [],
-  } = data.promotions as PromotionsSummary & { usageByType?: UsageByType[] };
+  const promotions = data?.promotions ?? {
+    activePromotions: 0,
+    conversionRate: 0,
+    conversionChange: 0,
+    avgDiscount: 0,
+    discountChange: 0,
+    roi: 0,
+    roiChange: 0,
+    cpa: 0,
+    cpaChange: 0,
+    revenue: 0,
+    revenueChange: 0,
+    monthlyUsage: [],
+    topPromotions: [],
+    usageByType: [],
+  };
 
   // --- Estrutura por tipo (usos) ---
-  const usageByType = (usageRaw as UsageByType[])
-    .map((u) => ({
-      label: (u.type ?? u.name ?? "").toString(),
-      uses: Number(u.uses ?? 0),
-      revenue: Number(u.revenue ?? 0),
-    }))
-    .filter((u) => u.label);
+  const usageByType = Array.isArray(promotions?.usageByType)
+    ? (
+        promotions.usageByType as {
+          type?: string;
+          name?: string;
+          uses?: number;
+          revenue?: number;
+        }[]
+      )
+        .map((u) => ({
+          label: (u.type ?? u.name ?? "").toString(),
+          uses: Number(u.uses ?? 0),
+          revenue: Number(u.revenue ?? 0),
+        }))
+        .filter((u) => u.label)
+    : [];
 
   const totalUsesByType = usageByType.reduce((s, x) => s + x.uses, 0);
   const baseComp = Math.max(totalUsesByType, 1);
@@ -106,7 +115,7 @@ export function PromotionsDashboard() {
   }));
 
   // --- Série 12m garantida ---
-  const series = buildLastMonthsSeries(monthlyUsage, 12);
+  const series = buildLastMonthsSeries(promotions.monthlyUsage, 12);
   const chartData = series.map(({ label, value }) => ({ month: label, value }));
   const rangeLabel = `${format(series[0].date, "MMM yyyy", { locale: ptBR })} — ${format(
     series[series.length - 1].date,
@@ -121,7 +130,7 @@ export function PromotionsDashboard() {
   const avgUses = totalUses / (series.length || 1);
 
   // top promoções com participação
-  const topSorted = [...topPromotions].sort(
+  const topSorted = [...(promotions.topPromotions ?? [])].sort(
     (a, b) => (b?.totalSold ?? 0) - (a?.totalSold ?? 0),
   );
   const topTotal =
@@ -141,74 +150,78 @@ export function PromotionsDashboard() {
         <Card className="col-span-12 rounded-lg bg-white p-3 shadow-sm sm:col-span-6 lg:col-span-4 xl:col-span-2">
           <p className="text-sm text-gray-500">Promoções ativas</p>
           <p className="text-xl font-semibold text-gray-900">
-            {activePromotions}
+            {promotions.activePromotions}
           </p>
           <p
-            className={`text-sm ${activePromotions >= 0 ? "text-green-600" : "text-red-600"}`}
+            className={`text-sm ${promotions.activePromotions >= 0 ? "text-green-600" : "text-red-600"}`}
           >
-            {activePromotions >= 0 ? "+" : ""}
-            {activePromotions} este mês
+            {promotions.activePromotions >= 0 ? "+" : ""}
+            {promotions.activePromotions} este mês
           </p>
         </Card>
 
         <Card className="col-span-12 rounded-lg bg-white p-3 shadow-sm sm:col-span-6 lg:col-span-4 xl:col-span-2">
           <p className="text-sm text-gray-500">Conversão</p>
           <p className="text-xl font-semibold text-gray-900">
-            {conversionRate}%
+            {promotions.conversionRate}%
           </p>
           <p
-            className={`text-sm ${conversionChange >= 0 ? "text-green-600" : "text-red-600"}`}
+            className={`text-sm ${promotions.conversionChange >= 0 ? "text-green-600" : "text-red-600"}`}
           >
-            {conversionChange >= 0 ? "+" : ""}
-            {conversionChange}% este mês
+            {promotions.conversionChange >= 0 ? "+" : ""}
+            {promotions.conversionChange}% este mês
           </p>
         </Card>
 
         <Card className="col-span-12 rounded-lg bg-white p-3 shadow-sm sm:col-span-6 lg:col-span-4 xl:col-span-2">
           <p className="text-sm text-gray-500">Desconto médio</p>
-          <p className="text-xl font-semibold text-gray-900">{avgDiscount}%</p>
+          <p className="text-xl font-semibold text-gray-900">
+            {promotions.avgDiscount}%
+          </p>
           <p
-            className={`text-sm ${discountChange >= 0 ? "text-green-600" : "text-red-600"}`}
+            className={`text-sm ${promotions.discountChange >= 0 ? "text-green-600" : "text-red-600"}`}
           >
-            {discountChange >= 0 ? "+" : ""}
-            {discountChange}% este mês
+            {promotions.discountChange >= 0 ? "+" : ""}
+            {promotions.discountChange}% este mês
           </p>
         </Card>
 
         <Card className="col-span-12 rounded-lg bg-white p-3 shadow-sm sm:col-span-6 lg:col-span-4 xl:col-span-2">
           <p className="text-sm text-gray-500">ROI</p>
-          <p className="text-xl font-semibold text-gray-900">{roi}%</p>
+          <p className="text-xl font-semibold text-gray-900">
+            {promotions.roi}%
+          </p>
           <p
-            className={`text-sm ${roiChange >= 0 ? "text-green-600" : "text-red-600"}`}
+            className={`text-sm ${promotions.roiChange >= 0 ? "text-green-600" : "text-red-600"}`}
           >
-            {roiChange >= 0 ? "+" : ""}
-            {roiChange}% este mês
+            {promotions.roiChange >= 0 ? "+" : ""}
+            {promotions.roiChange}% este mês
           </p>
         </Card>
 
         <Card className="col-span-12 rounded-lg bg-white p-3 shadow-sm sm:col-span-6 lg:col-span-4 xl:col-span-2">
           <p className="text-sm text-gray-500">CPA</p>
           <p className="text-xl font-semibold text-gray-900">
-            {BRL.format(cpa)}
+            {BRL.format(promotions.cpa)}
           </p>
           <p
-            className={`text-sm ${cpaChange >= 0 ? "text-green-600" : "text-red-600"}`}
+            className={`text-sm ${promotions.cpaChange >= 0 ? "text-green-600" : "text-red-600"}`}
           >
-            {cpaChange >= 0 ? "+" : ""}
-            {cpaChange}% este mês
+            {promotions.cpaChange >= 0 ? "+" : ""}
+            {promotions.cpaChange}% este mês
           </p>
         </Card>
 
         <Card className="col-span-12 rounded-lg bg-white p-3 shadow-sm sm:col-span-6 lg:col-span-4 xl:col-span-2">
           <p className="text-sm text-gray-500">Receita (promoções)</p>
           <p className="text-xl font-semibold text-gray-900">
-            {BRL.format(revenue)}
+            {BRL.format(promotions.revenue)}
           </p>
           <p
-            className={`text-sm ${revenueChange >= 0 ? "text-green-600" : "text-red-600"}`}
+            className={`text-sm ${promotions.revenueChange >= 0 ? "text-green-600" : "text-red-600"}`}
           >
-            {revenueChange >= 0 ? "+" : ""}
-            {revenueChange}% este mês
+            {promotions.revenueChange >= 0 ? "+" : ""}
+            {promotions.revenueChange}% este mês
           </p>
         </Card>
       </div>

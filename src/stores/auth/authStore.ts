@@ -9,6 +9,48 @@ interface GuestInfo {
     phone?: string;
 }
 
+type RegisterAdminWithRestaurantPayload = {
+  firstName: string;
+  lastName: string;
+  cpf: string;
+  email: string;
+  password: string;
+  phone?: string;
+  name: string;
+  socialName?: string;
+  cnpj: string;
+  specialty?: string;
+  address: {
+    zipCode: string;
+    street: string;
+    number: number;
+    complement?: string;
+  };
+  businessHours: Array<{
+    days: string[];   // ex.: ["Segunda", "Terça"]
+    open: string;     // "08:00"
+    close: string;    // "18:00"
+  }>;
+};
+
+type RegisterAdminWithRestaurantSuccess = {
+  success: true;
+  message?: string;
+  user: { _id: string; firstName: string; lastName: string; email: string; role: 'ADMIN' | string };
+  restaurant: { _id: string; name: string };
+  unit?: { _id: string; name: string };
+  token: string;
+};
+
+type RegisterAdminWithRestaurantFail = {
+  success: false;
+  message: string;
+};
+
+type RegisterAdminWithRestaurantResult =
+  | RegisterAdminWithRestaurantSuccess
+  | RegisterAdminWithRestaurantFail;
+
 interface AuthState {
     restaurantId: string | null;
     unitId: string | null;
@@ -33,6 +75,9 @@ interface AuthState {
     getHeaders: () => Record<string, string>;
     isTokenExpired: () => boolean;
 
+    // Cadastro de Admin com Restaurante
+    registerAdminWithRestaurant: (payload: RegisterAdminWithRestaurantPayload) => Promise<RegisterAdminWithRestaurantResult>;
+
     // Novos métodos para guest
     setGuestInfo: (info: GuestInfo) => void;
     setTableNumber: (tableNumber: string) => void;
@@ -43,6 +88,7 @@ interface AuthState {
 }
 
 const SESSION_DURATION = 14 * 60 * 60 * 1000; // 14 horas em milissegundos
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
 export const useAuthStore = create<AuthState>()(
     persist(
@@ -120,6 +166,45 @@ export const useAuthStore = create<AuthState>()(
                 }
 
                 return headers;
+            },
+
+            registerAdminWithRestaurant: async (
+            payload: RegisterAdminWithRestaurantPayload
+            ): Promise<RegisterAdminWithRestaurantResult> => {
+            set({ isLoading: true });
+            try {
+                const resp = await fetch(`${API_URL}/register/restaurant`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+                });
+
+                const data = await resp.json().catch(() => ({}));
+
+                if (!resp.ok) {
+                const message = data?.message || data?.error || "Erro ao registrar";
+                return { success: false, message };
+                }
+
+                const { user, restaurant, unit, token, message } = data;
+
+                // Persistir sessão
+                set({
+                token: token ?? null,
+                role: user?.role ?? "ADMIN",
+                restaurantId: restaurant?._id ?? null,
+                unitId: unit?._id ?? null,
+                isGuest: false,
+                guestInfo: null,
+                tableNumber: null,
+                });
+
+                return { success: true, message, user, restaurant, unit, token };
+            } catch (e: any) {
+                return { success: false, message: e?.message || "Erro inesperado ao registrar" };
+            } finally {
+                set({ isLoading: false });
+            }
             },
 
             isTokenExpired: () => {
