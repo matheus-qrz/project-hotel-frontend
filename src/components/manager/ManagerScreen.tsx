@@ -59,6 +59,9 @@ const StatusColors: Record<OrderStatusType, string> = {
 
 const EDITABLE_TO_COMPLETE = new Set(["processing", "added", "reduced"]);
 
+const POLL_MS_ACTIVE = 4000;
+const POLL_MS_BACKGROUND = 12000;
+
 export default function ManagerScreen({ slug }: ManagerScreenProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [everCompletedByOrder, setEverCompletedByOrder] = useState<
@@ -80,15 +83,58 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
   const restaurantId = slug && extractIdFromSlug(String(slug));
 
   useEffect(() => {
-    const loadOrders = async () => {
-      if (restaurantId) {
-        await fetchRestaurantUnitOrders(String(restaurantId));
-      } else if (currentUnitId) {
-        await fetchRestaurantUnitOrders("", String(currentUnitId));
+    let disposed = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let inFlight = false;
+
+    const doFetch = async (reason: string) => {
+      if (disposed || inFlight) return;
+      inFlight = true;
+      try {
+        if (restaurantId) {
+          await fetchRestaurantUnitOrders(String(restaurantId));
+        } else if (currentUnitId) {
+          await fetchRestaurantUnitOrders("", String(currentUnitId));
+        }
+      } catch (e) {
+        console.error(`[orders] fetch failed (${reason}):`, e);
+      } finally {
+        inFlight = false;
       }
     };
 
-    loadOrders();
+    const schedule = () => {
+      if (disposed) return;
+      if (timer) clearTimeout(timer);
+      const interval =
+        document.visibilityState === "visible"
+          ? POLL_MS_ACTIVE
+          : POLL_MS_BACKGROUND;
+      timer = setTimeout(async () => {
+        await doFetch("poll");
+        schedule(); // loop
+      }, interval);
+    };
+
+    // 1) busca imediata
+    doFetch("init");
+    // 2) inicia o loop
+    schedule();
+
+    // 3) atualiza ao voltar foco / ficar online
+    const onFocusVisible = () => doFetch("focus/visible");
+    window.addEventListener("visibilitychange", onFocusVisible);
+    window.addEventListener("focus", onFocusVisible);
+    window.addEventListener("online", onFocusVisible);
+
+    return () => {
+      disposed = true;
+      if (timer) clearTimeout(timer);
+      window.removeEventListener("visibilitychange", onFocusVisible);
+      window.removeEventListener("focus", onFocusVisible);
+      window.removeEventListener("online", onFocusVisible);
+    };
+    // importante: dependa só do que muda a origem dos dados
   }, [restaurantId, currentUnitId, fetchRestaurantUnitOrders]);
 
   useEffect(() => {
@@ -420,9 +466,9 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
   };
 
   return (
-    <div className="h-screen max-h-screen w-full overflow-auto overflow-x-hidden bg-gray-50">
-      <div className="mx-auto h-screen w-full p-4">
-        {/* Cabeçalho com botão atualizar */}
+    <div className="min-h-screen w-full bg-gray-50">
+      <div className="mx-auto flex min-h-screen w-full flex-col p-4">
+        {/* Cabeçalho */}
         <div className="mb-4 flex items-center justify-between px-6">
           <h1 className="text-xl font-bold">Gerenciamento de Pedidos</h1>
           <Button
@@ -438,30 +484,73 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
           </Button>
         </div>
 
-        {/* Grid com 3 colunas fixas */}
-        <div className="grid max-h-screen grid-cols-3 items-start gap-6 overflow-auto px-6">
-          {/* Em preparo */}
-          <div className="flex min-h-[500px] flex-col gap-y-4">
-            <h2 className="mb-4 border-r border-gray-400 text-lg font-semibold">
-              Em preparo
-            </h2>
-            {renderOrders(OrderStatus.PROCESSING)}
-          </div>
+        {/* -------- MOBILE: 1 coluna por tela, swipe horizontal -------- */}
+        <div className="px-6 md:hidden">
+          <div className="/* ocupa a tela menos o header */ flex h-[calc(100vh-140px)] snap-x snap-mandatory gap-6 overflow-x-auto pb-2">
+            {/* Em preparo */}
+            <section className="min-w-full snap-start">
+              <h2 className="mb-4 border-r border-gray-400 text-lg font-semibold">
+                Em preparo
+              </h2>
+              <div className="max-h-full overflow-y-auto pr-2">
+                {renderOrders(OrderStatus.PROCESSING)}
+              </div>
+            </section>
 
-          {/* Concluídos */}
-          <div className="flex min-h-[500px] flex-col gap-y-4">
-            <h2 className="mb-4 border-r border-gray-400 text-lg font-semibold">
-              Concluídos
-            </h2>
-            {renderOrders(OrderStatus.COMPLETED)}
-          </div>
+            {/* Concluídos */}
+            <section className="min-w-full snap-start">
+              <h2 className="mb-4 border-r border-gray-400 text-lg font-semibold">
+                Concluídos
+              </h2>
+              <div className="max-h-full overflow-y-auto pr-2">
+                {renderOrders(OrderStatus.COMPLETED)}
+              </div>
+            </section>
 
-          {/* Pagamentos solicitados */}
-          <div className="flex min-h-[500px] flex-col gap-y-4">
-            <h2 className="mb-4 text-lg font-semibold">
-              Pagamentos solicitados
-            </h2>
-            {renderOrders(OrderStatus.PAYMENT_REQUESTED)}
+            {/* Pagamentos solicitados */}
+            <section className="min-w-full snap-start">
+              <h2 className="mb-4 text-lg font-semibold">
+                Pagamentos solicitados
+              </h2>
+              <div className="max-h-full overflow-y-auto pr-2">
+                {renderOrders(OrderStatus.PAYMENT_REQUESTED)}
+              </div>
+            </section>
+          </div>
+        </div>
+
+        {/* -------- DESKTOP: 3 colunas com scroll independente -------- */}
+        <div className="hidden grow px-6 md:block">
+          <div className="grid h-[calc(100vh-140px)] grid-cols-3 items-start gap-6">
+            {/* Em preparo */}
+            <section className="flex h-full min-h-[500px] flex-col">
+              <h2 className="mb-4 border-r border-gray-400 text-lg font-semibold">
+                Em preparo
+              </h2>
+              <div className="h-0 grow overflow-y-auto pr-2">
+                {renderOrders(OrderStatus.PROCESSING)}
+              </div>
+            </section>
+
+            {/* Concluídos */}
+            <section className="flex h-full min-h-[500px] flex-col">
+              <h2 className="mb-4 border-r border-gray-400 text-lg font-semibold">
+                Concluídos
+              </h2>
+              <div className="h-0 grow overflow-y-auto pr-2">
+                {renderOrders(OrderStatus.COMPLETED)}
+              </div>
+            </section>
+
+            {/* Pagamentos solicitados */}
+            <section className="flex h-full min-h-[500px] flex-col">
+              <h2 className="mb-4 text-lg font-semibold">
+                Pagamentos solicitados
+              </h2>
+              <div className="h-0 grow overflow-y-auto pr-2">
+                {renderOrders(OrderStatus.PAYMENT_REQUESTED)}
+              </div>
+            </section>
           </div>
         </div>
       </div>
