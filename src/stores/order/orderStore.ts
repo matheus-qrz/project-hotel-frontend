@@ -243,16 +243,16 @@ export const useOrderStore = create(
                         headers: {
                             'Content-Type': 'application/json',
                             Authorization: `Bearer ${token}`,
-                            'x-session-id': sessionId ?? '',  
+                            'x-session-id': sessionId,  
                         },
                         body: JSON.stringify({
+                            _id: get().currentOrderId,
                             restaurantId,
-                            restaurantUnitId: restaurantUnitId ?? restaurantId, // se tiver unidade, mande aqui; o backend já cai pro restaurantId se vier vazio
+                            restaurantUnitId: restaurantUnitId ?? restaurantId,
                             guestInfo,
                             meta,
                             items,
                             totalAmount,
-                            // sessionId: NÃO precisa no body
                         }),
                     });
 

@@ -179,20 +179,17 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
         return;
       }
 
-      // 👉 COMPLETED / CANCELLED: primeiro itens, depois pedido
       if (
         newStatus === OrderStatus.COMPLETED ||
         newStatus === OrderStatus.CANCELLED
       ) {
         const targets =
           newStatus === OrderStatus.COMPLETED
-            ? // completar somente itens editáveis e com quantidade > 0
-              targetOrder.items.filter(
+            ? targetOrder.items.filter(
                 (it) =>
                   EDITABLE_TO_COMPLETE.has(it.status) && (it.quantity ?? 0) > 0,
               )
-            : // cancelar tudo que ainda não esteja cancelled/completed
-              targetOrder.items.filter(
+            : targetOrder.items.filter(
                 (it) => it.status !== "completed" && it.status !== "cancelled",
               );
 
@@ -442,7 +439,7 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
         </div>
 
         {/* Grid com 3 colunas fixas */}
-        <div className="grid grid-cols-3 items-start gap-6 px-6">
+        <div className="grid max-h-screen grid-cols-3 items-start gap-6 overflow-auto px-6">
           {/* Em preparo */}
           <div className="flex min-h-[500px] flex-col gap-y-4">
             <h2 className="mb-4 border-r border-gray-400 text-lg font-semibold">

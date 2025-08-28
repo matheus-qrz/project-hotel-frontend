@@ -11,7 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Order, OrderItem } from "./types";
-import { useOrderStore } from "@/stores";
+import { useGuestStore, useOrderStore } from "@/stores";
 import { extractIdFromSlug } from "@/utils/slugify";
 import { StatusTexts } from "@/components/cart/constants";
 import { Trash2, AlertCircle } from "lucide-react";
@@ -40,10 +40,11 @@ export function OrderCard({
   onStatusUpdate,
 }: OrderCardProps) {
   const { slug } = useParams();
+  const { guestInfo } = useGuestStore();
   const [isUpdating, setIsUpdating] = useState(false);
   const [cancelQuantity, setCancelQuantity] = useState(1);
   const [itemToCancel, setItemToCancel] = useState<string | null>(null);
-  const { cancelOrder, updateOrderItem } = useOrderStore();
+  const { cancelOrder, updateOrderItem, cancelOrderItem } = useOrderStore();
   const [previousItems, setPreviousItems] = useState<OrderItem[]>(order.items);
   const restaurantId = slug && extractIdFromSlug(String(slug));
 
@@ -80,14 +81,12 @@ export function OrderCard({
     setIsUpdating(true);
 
     try {
-      await updateOrderItem(
-        restaurantId,
-        Number(order.meta.tableId),
+      await cancelOrderItem(
         order._id,
         itemId,
-        newQuantity > 0
-          ? { quantity: newQuantity }
-          : { quantity: 0, status: "cancelled" },
+        restaurantId,
+        Number(order.meta.tableId),
+        guestInfo?.id,
       );
 
       onStatusUpdate?.();
@@ -149,7 +148,7 @@ export function OrderCard({
             </span>
 
             {/* Botão de cancelar só aparece se não estiver cancelado */}
-            {canCancel && !isCancelled && (
+            {canCancel && !isCancelled && item.status === "processing" && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
