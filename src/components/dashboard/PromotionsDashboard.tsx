@@ -90,13 +90,22 @@ export function PromotionsDashboard() {
   };
 
   // --- Estrutura por tipo (usos) ---
-  const usageByType = (promotions.usageByType as UsageByType[])
-    .map((u) => ({
-      label: (u.type ?? u.name ?? "").toString(),
-      uses: Number(u.uses ?? 0),
-      revenue: Number(u.revenue ?? 0),
-    }))
-    .filter((u) => u.label);
+  const usageByType = Array.isArray(promotions?.usageByType)
+    ? (
+        promotions.usageByType as {
+          type?: string;
+          name?: string;
+          uses?: number;
+          revenue?: number;
+        }[]
+      )
+        .map((u) => ({
+          label: (u.type ?? u.name ?? "").toString(),
+          uses: Number(u.uses ?? 0),
+          revenue: Number(u.revenue ?? 0),
+        }))
+        .filter((u) => u.label)
+    : [];
 
   const totalUsesByType = usageByType.reduce((s, x) => s + x.uses, 0);
   const baseComp = Math.max(totalUsesByType, 1);
