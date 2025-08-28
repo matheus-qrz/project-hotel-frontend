@@ -71,11 +71,13 @@ export function CustomersDashboard() {
 
   if (error) return <div className="p-3 text-red-500">Erro: {error}</div>;
 
-  const { summary, customerReport, topCustomers } =
-    data.customers as CustomersDashboardData;
+  if (!data.customers)
+    return <div className="p-3">Nenhum dado de clientes</div>;
+
+  const { summary, customerReport, topCustomers } = data.customers;
 
   // --- KPIs (defensivo contra NaN) ---
-  const s: CustomersSummary = summary as CustomersSummary;
+  const s: CustomersSummary = summary satisfies CustomersSummary;
 
   const total = Number(s.total ?? 0);
   const totalChange = Number(s.totalChange ?? 0);

@@ -96,12 +96,20 @@ export type TopPromotion = {
   totalSold: number;
 };
 
+export type UsageByType = {
+  type?: string;
+  name?: string;
+  uses: number;
+  revenue?: number;
+};
+
 export interface PromotionsSummary {
   activePromotions: number;
   conversionRate: number;
   conversionChange: number;
   avgDiscount: number;
   discountChange: number;
+  usageByType?: UsageByType;
   roi: number;
   roiChange: number;
   cpa: number;

@@ -7,7 +7,11 @@ import { format, addMonths, startOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DelayedLoading } from "../loading/DelayedLoading";
 import { useDashboardStore, useRestaurantUnitStore } from "@/stores";
-import type { PromotionsSummary, TopPromotion } from "@/types/dashboard";
+import type {
+  PromotionsSummary,
+  TopPromotion,
+  UsageByType,
+} from "@/types/dashboard";
 
 const BRL = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -51,13 +55,6 @@ const SEG_COLORS = [
   "#f472b6",
 ];
 
-type UsageByType = {
-  type?: string;
-  name?: string;
-  uses: number;
-  revenue?: number;
-};
-
 export function PromotionsDashboard() {
   const { data, isLoading, error, fetchDashboardData } = useDashboardStore();
   const unitId = useRestaurantUnitStore.getState().currentUnitId;
@@ -69,6 +66,8 @@ export function PromotionsDashboard() {
   if (isLoading) return <DelayedLoading />;
   if (error) return <div className="p-3 text-red-500">Erro: {error}</div>;
 
+  if (!data?.promotions)
+    return <div className="p-3">Nenhum dado disponível</div>;
   const {
     activePromotions = 0,
     conversionRate = 0,
@@ -85,7 +84,7 @@ export function PromotionsDashboard() {
     topPromotions = [],
     // opcional do backend
     usageByType: usageRaw = [],
-  } = data.promotions as PromotionsSummary & { usageByType?: UsageByType[] };
+  } = data.promotions;
 
   // --- Estrutura por tipo (usos) ---
   const usageByType = (usageRaw as UsageByType[])
