@@ -13,6 +13,7 @@ import type {
   CustomersSummary,
   TopCustomer,
 } from "@/types/dashboard";
+import { useRestaurantStore } from "@/stores";
 
 const DelayedComponent = dynamic(
   () =>
@@ -56,9 +57,11 @@ function buildLastMonthsSeries(
 export function CustomersDashboard() {
   const { data, isLoading, error, fetchDashboardData } = useDashboardStore();
   const unitId = useRestaurantUnitStore.getState().currentUnitId;
+  const restaurantId = useRestaurantStore.getState().restaurant?._id;
 
   useEffect(() => {
     if (unitId) fetchDashboardData("unit", unitId, "customers");
+    else fetchDashboardData("restaurant", String(restaurantId), "customers");
   }, [unitId, fetchDashboardData]);
 
   if (isLoading) {
