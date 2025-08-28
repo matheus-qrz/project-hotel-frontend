@@ -27,6 +27,7 @@ export default function PaymentRequestPage() {
   };
 
   const total = getTotal();
+  const divided = (total / splitCount).toFixed(2);
 
   return (
     <div className="container mx-auto flex min-h-[80vh] max-w-md flex-col items-center justify-center px-4 py-16">
@@ -49,7 +50,7 @@ export default function PaymentRequestPage() {
         </p>
 
         <div className="mt-2 text-xs text-gray-500">
-          Cada pessoa pagará aproximadamente {total}.
+          Cada pessoa pagará aproximadamente {divided ?? total}.
         </div>
 
         <p className="mb-8 text-sm text-gray-500">
