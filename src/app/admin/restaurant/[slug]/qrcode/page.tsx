@@ -42,7 +42,7 @@ export default function QRCodeGenerator() {
     const codes: string[] = [];
     for (let i = 1; i <= numTables; i++) {
       // ajuste conforme sua rota real
-      codes.push(`${cleanBase}/qrcode/${restaurantId}/${i}`);
+      codes.push(`${cleanBase}/${i}`);
     }
     setQrCodes(codes);
   };
