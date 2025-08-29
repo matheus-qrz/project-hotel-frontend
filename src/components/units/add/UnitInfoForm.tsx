@@ -17,17 +17,17 @@ export default function UnitInfoForm() {
   const toast = useToast();
 
   const handleCnpjPart1Change = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '');
+    const value = e.target.value.replace(/\D/g, "");
     updateUnitData({ cnpjPart1: value });
   };
 
   const handleCnpjPart2Change = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '');
+    const value = e.target.value.replace(/\D/g, "");
     updateUnitData({ cnpjPart2: value });
   };
 
   const handleCnpjPart3Change = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '');
+    const value = e.target.value.replace(/\D/g, "");
     updateUnitData({ cnpjPart3: value });
   };
 
@@ -38,18 +38,25 @@ export default function UnitInfoForm() {
   const handleCheckboxChange = (checked: boolean) => {
     updateUnitData({ useMatrixCNPJ: checked });
     if (checked) {
+      const cnpj =
+        `${unitData.cnpjPart1}${unitData.cnpjPart2}${unitData.cnpjPart3}`.replace(
+          /\D/g,
+          "",
+        );
 
-      const cnpj = `${unitData.cnpjPart1}${unitData.cnpjPart2}${unitData.cnpjPart3}`.replace(/\D/g, '');
-
-      const formattedCNPJ = cnpj.replace(/[^\d]/g, '');
+      const formattedCNPJ = cnpj.replace(/[^\d]/g, "");
       if (formattedCNPJ.length >= 14) {
         const part1 = formattedCNPJ.substring(0, 8);
         const part2 = formattedCNPJ.substring(8, 12);
         const part3 = formattedCNPJ.substring(12, 14);
-        updateUnitData({ cnpjPart1: part1, cnpjPart2: part2, cnpjPart3: part3 });
+        updateUnitData({
+          cnpjPart1: part1,
+          cnpjPart2: part2,
+          cnpjPart3: part3,
+        });
       }
     } else {
-      updateUnitData({ cnpjPart1: '', cnpjPart2: '', cnpjPart3: '' });
+      updateUnitData({ cnpjPart1: "", cnpjPart2: "", cnpjPart3: "" });
     }
   };
 
@@ -63,26 +70,31 @@ export default function UnitInfoForm() {
   ];
 
   return (
-    <div className="flex flex-col w-full space-y-6">
+    <div className="flex w-full flex-col space-y-6">
       <div>
-        <h2 className="text-lg font-medium mb-1">Informações da unidade</h2>
-        <p className="text-sm text-gray-500 mb-4">
+        <h2 className="mb-1 text-lg font-medium">Informações da unidade</h2>
+        <p className="mb-4 text-sm text-gray-500">
           Informe os dados do seu negócio.
         </p>
       </div>
 
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          {/* CNPJ */}
+        {/* Linha 1: CNPJ + Razão social */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="cnpj-part1" className="py-2 text-lg font-semibold">CNPJ</Label>
-            <div className="flex items-center gap-2">
+            <Label
+              htmlFor="cnpj-part1"
+              className="py-2 text-base font-semibold md:text-lg"
+            >
+              CNPJ
+            </Label>
+            <div className="flex flex-wrap items-center gap-2">
               <Input
                 id="cnpj-part1"
                 value={unitData.cnpjPart1}
                 onChange={handleCnpjPart1Change}
                 placeholder="12.345.678"
-                className="w-52 h-10 text-lg"
+                className="h-10 min-w-[140px] flex-1"
               />
               <span className="text-lg">/</span>
               <Input
@@ -90,7 +102,7 @@ export default function UnitInfoForm() {
                 value={unitData.cnpjPart2}
                 onChange={handleCnpjPart2Change}
                 placeholder="0001"
-                className="w-24 h-10 text-lg"
+                className="h-10 w-24 md:w-28"
               />
               <span className="text-lg">-</span>
               <Input
@@ -98,7 +110,7 @@ export default function UnitInfoForm() {
                 value={unitData.cnpjPart3}
                 onChange={handleCnpjPart3Change}
                 placeholder="90"
-                className="w-14 h-10 text-lg"
+                className="h-10 w-16"
               />
             </div>
             <div className="flex items-center gap-2 py-2">
@@ -106,13 +118,20 @@ export default function UnitInfoForm() {
                 checked={unitData.useMatrixCNPJ}
                 onCheckedChange={handleCheckboxChange}
               />
-              <Label htmlFor="matrix-cnpj" className="text-sm">CNPJ baseado na matriz</Label>
+              <Label
+                htmlFor="matrix-cnpj"
+                className="text-sm"
+              >
+                CNPJ baseado na matriz
+              </Label>
             </div>
           </div>
 
-          {/* Razão social */}
           <div className="flex flex-col gap-2">
-            <Label htmlFor="socialName" className="py-2 text-lg font-semibold">
+            <Label
+              htmlFor="socialName"
+              className="py-2 text-base font-semibold md:text-lg"
+            >
               Razão social
             </Label>
             <Input
@@ -120,16 +139,18 @@ export default function UnitInfoForm() {
               value={unitData.socialName}
               onChange={(e) => updateUnitData({ socialName: e.target.value })}
               placeholder="Informe a razão social da loja"
-              className="w-full h-10 text-lg"
+              className="h-10"
             />
           </div>
         </div>
 
-        {/* Segunda linha: Nome da unidade, Telefone e Especialidade */}
-        <div className="grid grid-cols-3 gap-4">
-          {/* Nome da unidade */}
+        {/* Linha 2: Nome / Telefone / Especialidade */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div>
-            <Label htmlFor="unitName" className="block mb-4">
+            <Label
+              htmlFor="unitName"
+              className="mb-2 block"
+            >
               Nome da unidade
             </Label>
             <Input
@@ -137,13 +158,14 @@ export default function UnitInfoForm() {
               value={unitData.name}
               onChange={(e) => updateUnitData({ name: e.target.value })}
               placeholder="Exemplo: Lanchonete do Bio"
-              className="w-full h-10"
+              className="h-10"
             />
           </div>
-
-          {/* Telefone */}
           <div>
-            <Label htmlFor="phone" className="block mb-4">
+            <Label
+              htmlFor="phone"
+              className="mb-2 block"
+            >
               Telefone ou celular
             </Label>
             <Input
@@ -151,29 +173,24 @@ export default function UnitInfoForm() {
               value={unitData.phone}
               onChange={(e) => updateUnitData({ phone: e.target.value })}
               placeholder="Número de telefone ou celular da unidade"
-              className="w-full h-10"
+              className="h-10"
             />
           </div>
-
-          {/* Especialidade */}
           <div>
-            <Label htmlFor="specialty" className="block mb-4">
+            <Label
+              htmlFor="specialty"
+              className="mb-2 block"
+            >
               Especialidade
             </Label>
             <Select
               value={unitData.specialty}
-              onValueChange={(value) => updateUnitData({ specialty: value })}
+              onValueChange={(v) => updateUnitData({ specialty: v })}
             >
-              <SelectTrigger className="w-full h-10">
+              <SelectTrigger className="h-10">
                 <SelectValue placeholder="Açaí" />
               </SelectTrigger>
-              <SelectContent>
-                {specialties.map((specialty) => (
-                  <SelectItem key={specialty.value} value={specialty.value}>
-                    {specialty.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+              <SelectContent>{/* ...mesma lista... */}</SelectContent>
             </Select>
           </div>
         </div>

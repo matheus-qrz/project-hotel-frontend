@@ -178,7 +178,7 @@ export default function AddRestaurantUnit({
       };
 
       const response = await fetch(
-        `/${API_URL}/restaurant/${restaurantId}/units/register`,
+        `${API_URL}/restaurant/${restaurantId}/units/register`,
         {
           method: "POST",
           headers: {
@@ -236,11 +236,13 @@ export default function AddRestaurantUnit({
   };
 
   return (
-    <div className="h-screen">
-      <div className="mx-auto flex w-full flex-col bg-transparent">
-        <div className="relative mx-auto mb-8 mt-8 w-full p-8">
-          <div className="mb-7 flex flex-row items-center justify-between">
-            <h2 className="text-2xl font-medium">Adicionar nova unidade</h2>
+    <div className="min-h-screen">
+      <div className="mx-auto w-full max-w-5xl bg-transparent px-4 sm:px-6 lg:px-8">
+        <div className="relative mx-auto mb-8 mt-6 w-full pb-24">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="text-xl font-medium sm:text-2xl">
+              Adicionar nova unidade
+            </h2>
             <Button
               variant="ghost"
               size="icon"
@@ -254,60 +256,60 @@ export default function AddRestaurantUnit({
           <div className="mb-8">{renderStepContent()}</div>
 
           {step !== 5 && (
-            <div className="mt-14">
-              <Progress
-                value={(step / 4) * 100}
-                className="mb-6 h-2 bg-gray-300"
-              />
-              <div className="flex justify-between">
-                {step > 1 ? (
-                  <Button
-                    variant="outline"
-                    onClick={handlePrevious}
-                    className="rounded-md border border-border px-4 py-2"
-                  >
-                    <span>
-                      <ChevronLeft className="mr-1 inline h-4 w-4" />
+            // barra “fixa” no rodapé (mobile), normal no desktop
+            <div className="sticky bottom-0 -mx-4 border-t bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 sm:mx-0">
+              <div className="px-4 py-3 sm:px-0">
+                <Progress
+                  value={(step / 4) * 100}
+                  className="mb-3 h-2 bg-gray-200"
+                />
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  {step > 1 ? (
+                    <Button
+                      variant="outline"
+                      onClick={handlePrevious}
+                      className="rounded-md"
+                    >
+                      <ChevronLeft className="mr-1 h-4 w-4" />
                       Voltar para:
                       {step === 2 && " Informações da unidade"}
                       {step === 3 && " Endereço da unidade"}
                       {step === 4 && " Horário de funcionamento"}
-                    </span>
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    onClick={handleClose}
-                    className="rounded-md border border-border px-4 py-2"
-                  >
-                    Cancelar
-                  </Button>
-                )}
-
-                <Button
-                  onClick={step < 4 ? handleNext : handleSubmit}
-                  disabled={isSubmitting}
-                  className="rounded-md bg-secondary px-4 py-2 text-primary hover:bg-gray-800"
-                >
-                  {step < 4 ? (
-                    <>
-                      Próximo
-                      <ChevronRight className="ml-2 inline h-4 w-4" />
-                    </>
+                    </Button>
                   ) : (
-                    <>
-                      <Check className="mr-2 inline h-4 w-4" />
-                      Finalizar cadastro
-                    </>
+                    <Button
+                      variant="outline"
+                      onClick={handleClose}
+                      className="rounded-md"
+                    >
+                      Cancelar
+                    </Button>
                   )}
-                </Button>
+
+                  <Button
+                    onClick={step < 4 ? handleNext : handleSubmit}
+                    disabled={isSubmitting}
+                    className="rounded-md bg-secondary text-primary hover:bg-gray-800"
+                  >
+                    {step < 4 ? (
+                      <>
+                        Próximo <ChevronRight className="ml-2 h-4 w-4" />
+                      </>
+                    ) : (
+                      <>
+                        <Check className="mr-2 h-4 w-4" />
+                        Finalizar cadastro
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           )}
 
           {step === 5 && (
-            <div className="mt-8">
-              <div className="flex justify-center gap-4">
+            <div className="mt-6">
+              <div className="flex flex-col gap-3 sm:flex-row">
                 <Button
                   variant="outline"
                   onClick={() =>

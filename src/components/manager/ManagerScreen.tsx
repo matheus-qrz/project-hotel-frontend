@@ -398,7 +398,7 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
   const renderOrderCard = (order: Order) => (
     <Card
       key={order._id}
-      className="w-full max-w-lg rounded-xl bg-white shadow-md"
+      className="w-full shrink-0 rounded-xl bg-white shadow-md"
     >
       <CardHeader className="pb-2">
         <CardTitle className="flex flex-col items-start space-y-1 text-base">
@@ -486,33 +486,26 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
 
         {/* -------- MOBILE: 1 coluna por tela, swipe horizontal -------- */}
         <div className="px-6 md:hidden">
-          <div className="/* ocupa a tela menos o header */ flex h-[calc(100vh-140px)] snap-x snap-mandatory gap-6 overflow-x-auto pb-2">
-            {/* Em preparo */}
+          <div className="h[calc(100vh-140px)] flex snap-x snap-mandatory gap-6 overflow-x-auto pb-2">
             <section className="min-w-full snap-start">
-              <h2 className="mb-4 border-r border-gray-400 text-lg font-semibold">
-                Em preparo
-              </h2>
-              <div className="max-h-full overflow-y-auto pr-2">
+              <h2 className="mb-4 text-lg font-semibold">Em preparo</h2>
+              <div className="max-h-full space-y-3 overflow-y-auto pr-2">
                 {renderOrders(OrderStatus.PROCESSING)}
               </div>
             </section>
 
-            {/* Concluídos */}
             <section className="min-w-full snap-start">
-              <h2 className="mb-4 border-r border-gray-400 text-lg font-semibold">
-                Concluídos
-              </h2>
-              <div className="max-h-full overflow-y-auto pr-2">
+              <h2 className="mb-4 text-lg font-semibold">Concluídos</h2>
+              <div className="max-h-full space-y-3 overflow-y-auto pr-2">
                 {renderOrders(OrderStatus.COMPLETED)}
               </div>
             </section>
 
-            {/* Pagamentos solicitados */}
             <section className="min-w-full snap-start">
               <h2 className="mb-4 text-lg font-semibold">
                 Pagamentos solicitados
               </h2>
-              <div className="max-h-full overflow-y-auto pr-2">
+              <div className="max-h-full space-y-3 overflow-y-auto pr-2">
                 {renderOrders(OrderStatus.PAYMENT_REQUESTED)}
               </div>
             </section>
@@ -523,21 +516,17 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
         <div className="hidden grow px-6 md:block">
           <div className="grid h-[calc(100vh-140px)] grid-cols-3 items-start gap-6">
             {/* Em preparo */}
-            <section className="flex h-full min-h-[500px] flex-col">
-              <h2 className="mb-4 border-r border-gray-400 text-lg font-semibold">
-                Em preparo
-              </h2>
-              <div className="h-0 grow overflow-y-auto pr-2">
+            <section className="flex h-full min-h-[500px] flex-col border-r border-gray-200 pr-2">
+              <h2 className="mb-4 text-lg font-semibold">Em preparo</h2>
+              <div className="h-0 grow space-y-3 overflow-y-auto">
                 {renderOrders(OrderStatus.PROCESSING)}
               </div>
             </section>
 
             {/* Concluídos */}
-            <section className="flex h-full min-h-[500px] flex-col">
-              <h2 className="mb-4 border-r border-gray-400 text-lg font-semibold">
-                Concluídos
-              </h2>
-              <div className="h-0 grow overflow-y-auto pr-2">
+            <section className="flex h-full min-h-[500px] flex-col border-r border-gray-200 pr-2">
+              <h2 className="mb-4 text-lg font-semibold">Concluídos</h2>
+              <div className="h-0 grow space-y-3 overflow-y-auto">
                 {renderOrders(OrderStatus.COMPLETED)}
               </div>
             </section>
@@ -547,7 +536,7 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
               <h2 className="mb-4 text-lg font-semibold">
                 Pagamentos solicitados
               </h2>
-              <div className="h-0 grow overflow-y-auto pr-2">
+              <div className="h-0 grow space-y-3 overflow-y-auto">
                 {renderOrders(OrderStatus.PAYMENT_REQUESTED)}
               </div>
             </section>

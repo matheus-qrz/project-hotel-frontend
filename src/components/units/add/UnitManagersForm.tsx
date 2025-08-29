@@ -97,7 +97,7 @@ export default function UnitManagersForm({ restaurantId }: iUnitManagersForm) {
         </p>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {availableManagers.length === 0 ? (
           <div className="py-4 text-center text-gray-500">
             Nenhum gerente disponível. Cadastre gerentes antes de continuar.

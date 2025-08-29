@@ -102,6 +102,7 @@ export default function UnitsList({
             size="icon"
             className="h-10 w-full rounded-sm border border-border hover:bg-primary hover:text-secondary sm:w-10"
             aria-label="Configurações"
+            disabled
           >
             <Settings size={22} />
           </Button>
@@ -123,6 +124,7 @@ export default function UnitsList({
           className="h-10 w-full rounded-sm border border-border hover:bg-primary hover:text-secondary sm:w-10"
           title="Mais filtros"
           aria-label="Mais filtros"
+          disabled
         >
           <Settings2 />
         </Button>
