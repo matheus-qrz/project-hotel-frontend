@@ -442,9 +442,6 @@ export default function OrderHistory({ slug }: OrderHistoryProps) {
       <div className="mx-auto w-full p-2">
         {/* Barra de impressão / filtro */}
         <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div className="text-sm font-medium text-zinc-700">
-            Exportar pedidos
-          </div>
           <div className="flex items-center gap-2">
             <Select
               value={printFilter}
