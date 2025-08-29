@@ -8,7 +8,9 @@
     "dev": "next dev",
     "lint": "next lint"
   },
-  "engines": { "node": ">=18.18 <=22" },
+  "engines": {
+    "node": ">=18.18 <=22"
+  },
   "dependencies": {
     "@hookform/resolvers": "^4.1.3",
     "@radix-ui/react-alert-dialog": "^1.1.6",
@@ -45,6 +47,7 @@
     "idb": "^8.0.3",
     "jose": "^5.9.6",
     "js-cookie": "^3.0.5",
+    "jspdf": "^3.0.2",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.468.0",
     "next": "15.1.7",
