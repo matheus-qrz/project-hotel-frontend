@@ -398,7 +398,7 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
   const renderOrderCard = (order: Order) => (
     <Card
       key={order._id}
-      className="w-full flex-none rounded-xl bg-white shadow-md"
+      className="h-fit w-full flex-none rounded-xl bg-white shadow-md"
     >
       <CardHeader className="pb-2">
         <CardTitle className="flex flex-col items-start space-y-1 text-base">
