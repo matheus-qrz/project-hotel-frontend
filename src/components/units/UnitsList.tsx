@@ -6,8 +6,6 @@ import { Plus, Settings, Settings2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import UnitCard from "./UnitCard";
 
 import {
@@ -79,56 +77,59 @@ export default function UnitsList({
     }
   };
 
-  if (isLoading) {
-    return <DelayedLoading />;
-  }
+  if (isLoading) return <DelayedLoading />;
 
   return (
     <div
-      className={`flex w-full flex-col p-3 ${selectedUnits.length > 0 ? "border-b border-border" : ""}`}
+      className={`flex w-full flex-col p-3 sm:p-4 ${
+        selectedUnits.length > 0 ? "border-b border-border" : ""
+      }`}
     >
-      <div className="mb-4 flex items-center justify-between">
+      {/* Ações do topo */}
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
         <Button
           variant="default"
-          className="cursor-pointer border border-border bg-secondary font-medium text-primary hover:bg-primary hover:text-secondary"
+          className="h-10 w-full cursor-pointer border border-border bg-secondary font-medium text-primary hover:bg-primary hover:text-secondary sm:w-auto"
           onClick={handleRegisterRestaurantUnit}
         >
-          <Label className="cursor-pointer">Criar nova unidade</Label>
-          <Plus className="ml-2" />
+          <span className="pointer-events-none">Criar nova unidade</span>
+          <Plus className="ml-2 shrink-0" />
         </Button>
 
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-10 w-10 rounded-sm border border-border hover:bg-primary hover:text-secondary"
-        >
-          <Settings size={22} />
-        </Button>
+        <div className="flex sm:ml-auto">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-10 w-full rounded-sm border border-border hover:bg-primary hover:text-secondary sm:w-10"
+            aria-label="Configurações"
+          >
+            <Settings size={22} />
+          </Button>
+        </div>
       </div>
 
-      {/* Filtro */}
-      <div className="mt-2 flex items-center gap-4">
-        <div className="relative w-full">
-          <Input
-            type="text"
-            placeholder="Buscar por nome, gerente ou CNPJ"
-            className="h-10 w-full rounded-sm border-border"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
+      {/* Filtros */}
+      <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <Input
+          type="text"
+          placeholder="Buscar por nome, gerente ou CNPJ"
+          className="h-10 w-full rounded-sm border-border"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
         <Button
           variant="ghost"
           size="icon"
-          className="h-10 w-10 rounded-sm border border-border hover:bg-primary hover:text-secondary"
+          className="h-10 w-full rounded-sm border border-border hover:bg-primary hover:text-secondary sm:w-10"
           title="Mais filtros"
+          aria-label="Mais filtros"
         >
           <Settings2 />
         </Button>
       </div>
 
       {/* Lista */}
-      <div className="flex flex-col gap-4 pt-9">
+      <div className="space-y-4 pt-6 sm:pt-8">
         {filteredUnits.map((unit) => (
           <UnitCard
             key={unit._id}

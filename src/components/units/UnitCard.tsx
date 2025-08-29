@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,61 +61,59 @@ export default function UnitCard({
     setSelected(isSelected);
   }, [isSelected]);
 
-  const handleSelectionChange = () => {
-    const newSelected = !selected;
-    setSelected(newSelected);
-    onToggleSelection(newSelected);
-  };
-
   const goDetails = () => router.push(`/admin/restaurant/${slug}/units/${_id}`);
-  const goEdit = () => router.push(`/admin/restaurant/${slug}/units/${_id}`); // edição já ocorre na tela de detalhes
+  const goEdit = () => router.push(`/admin/restaurant/${slug}/units/${_id}`); // edição na tela de detalhes
 
-  const statusDot = {
-    active: "bg-green-500",
-    outOfHours: "bg-amber-500",
-    inactive: "bg-red-500",
-  }[status];
+  const statusDot =
+    {
+      active: "bg-green-500",
+      outOfHours: "bg-amber-500",
+      inactive: "bg-red-500",
+    }[status] ?? "bg-zinc-400";
 
   return (
-    <div className="bg-card/60 hover:bg-accent/40 group h-28 rounded-lg border border-border transition-colors">
-      <div className="flex items-center gap-3 px-4 py-3">
+    <div className="bg-card/60 hover:bg-accent/40 group rounded-lg border border-border transition-colors">
+      {/* Cabeçalho do card: empilha no mobile, linha no desktop */}
+      <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* Bloco de textos */}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className={`h-2.5 w-2.5 rounded-full ${statusDot}`} />
-            <h3 className="truncate text-lg font-medium text-foreground">
+            <h3 className="truncate text-base font-medium text-foreground sm:text-lg">
               {name}
             </h3>
 
             {isMatrix && (
-              <Badge className="rounded-full px-2 py-0.5 text-[10px]">
+              <Badge className="rounded-full px-2 py-0.5 text-[10px] sm:text-xs">
                 Matriz
               </Badge>
             )}
             {isTopSeller && (
-              <Badge className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px]">
-                <Flame className="h-3 w-3" />
+              <Badge className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] sm:text-xs">
+                <Flame className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 Destaque
               </Badge>
             )}
           </div>
 
-          <div className="mt-8 flex flex-wrap gap-x-6 text-sm text-muted-foreground">
-            <span>
-              Gerente:{" "}
-              <span className="text-foreground">
+          <div className="mt-1 flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <span className="font-medium">Gerente:</span>
+              <span className="truncate text-foreground">
                 {manager && manager.trim() ? manager : "Sem gerente"}
               </span>
             </span>
-            <span>
-              CNPJ:{" "}
-              <span className="text-foreground">
+            <span className="flex items-center gap-1">
+              <span className="font-medium">CNPJ:</span>
+              <span className="truncate text-foreground">
                 {formatCnpj(String(cnpj)) || "—"}
               </span>
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        {/* Ações */}
+        <div className="flex shrink-0 items-center gap-1 sm:self-start">
           <Button
             variant="ghost"
             size="icon"
