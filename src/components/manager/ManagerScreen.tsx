@@ -466,10 +466,10 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gray-50">
+    <div className="h-screen w-full overflow-auto">
       <div className="mx-auto flex w-full flex-col p-4">
         {/* Cabeçalho */}
-        <div className="mb-4 flex items-center justify-between px-6">
+        <div className="mb-4 flex items-center justify-between p-4">
           <h1 className="text-xl font-bold">Gerenciamento de Pedidos</h1>
           <Button
             onClick={handleRefresh}
@@ -516,21 +516,21 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
         <div className="hidden grow px-6 md:block">
           <div className="grid grid-cols-3 items-start gap-6">
             {/* Em preparo */}
-            <section className="flex h-full flex-col overflow-hidden border-r border-gray-200 pr-2">
+            <section className="flex h-full flex-col overflow-auto border-r border-gray-200 pr-2">
               <h2 className="mb-4 text-lg font-semibold">Em preparo</h2>
               <div className="flex-1 space-y-3 overflow-y-auto">
                 {renderOrders(OrderStatus.PROCESSING)}
               </div>
             </section>
 
-            <section className="flex h-full flex-col overflow-hidden border-r border-gray-200 pr-2">
+            <section className="flex h-full flex-col overflow-auto border-r border-gray-200 pr-2">
               <h2 className="mb-4 text-lg font-semibold">Concluídos</h2>
               <div className="flex-1 space-y-3 overflow-y-auto">
                 {renderOrders(OrderStatus.COMPLETED)}
               </div>
             </section>
 
-            <section className="flex h-full flex-col overflow-hidden">
+            <section className="flex h-full flex-col overflow-auto">
               <h2 className="mb-4 text-lg font-semibold">
                 Pagamentos solicitados
               </h2>
