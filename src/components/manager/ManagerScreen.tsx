@@ -467,7 +467,7 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
 
   return (
     <div className="min-h-screen w-full bg-gray-50">
-      <div className="mx-auto flex min-h-screen w-full flex-col p-4">
+      <div className="mx-auto flex w-full flex-col p-4">
         {/* Cabeçalho */}
         <div className="mb-4 flex items-center justify-between px-6">
           <h1 className="text-xl font-bold">Gerenciamento de Pedidos</h1>
@@ -486,7 +486,7 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
 
         {/* -------- MOBILE: 1 coluna por tela, swipe horizontal -------- */}
         <div className="px-6 md:hidden">
-          <div className="flex h-[calc(100vh-140px)] snap-x snap-mandatory gap-6 overflow-x-auto pb-2">
+          <div className="flex snap-x snap-mandatory gap-6 overflow-x-auto pb-2">
             <section className="flex h-full min-w-full snap-start flex-col overflow-hidden">
               <h2 className="mb-4 text-lg font-semibold">Em preparo</h2>
               <div className="flex-1 space-y-3 overflow-y-auto pr-2">
@@ -514,7 +514,7 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
 
         {/* -------- DESKTOP: 3 colunas com scroll independente -------- */}
         <div className="hidden grow px-6 md:block">
-          <div className="grid h-[calc(100vh-140px)] grid-cols-3 items-start gap-6">
+          <div className="grid grid-cols-3 items-start gap-6">
             {/* Em preparo */}
             <section className="flex h-full flex-col overflow-hidden border-r border-gray-200 pr-2">
               <h2 className="mb-4 text-lg font-semibold">Em preparo</h2>
