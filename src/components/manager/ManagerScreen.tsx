@@ -454,6 +454,14 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
         <div className="ml-4 space-y-1">
           {renderOrderItems(order, order.items)}
         </div>
+        <p className="mt-1">
+          <strong>Observações:</strong>
+        </p>
+        <div className="ml-4 space-y-1">
+          <span className="text-md text-muted-foreground">
+            {order.observations || "Nenhuma observação."}
+          </span>
+        </div>
         <p className="flex w-full flex-row justify-end pt-4">
           <strong>Total:</strong> R$ {order.totalAmount.toFixed(2)}
         </p>
@@ -487,21 +495,21 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
         {/* -------- MOBILE: 1 coluna por tela, swipe horizontal -------- */}
         <div className="px-6 md:hidden">
           <div className="flex snap-x snap-mandatory gap-6 overflow-x-auto pb-2">
-            <section className="flex h-full min-w-full snap-start flex-col overflow-hidden">
+            <section className="flex h-full min-w-full snap-start flex-col overflow-auto">
               <h2 className="mb-4 text-lg font-semibold">Em preparo</h2>
               <div className="flex-1 space-y-3 overflow-y-auto pr-2">
                 {renderOrders(OrderStatus.PROCESSING)}
               </div>
             </section>
 
-            <section className="flex h-full min-w-full snap-start flex-col overflow-hidden">
+            <section className="flex h-full min-w-full snap-start flex-col overflow-auto">
               <h2 className="mb-4 text-lg font-semibold">Concluídos</h2>
               <div className="flex-1 space-y-3 overflow-y-auto pr-2">
                 {renderOrders(OrderStatus.COMPLETED)}
               </div>
             </section>
 
-            <section className="flex h-full min-w-full snap-start flex-col overflow-hidden">
+            <section className="flex h-full min-w-full snap-start flex-col overflow-auto">
               <h2 className="mb-4 text-lg font-semibold">
                 Pagamentos solicitados
               </h2>

@@ -21,6 +21,8 @@ import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useParams } from "next/navigation";
 import { extractIdFromSlug, extractNameFromSlug } from "@/utils/slugify";
+
+// 🔹 NOVO: usa o util leve (gera imagens sem capturar DOM)
 import { buildQrPdf, openPrintWindow } from "@/utils/QRCodeGenerator";
 
 export default function QRCodeGenerator() {
@@ -175,10 +177,7 @@ export default function QRCodeGenerator() {
                         </div>
                       </div>
 
-                      <Button
-                        onClick={generateQRCodes}
-                        className="w-full"
-                      >
+                      <Button onClick={generateQRCodes} className="w-full">
                         Gerar QR Codes
                       </Button>
                     </div>
@@ -190,18 +189,11 @@ export default function QRCodeGenerator() {
                     <div className="flex flex-col items-stretch justify-between gap-2 sm:flex-row sm:items-center">
                       <h2 className="text-lg font-medium">QR Codes Gerados</h2>
                       <div className="flex gap-2 self-end">
-                        <Button
-                          onClick={printAllQRCodes}
-                          variant="outline"
-                          size="sm"
-                        >
+                        <Button onClick={printAllQRCodes} variant="outline" size="sm">
                           <Printer className="mr-2 h-4 w-4" />
                           Imprimir Todos
                         </Button>
-                        <Button
-                          onClick={downloadAllQRCodesAsPDF}
-                          size="sm"
-                        >
+                        <Button onClick={downloadAllQRCodesAsPDF} size="sm">
                           <Download className="mr-2 h-4 w-4" />
                           Baixar PDF
                         </Button>
@@ -211,21 +203,12 @@ export default function QRCodeGenerator() {
                     {/* 1 coluna no mobile, 2 no desktop */}
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       {qrCodes.map((url, index) => (
-                        <Card
-                          key={index}
-                          className="overflow-hidden"
-                        >
+                        <Card key={index} className="overflow-hidden">
                           <CardContent className="p-4 text-center">
-                            <h3 className="mb-3 font-medium">
-                              Mesa {index + 1}
-                            </h3>
+                            <h3 className="mb-3 font-medium">Mesa {index + 1}</h3>
                             <div className="mb-4 flex justify-center">
                               <div id={`qr-${index + 1}`}>
-                                <QRCodeSVG
-                                  value={url}
-                                  size={qrSize}
-                                  level="H"
-                                />
+                                <QRCodeSVG value={url} size={qrSize} level="H" />
                               </div>
                             </div>
                             <Button

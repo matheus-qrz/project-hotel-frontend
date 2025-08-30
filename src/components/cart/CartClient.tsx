@@ -94,6 +94,7 @@ export const CartClient = () => {
             createdAt: new Date(),
           })),
         })),
+        observations: observations || "",
         guestInfo: {
           id: guestId,
           name: guestInfo.name,

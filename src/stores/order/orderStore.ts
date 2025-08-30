@@ -35,6 +35,7 @@ export interface OrderItem extends CartItemProps {
 export interface Order {
     _id: string;
     items: OrderItem[];
+    observations?: string;
     totalAmount: number;
     status: OrderStatusType;
     isPaid: boolean;
