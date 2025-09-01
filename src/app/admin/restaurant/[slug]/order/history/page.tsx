@@ -4,7 +4,7 @@
 import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Header from "@/components/header/Header";
-import { Sidebar } from "@/components/dashboard/SideMenu";
+import { Sidebar } from "@/components/sidebar/SideMenu";
 import { useAuthStore, useOrderStore } from "@/stores";
 import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";

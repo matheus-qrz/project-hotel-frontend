@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { useParams, useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores";
 import Header from "@/components/header/Header";
-import { Sidebar } from "@/components/dashboard/SideMenu";
+import { Sidebar } from "@/components/sidebar/SideMenu";
 import { useSidebar } from "@/components/ui/sidebar";
 import { DelayedLoading } from "@/components/loading/DelayedLoading";
 import ManagerScreen from "@/components/manager/ManagerScreen";
@@ -45,7 +45,7 @@ export default function ManagerPage() {
       >
         <Sidebar />
 
-        <div className="px-8 py-6">
+        <div className="px-8">
           <ManagerScreen slug={String(slug)} />
         </div>
       </div>

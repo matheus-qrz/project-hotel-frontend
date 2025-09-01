@@ -21,7 +21,6 @@ export default function TableIdentificationPage() {
 
   const { restaurant, fetchRestaurantData } = useRestaurantStore();
   const { setTableInfo } = useTableStore();
-  const { setTableInfo: setCartTableInfo } = useCartStore();
   const { guestInfo, setGuestInfo, setRestaurantId, setTableId } =
     useGuestStore();
 
@@ -66,7 +65,6 @@ export default function TableIdentificationPage() {
         const tableIdNum = Number(tableId);
 
         setTableInfo(tableIdNum, restaurantId);
-        setCartTableInfo(tableIdNum, restaurantId);
         setRestaurantId(restaurantId);
         setTableId(tableIdNum);
       } catch (error: any) {

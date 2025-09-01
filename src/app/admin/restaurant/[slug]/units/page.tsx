@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import UnitsList from "@/components/units/UnitsList";
-import { Sidebar } from "@/components/dashboard/SideMenu";
+import { Sidebar } from "@/components/sidebar/SideMenu";
 import Header from "@/components/header/Header";
 import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";

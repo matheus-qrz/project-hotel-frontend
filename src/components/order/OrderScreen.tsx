@@ -25,6 +25,7 @@ export const OrdersScreen = () => {
   const { guestInfo } = useGuestStore();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showFinishDialog, setShowFinishDialog] = useState(false);
+  const [showIsPaidDialog, setShowIsPaidDialog] = useState(false);
   const [isFinalizingOrder, setIsFinalizingOrder] = useState(false);
   const [splitCount, setSplitCount] = useState(1);
 
@@ -76,6 +77,38 @@ export const OrdersScreen = () => {
       setIsRefreshing(false);
     }
   };
+
+  if (order[0].status === "paid") {
+    return (
+      <AlertDialog
+        open={showFinishDialog}
+        onOpenChange={setShowFinishDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Conta paga!</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja voltar para o menu?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={isFinalizingOrder}
+              onClick={() => router.push(`/login`)}
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => router.push(`/restaurant/${slug}/${tableId}/menu`)}
+              disabled={isFinalizingOrder}
+            >
+              {isFinalizingOrder ? "Solicitando..." : "Fechar Conta"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  }
 
   const totalAmount =
     order[0]?.status === "cancelled"

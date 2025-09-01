@@ -81,14 +81,24 @@ export function OrderCard({
     setIsUpdating(true);
 
     try {
-      await cancelOrderItem(
-        order._id,
-        itemId,
-        restaurantId,
-        Number(order.meta.tableId),
-        guestInfo?.id,
-      );
-
+      if (newQuantity <= 0) {
+        await cancelOrderItem(
+          order._id,
+          itemId,
+          restaurantId,
+          Number(order.meta.tableId),
+          guestInfo?.id,
+        );
+      } else {
+        // ajuste a assinatura conforme seu store:
+        await updateOrderItem(
+          restaurantId,
+          Number(order.meta.tableId),
+          order._id,
+          itemId,
+          { quantity: newQuantity, status: "reduced" }, // ou o payload que seu store espera
+        );
+      }
       onStatusUpdate?.();
     } catch (error) {
       console.error("Erro ao atualizar quantidade do item:", error);
@@ -102,10 +112,16 @@ export function OrderCard({
   const canCancel = order.status === "processing";
 
   const renderOrderItems = (items: OrderItem[]) => {
-    return items.map((item) => {
+    return items.map((item: OrderItem) => {
       const previousItem = previousItems.find((prev) => prev._id === item._id);
       const isNew = previousItem ? item.quantity > previousItem.quantity : true;
-      const isCancelled = item.status === "cancelled";
+      const itemStatus = (item as any).status ?? "added"; // fallback seguro
+      const isCancelled = itemStatus === "cancelled";
+
+      const isActionable =
+        order.status === "processing" &&
+        item.status !== "cancelled" &&
+        item.status !== "completed";
 
       return (
         <div
@@ -147,15 +163,17 @@ export function OrderCard({
               Quantidade: {item.quantity}
             </span>
 
-            {/* Botão de cancelar só aparece se não estiver cancelado */}
-            {canCancel && !isCancelled && item.status === "processing" && (
+            {/* Botão de cancelar só aparece se não estiver cancelado ou concluído*/}
+            {isActionable && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
                     className="text-red-500 hover:text-red-700"
                     disabled={isUpdating}
+                    aria-label="Cancelar item"
+                    title="Cancelar item"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

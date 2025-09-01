@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { CircleDollarSign, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { extractIdFromSlug, extractScopeFromPathname } from "@/utils/slugify";
@@ -40,6 +40,7 @@ function lastMonths(n: number): string[] {
 
 export default function ChartCard() {
   const { slug, unitId } = useParams();
+  const route = useRouter();
   const scope = extractScopeFromPathname(String(slug));
   const restaurantId = extractIdFromSlug(String(slug));
 
@@ -96,7 +97,12 @@ export default function ChartCard() {
             Faturamento
           </CardTitle>
         </div>
-        <button className="text-sm text-gray-500 transition-colors hover:text-primary hover:underline">
+        <button
+          className="text-sm text-gray-500 transition-colors hover:text-primary hover:underline"
+          onClick={() =>
+            route.push(`/admin/restaurant/${slug}/statistics?tab=financial`)
+          }
+        >
           Ver detalhes
         </button>
       </CardHeader>
@@ -113,7 +119,9 @@ export default function ChartCard() {
           </div>
           <div className="h-8 border-r border-border"></div>
           <div>
-            <p className="text-right text-sm text-gray-500">Receita total</p>
+            <p className="text-right text-sm text-gray-500">
+              Receita total (mês atual)
+            </p>
             <p className="text-right font-medium text-green-500">
               {formatCurrency(currentRevenue)}
             </p>

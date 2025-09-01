@@ -48,6 +48,8 @@ const CATEGORIES = [
   { id: "desserts", name: "Sobremesas" },
 ];
 
+const VISIBLE_CATEGORIES = CATEGORIES.filter((c) => c.id !== "addOns");
+
 export default function MenuClient({
   slug,
   initialCategories,
@@ -55,15 +57,23 @@ export default function MenuClient({
   const { tableId } = useParams();
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const { items, addItem, updateQuantity, removeItem, getTotal, getGuestId } =
-    useCartStore();
+  const {
+    items,
+    addItem,
+    updateQuantity,
+    removeItem,
+    getTotal,
+    setActiveGuestId,
+  } = useCartStore();
   const {
     products,
     loading: isLoading,
     setSelectedProduct,
   } = useProductStore();
-  const { guestInfo } = useGuestStore();
   const { fetchGuestOrders, order } = useOrderStore();
+  const { guestInfo } = useGuestStore();
+
+  const guestId = guestInfo?.id;
 
   const restaurantName = slug && extractNameFromSlug(String(slug));
 
@@ -73,11 +83,11 @@ export default function MenuClient({
   const totalPrice = getTotal();
 
   useEffect(() => {
-    const guestId = guestInfo?.id;
     if (guestId && tableId) {
+      setActiveGuestId(guestId);
       fetchGuestOrders(guestId, Number(tableId));
     }
-  }, [slug, tableId, order.length]);
+  }, [guestInfo, tableId, order.length]);
 
   const handleQuantityChange = (id: string, newQuantity: number) => {
     const product = products.find((p) => p._id === id);
@@ -105,13 +115,17 @@ export default function MenuClient({
     }
   };
 
+  const menuProducts = products.filter(
+    (p) => (p.category ?? "").toLowerCase() !== "addons",
+  );
+
   const filteredProducts = selectedCategory
-    ? products.filter(
+    ? menuProducts.filter(
         (product) =>
           product.category === selectedCategory ||
           (product.isCombo && selectedCategory === "Combos"),
       )
-    : products;
+    : menuProducts;
 
   const goToCart = () => {
     // Verifica se algum item no carrinho possui adicionais ou acompanhamentos
@@ -189,8 +203,8 @@ export default function MenuClient({
 
       <div className="mb-8 space-y-6">
         {selectedCategory === null ? (
-          CATEGORIES.map((category) => {
-            const categoryProducts = products.filter(
+          VISIBLE_CATEGORIES.map((category) => {
+            const categoryProducts = menuProducts.filter(
               (product) =>
                 product.category === category.id ||
                 (product.isCombo && category.id === "Combos"),

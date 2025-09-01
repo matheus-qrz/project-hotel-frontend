@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { ShoppingBag, TrendingUp } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -12,6 +12,7 @@ import { OrdersDashboardData } from "@/types/dashboard";
 import { DelayedLoading } from "../loading/DelayedLoading";
 
 export default function InformativeCard() {
+  const route = useRouter();
   const { slug, unitId } = useParams();
   const { data, fetchDashboardData, isLoading, error } = useDashboardStore();
 
@@ -49,7 +50,12 @@ export default function InformativeCard() {
             Pedidos
           </CardTitle>
         </div>
-        <button className="text-sm text-gray-500 transition-colors hover:text-primary hover:underline">
+        <button
+          className="text-sm text-gray-500 transition-colors hover:text-primary hover:underline"
+          onClick={() =>
+            route.push(`/admin/restaurant/${slug}/statistics?tab=orders`)
+          }
+        >
           Ver detalhes
         </button>
       </CardHeader>

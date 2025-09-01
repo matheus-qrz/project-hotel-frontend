@@ -19,7 +19,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { CartItem } from "@/components/cart/CartItem";
-import { useCartStore, useGuestStore, useOrderStore } from "@/stores";
+import {
+  CartItemProps,
+  useCartStore,
+  useGuestStore,
+  useOrderStore,
+} from "@/stores";
 import { extractIdFromSlug } from "@/utils/slugify";
 import { OrderItemStatus } from "@/stores/order/types/order.types";
 import { generateOrGetGuestId } from "@/utils/guestId";
@@ -39,7 +44,8 @@ export const CartClient = () => {
 
   const restaurantId = slug && extractIdFromSlug(String(slug));
 
-  const { items, getGuestId, getTotal, clearCart } = useCartStore();
+  const { items, getTotal, clearCart } = useCartStore();
+  const { guestInfo } = useGuestStore();
 
   const {
     order,
@@ -48,8 +54,6 @@ export const CartClient = () => {
     cleanUpOrders,
     submitOrderUnified,
   } = useOrderStore();
-
-  const { guestInfo } = useGuestStore();
 
   const guestId = guestInfo?.id;
 
@@ -254,17 +258,17 @@ export const CartClient = () => {
 
       {/* Itens no carrinho */}
       <div className="mb-6 space-y-2">
-        {items.map((item) => (
+        {items.map((item: CartItemProps) => (
           <CartItem
             key={item._id}
             id={item._id}
             name={item.name}
             price={item.price}
             image={item.image}
-            costPrice={item.costPrice}
+            costPrice={item.costPrice || 0}
             quantity={item.quantity}
             itemStatus={item.status || OrderItemStatus.PROCESSING}
-            guestId={getGuestId() || ""}
+            guestId={String(guestId)}
             addons={item.addons}
           />
         ))}

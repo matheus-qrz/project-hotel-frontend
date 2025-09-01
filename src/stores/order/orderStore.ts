@@ -6,8 +6,6 @@ import { OrderItemStatus, OrderItemStatusType, OrderStatus, OrderStatusType, Ord
 import { useTableStore } from './tableStore';
 import { getOrCreateOrderSessionId } from '@/utils/session';
 
-// ✅ Tipagens ajustadas com sessionId e store limpo (somente fluxo unificado)
-
 export interface OrderMetadata {
     tableId: number;
     guestId: string;
@@ -508,7 +506,7 @@ export const useOrderStore = create(
             },
 
             cancelOrderItem: async (orderId: string, itemId: string, restaurantId: string, tableId: number, guestId?: string) => {
-                const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/item/${itemId}/cancel`, {
+                const response = await fetch(`${API_URL}/restaurant/${restaurantId}/${tableId}/order/${orderId}/items/${itemId}/cancel`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ guestId }),

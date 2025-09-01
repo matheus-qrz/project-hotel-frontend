@@ -16,7 +16,7 @@ import { Download, Printer } from "lucide-react";
 import { toPng } from "html-to-image";
 import { QRCodeSVG } from "qrcode.react";
 import Header from "@/components/header/Header";
-import { Sidebar } from "@/components/dashboard/SideMenu";
+import { Sidebar } from "@/components/sidebar/SideMenu";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useParams } from "next/navigation";

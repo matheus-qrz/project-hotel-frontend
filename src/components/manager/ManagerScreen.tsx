@@ -233,7 +233,8 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
           newStatus === OrderStatus.COMPLETED
             ? targetOrder.items.filter(
                 (it) =>
-                  EDITABLE_TO_COMPLETE.has(it.status) && (it.quantity ?? 0) > 0,
+                  EDITABLE_TO_COMPLETE.has(it.status ?? "") &&
+                  (it.quantity ?? 0) > 0,
               )
             : targetOrder.items.filter(
                 (it) => it.status !== "completed" && it.status !== "cancelled",
@@ -398,7 +399,7 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
   const renderOrderCard = (order: Order) => (
     <Card
       key={order._id}
-      className="h-auto w-full flex-none rounded-xl bg-white shadow-md"
+      className="h-auto w-full flex-none rounded-xl bg-white p-4 shadow-md"
     >
       <CardHeader className="pb-2">
         <CardTitle className="flex flex-col items-start space-y-1 text-base">
@@ -474,8 +475,8 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
   };
 
   return (
-    <div className="h-screen w-full overflow-auto">
-      <div className="mx-auto flex w-full flex-col p-4">
+    <div className="h-screen w-full">
+      <div className="m-auto flex h-[820px] w-full flex-col p-2">
         {/* Cabeçalho */}
         <div className="mb-4 flex items-center justify-between p-4">
           <h1 className="text-xl font-bold">Gerenciamento de Pedidos</h1>
@@ -486,30 +487,30 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
             className="text-sm"
           >
             <RefreshCw
-              className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+              className={`h-8 w-8 ${isRefreshing ? "animate-spin" : ""}`}
             />
-            {isRefreshing ? "Atualizando..." : "Atualizar"}
+            {isRefreshing ?? "Atualizando..."}
           </Button>
         </div>
 
         {/* -------- MOBILE: 1 coluna por tela, swipe horizontal -------- */}
         <div className="px-6 md:hidden">
-          <div className="flex snap-x snap-mandatory gap-6 overflow-x-auto pb-2">
-            <section className="flex h-full min-w-full snap-start flex-col overflow-auto">
+          <div className="flex h-[710px] snap-x snap-mandatory gap-6 overflow-x-auto pb-2">
+            <section className="flex h-full min-w-full snap-start flex-col overflow-auto pb-4">
               <h2 className="mb-4 text-lg font-semibold">Em preparo</h2>
               <div className="flex-1 space-y-3 overflow-y-auto pr-2">
                 {renderOrders(OrderStatus.PROCESSING)}
               </div>
             </section>
 
-            <section className="flex h-full min-w-full snap-start flex-col overflow-auto">
+            <section className="flex h-full min-w-full snap-start flex-col overflow-auto pb-4">
               <h2 className="mb-4 text-lg font-semibold">Concluídos</h2>
               <div className="flex-1 space-y-3 overflow-y-auto pr-2">
                 {renderOrders(OrderStatus.COMPLETED)}
               </div>
             </section>
 
-            <section className="flex h-full min-w-full snap-start flex-col overflow-auto">
+            <section className="flex h-full min-w-full snap-start flex-col overflow-auto pb-4">
               <h2 className="mb-4 text-lg font-semibold">
                 Pagamentos solicitados
               </h2>
@@ -521,25 +522,25 @@ export default function ManagerScreen({ slug }: ManagerScreenProps) {
         </div>
 
         {/* -------- DESKTOP: 3 colunas com scroll independente -------- */}
-        <div className="hidden grow px-6 md:block">
-          <div className="grid grid-cols-3 items-start gap-6">
+        <div className="hidden grow md:block">
+          <div className="grid h-[710px] grid-cols-3 items-start gap-6 rounded-md p-4">
             {/* Em preparo */}
-            <section className="flex h-full flex-col overflow-auto border-r border-gray-200 pr-2">
-              <h2 className="mb-4 text-lg font-semibold">Em preparo</h2>
+            <section className="flex h-full flex-col overflow-y-auto border-r border-gray-200 pr-2">
+              <h2 className="mb-4 text-xl font-semibold">Em preparo</h2>
               <div className="flex-1 space-y-3 overflow-y-auto">
                 {renderOrders(OrderStatus.PROCESSING)}
               </div>
             </section>
 
-            <section className="flex h-full flex-col overflow-auto border-r border-gray-200 pr-2">
-              <h2 className="mb-4 text-lg font-semibold">Concluídos</h2>
+            <section className="flex h-full flex-col overflow-y-auto border-r border-gray-200 pr-2">
+              <h2 className="mb-4 text-xl font-semibold">Concluídos</h2>
               <div className="flex-1 space-y-3 overflow-y-auto">
                 {renderOrders(OrderStatus.COMPLETED)}
               </div>
             </section>
 
             <section className="flex h-full flex-col overflow-auto">
-              <h2 className="mb-4 text-lg font-semibold">
+              <h2 className="mb-4 text-xl font-semibold">
                 Pagamentos solicitados
               </h2>
               <div className="flex-1 space-y-3 overflow-y-auto">

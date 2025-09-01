@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores";
 import EmployeeList from "@/components/employee/EmployeeList";
 import Header from "@/components/header/Header";
-import { Sidebar } from "@/components/dashboard/SideMenu";
+import { Sidebar } from "@/components/sidebar/SideMenu";
 import { useSidebar } from "@/components/ui/sidebar";
 import { DelayedLoading } from "@/components/loading/DelayedLoading";
 import { useSession } from "next-auth/react";

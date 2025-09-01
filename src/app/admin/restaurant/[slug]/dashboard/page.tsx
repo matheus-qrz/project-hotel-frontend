@@ -1,6 +1,6 @@
 "use client";
 
-import { Sidebar } from "@/components/dashboard/SideMenu";
+import { Sidebar } from "@/components/sidebar/SideMenu";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { extractIdFromSlug } from "@/utils/slugify";

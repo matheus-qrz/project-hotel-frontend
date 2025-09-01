@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import EmployeeForm from "@/components/employee/EmployeeForm";
 import { useSidebar } from "@/components/ui/sidebar";
 import Header from "@/components/header/Header";
-import { Sidebar } from "@/components/dashboard/SideMenu";
+import { Sidebar } from "@/components/sidebar/SideMenu";
 import { extractIdFromSlug } from "@/utils/slugify";
 import { useSession } from "next-auth/react";
 import { DelayedLoading } from "@/components/loading/DelayedLoading";

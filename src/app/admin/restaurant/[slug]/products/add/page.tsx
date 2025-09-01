@@ -6,7 +6,7 @@ import { ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores";
 import Header from "@/components/header/Header";
-import { Sidebar } from "@/components/dashboard/SideMenu";
+import { Sidebar } from "@/components/sidebar/SideMenu";
 import { useSidebar } from "@/components/ui/sidebar";
 import ProductForm from "@/components/products/ProductsForm";
 import { DelayedLoading } from "@/components/loading/DelayedLoading";
