@@ -9,7 +9,7 @@ interface GuestInfo {
     phone?: string;
 }
 
-type RegisterAdminWithRestaurantPayload = {
+type RegisterAdminWithHotelPayload = {
   firstName: string;
   lastName: string;
   cpf: string;
@@ -17,56 +17,56 @@ type RegisterAdminWithRestaurantPayload = {
   password: string;
   phone?: string;
   name: string;
-  socialName?: string;
-  cnpj: string;
-  specialty?: string;
+  description?: string;
+  logo?: string;
   address: {
-    zipCode: string;
     street: string;
-    number: number;
+    number: string;
     complement?: string;
+    city: string;
+    state: string;
+    zipCode: string;
   };
-  businessHours: Array<{
-    days: string[];   // ex.: ["Segunda", "Terça"]
-    open: string;     // "08:00"
-    close: string;    // "18:00"
-  }>;
+  contact: {
+    phone?: string;
+    email?: string;
+  };
 };
 
-type RegisterAdminWithRestaurantSuccess = {
+type RegisterAdminWithHotelSuccess = {
   success: true;
   message?: string;
   user: { _id: string; firstName: string; lastName: string; email: string; role: 'ADMIN' | string };
-  restaurant: { _id: string; name: string };
+  hotel: { _id: string; name: string; slug: string };
   unit?: { _id: string; name: string };
   token: string;
 };
 
-type RegisterAdminWithRestaurantFail = {
+type RegisterAdminWithHotelFail = {
   success: false;
   message: string;
 };
 
-type RegisterAdminWithRestaurantResult =
-  | RegisterAdminWithRestaurantSuccess
-  | RegisterAdminWithRestaurantFail;
+type RegisterAdminWithHotelResult =
+  | RegisterAdminWithHotelSuccess
+  | RegisterAdminWithHotelFail;
 
 interface AuthState {
-    restaurantId: string | null;
+    hotelId: string | null;
     unitId: string | null;
     token: string | null;
     role: string | null;
     tokenExpiry: number | null;
     isGuest: boolean;
     guestInfo: GuestInfo | null;
-    tableNumber: string | null;
+    roomNumber: string | null;
 
     isLoading: boolean;
     setLoading: (v: boolean) => void;
     withLoading: <T>(fn: () => Promise<T>) => Promise<T>;
 
-    // Métodos existentes
-    setRestaurantId: (id: string) => void;
+    // Métodos de sessão
+    setHotelId: (id: string) => void;
     setUnitId: (id: string) => void;
     setToken: (token: string | null, role?: string | null) => void;
     setUserRole: (role: string) => void;
@@ -75,12 +75,12 @@ interface AuthState {
     getHeaders: () => Record<string, string>;
     isTokenExpired: () => boolean;
 
-    // Cadastro de Admin com Restaurante
-    registerAdminWithRestaurant: (payload: RegisterAdminWithRestaurantPayload) => Promise<RegisterAdminWithRestaurantResult>;
+    // Cadastro de Admin com Hotel
+    registerAdminWithHotel: (payload: RegisterAdminWithHotelPayload) => Promise<RegisterAdminWithHotelResult>;
 
-    // Novos métodos para guest
+    // Métodos para guest
     setGuestInfo: (info: GuestInfo) => void;
-    setTableNumber: (tableNumber: string) => void;
+    setRoomNumber: (roomNumber: string) => void;
     createGuestToken: () => string;
 
     _hydrated: boolean;
@@ -93,66 +93,65 @@ const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 export const useAuthStore = create<AuthState>()(
     persist(
         (set, get) => ({
-            restaurantId: null,
+            hotelId: null,
             unitId: null,
             token: null,
             role: null,
             tokenExpiry: null,
             isGuest: false,
             guestInfo: null,
-            tableNumber: null,
+            roomNumber: null,
             isLoading: false,
             _hydrated: false,
-            
+
             setHydrated: () => set({ _hydrated: true }),
             setLoading: (v) => set({ isLoading: v }),
             withLoading: async (fn) => {
                 set({ isLoading: true });
                 try {
-                return await fn();
+                    return await fn();
                 } finally {
-                set({ isLoading: false });
+                    set({ isLoading: false });
                 }
             },
 
-            setRestaurantId: (id: string) => {
+            setHotelId: (id: string) => {
                 if (typeof id !== 'string') {
-                    console.error('Invalid restaurant ID:', id);
+                    console.error('Invalid hotel ID:', id);
                     return;
                 }
-                set({ restaurantId: id });
+                set({ hotelId: id });
             },
 
             setUnitId: (id) => set({ unitId: id }),
 
-            setToken: (token, role) => set({ token: token, role: role ?? null }),
+            setToken: (token, role) => set({ token, role: role ?? null }),
 
             setUserRole: (role) => set({ role }),
 
             updateFromSession: (session) => {
                 if (session) {
                     const expiry = Date.now() + SESSION_DURATION;
-
                     set({
-                        restaurantId: session.user?.restaurantId || null,
+                        hotelId: session.user?.hotelId || null,
                         unitId: session.user?.unitId || null,
                         token: session.token || null,
                         role: session.user?.role || null,
                         tokenExpiry: expiry,
-                        isGuest: false
+                        isGuest: false,
                     });
                 }
             },
 
             clear: () => set({
-                restaurantId: null,
+                hotelId: null,
                 unitId: null,
                 token: null,
                 role: null,
                 tokenExpiry: null,
                 isGuest: false,
                 guestInfo: null,
-                tableNumber: null
+                roomNumber: null,
             }),
 
             getHeaders: () => {
@@ -160,51 +159,49 @@ export const useAuthStore = create<AuthState>()(
                 const headers: Record<string, string> = {
                     'Content-Type': 'application/json',
                 };
-
                 if (token) {
                     headers['Authorization'] = `Bearer ${token}`;
                 }
-
                 return headers;
             },
 
-            registerAdminWithRestaurant: async (
-            payload: RegisterAdminWithRestaurantPayload
-            ): Promise<RegisterAdminWithRestaurantResult> => {
-            set({ isLoading: true });
-            try {
-                const resp = await fetch(`${API_URL}/register/restaurant`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-                });
+            registerAdminWithHotel: async (
+                payload: RegisterAdminWithHotelPayload
+            ): Promise<RegisterAdminWithHotelResult> => {
+                set({ isLoading: true });
+                try {
+                    const resp = await fetch(`${API_URL}/hotel/create`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
 
-                const data = await resp.json().catch(() => ({}));
+                    const data = await resp.json().catch(() => ({}));
 
-                if (!resp.ok) {
-                const message = data?.message || data?.error || "Erro ao registrar";
-                return { success: false, message };
+                    if (!resp.ok) {
+                        const message = data?.message || data?.error || 'Erro ao registrar';
+                        return { success: false, message };
+                    }
+
+                    const { user, hotel, unit, token, message } = data;
+
+                    // Persistir sessão
+                    set({
+                        token: token ?? null,
+                        role: user?.role ?? 'ADMIN',
+                        hotelId: hotel?._id ?? null,
+                        unitId: unit?._id ?? null,
+                        isGuest: false,
+                        guestInfo: null,
+                        roomNumber: null,
+                    });
+
+                    return { success: true, message, user, hotel, unit, token };
+                } catch (e: any) {
+                    return { success: false, message: e?.message || 'Erro inesperado ao registrar' };
+                } finally {
+                    set({ isLoading: false });
                 }
-
-                const { user, restaurant, unit, token, message } = data;
-
-                // Persistir sessão
-                set({
-                token: token ?? null,
-                role: user?.role ?? "ADMIN",
-                restaurantId: restaurant?._id ?? null,
-                unitId: unit?._id ?? null,
-                isGuest: false,
-                guestInfo: null,
-                tableNumber: null,
-                });
-
-                return { success: true, message, user, restaurant, unit, token };
-            } catch (e: any) {
-                return { success: false, message: e?.message || "Erro inesperado ao registrar" };
-            } finally {
-                set({ isLoading: false });
-            }
             },
 
             isTokenExpired: () => {
@@ -215,10 +212,10 @@ export const useAuthStore = create<AuthState>()(
 
             setGuestInfo: (info) => set({
                 guestInfo: info,
-                isGuest: true
+                isGuest: true,
             }),
 
-            setTableNumber: (tableNumber) => set({ tableNumber }),
+            setRoomNumber: (roomNumber) => set({ roomNumber }),
 
             createGuestToken: () => {
                 const token = `guest_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
@@ -226,22 +223,22 @@ export const useAuthStore = create<AuthState>()(
                 set({
                     token,
                     tokenExpiry: expiry,
-                    isGuest: true
+                    isGuest: true,
                 });
                 return token;
             },
         }),
         {
-            name: 'restaurant-storage',
+            name: 'hotel-storage',
             partialize: (state) => ({
-                restaurantId: state.restaurantId,
+                hotelId: state.hotelId,
                 unitId: state.unitId,
                 token: state.token,
                 role: state.role,
                 tokenExpiry: state.tokenExpiry,
                 isGuest: state.isGuest,
                 guestInfo: state.guestInfo,
-                tableNumber: state.tableNumber
+                roomNumber: state.roomNumber,
             }),
         }
     )

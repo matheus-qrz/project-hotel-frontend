@@ -8,7 +8,7 @@ declare module "next-auth" {
         user: {
             id: string;
             role?: string;
-            restaurantId?: string;
+            hotelId?: string;
             unitId?: string;
         } & DefaultSession["user"];
     }
@@ -17,7 +17,7 @@ declare module "next-auth" {
         id: string;
         role?: string;
         token?: string;
-        restaurantId?: string;
+        hotelId?: string;
         unitId?: string;
     }
 }
@@ -28,7 +28,7 @@ declare module "next-auth/jwt" {
         id: string;
         role?: string;
         token?: string;
-        restaurantId?: string;
+        hotelId?: string;
         unitId?: string;
     }
 }

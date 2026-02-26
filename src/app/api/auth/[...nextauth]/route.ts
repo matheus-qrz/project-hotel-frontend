@@ -9,11 +9,11 @@ const handler = NextAuth({
       id: "credentials",
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        identifier: { label: "Email ou CPF", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.identifier) return null;
 
         const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
         if (!API_URL) throw new Error("API_URL ausente");
@@ -22,8 +22,8 @@ const handler = NextAuth({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            email: credentials.email,
-            password: credentials.password,
+            identifier: credentials.identifier,
+            password: credentials.password ?? "",
           }),
         });
 
@@ -32,20 +32,17 @@ const handler = NextAuth({
 
         if (!data?.user) return null;
 
-        // filtre as roles que podem logar
-        if (!["ADMIN", "MANAGER"].includes(data.user.role)) return null;
+        // Roles permitidas para login
+        if (!["ADMIN", "MANAGER", "ATTENDANT"].includes(data.user.role)) return null;
 
         return {
-          id: data.user.id ?? data.user._id,
-          name: data.user.firstName,
+          id: data.user._id ?? data.user.id,
+          name: `${data.user.firstName} ${data.user.lastName ?? ""}`.trim(),
           email: data.user.email,
           role: data.user.role,
           token: data.token,
-          restaurantId:
-            data.restaurantInfo?.restaurantId ??
-            data.user.restaurantId ??
-            data.user._id,
-          restaurantName: data.restaurantInfo?.restaurantName,
+          hotelId: data.hotel?._id ?? data.user.hotel ?? null,
+          unitId: data.unit?._id ?? data.user.restaurantUnit ?? null,
         };
       },
     }),
@@ -55,22 +52,22 @@ const handler = NextAuth({
       if (user) {
         token.id = (user as any).id;
         token.role = (user as any).role;
-        token.restaurantId = (user as any).restaurantId;
-        token.restaurantName = (user as any).restaurantName;
-        (token as any).token = (user as any).token;
+        token.hotelId = (user as any).hotelId;
+        token.unitId = (user as any).unitId;
+        token.token = (user as any).token;
       }
       return token;
     },
     async session({ session, token }) {
-      (session.user as any).id = (token as any).id;
-      (session.user as any).role = (token as any).role;
-      (session.user as any).restaurantId = (token as any).restaurantId;
-      (session.user as any).restaurantName = (token as any).restaurantName;
-      (session as any).token = (token as any).token;
+      (session.user as any).id = token.id;
+      (session.user as any).role = token.role;
+      (session.user as any).hotelId = token.hotelId;
+      (session.user as any).unitId = token.unitId;
+      (session as any).token = token.token;
       return session;
     },
   },
-  debug: true,
+  debug: process.env.NODE_ENV === "development",
   secret: process.env.NEXTAUTH_SECRET,
 });
 
