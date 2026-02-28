@@ -4,40 +4,51 @@ import { useEffect, useState } from "react";
 import { Bell, Menu, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHotelStore } from "@/stores/hotel";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useSidebar } from "../ui/sidebar";
+import { useAuthStore } from "@/stores";
 
 export default function Header() {
   const router = useRouter();
-  const { slug } = useParams();
-  const { hotel, fetchHotelData } = useHotelStore();
-  const { data: session } = useSession();
+  const { hotelSlug, _hydrated, updateFromSession } = useAuthStore();
+  const { fetchHotelData } = useHotelStore();
+  const { data: session, status } = useSession();
   const { toggle } = useSidebar();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Sincroniza a session com o authStore assim que estiver disponível
   useEffect(() => {
+    if (status === "authenticated" && session) {
+      updateFromSession(session);
+    }
+  }, [session, status]);
+
+  // Só busca quando o store estiver hidratado E o slug disponível
+  useEffect(() => {
+    if (!_hydrated) return;
+    if (!hotelSlug || hotelSlug === "null" || hotelSlug === "undefined") {
+      console.warn("[Header] hotelSlug ainda inválido:", hotelSlug);
+      return;
+    }
+
     const load = async () => {
       try {
-        await fetchHotelData(String(slug));
+        await fetchHotelData(hotelSlug);
       } catch (error) {
         console.error("Erro ao carregar hotel:", error);
       }
     };
-    load();
-  }, []);
 
-  function redirectToHome() {
-    if (!session) return;
-    router.push(`/admin/hotel/${slug}/dashboard`);
-  }
+    load();
+  }, [hotelSlug, _hydrated]); // ✅ re-executa quando o slug chegar
 
   async function handleRefresh() {
+    if (!hotelSlug) return;
     setIsRefreshing(true);
     try {
-      await fetchHotelData(String(slug));
+      await fetchHotelData(hotelSlug);
     } finally {
-      // Mantém o ícone girando por pelo menos 600ms para feedback visual
       setTimeout(() => setIsRefreshing(false), 600);
     }
   }
@@ -50,8 +61,7 @@ export default function Header() {
   });
 
   return (
-    <header className="sticky top-0 z-50 flex h-16 w-full items-center justify-between border-b border-stone-200 bg-white px-6">
-      {/* Hamburguer — mesmo padrão do projeto restaurante */}
+    <header className="sticky top-0 z-50 flex h-24 w-full items-center justify-between border-b border-stone-200 bg-white p-3 px-6">
       <Button
         type="button"
         variant="outline"
@@ -63,7 +73,6 @@ export default function Header() {
         <Menu className="h-4 w-4" />
       </Button>
 
-      {/* Direita: data + ações */}
       <div className="flex items-center gap-3">
         <span className="hidden text-xs capitalize text-stone-400 sm:block">
           {today}

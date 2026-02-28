@@ -2,8 +2,12 @@ import QueryProvider from "@/providers/queryProvider";
 import "../globals.css";
 
 export const metadata = {
-  title: "Seu Garçom",
+  title: "Roomly",
   description: "Frontend",
+  icons: {
+    icon: [{ url: "/icon-32.png", sizes: "32x32" }],
+    apple: "/apple-icon.png",
+  },
 };
 
 export default async function PublicLayout({
@@ -22,4 +26,3 @@ export default async function PublicLayout({
     </html>
   );
 }
-

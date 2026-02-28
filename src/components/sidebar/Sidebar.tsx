@@ -41,8 +41,9 @@ interface NavItem {
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+
 export function Sidebar() {
-  const { slug } = useParams();
   const pathname = usePathname();
   const { setTheme } = useTheme();
   const { data: session } = useSession();
@@ -52,8 +53,9 @@ export function Sidebar() {
   const role = session?.user?.role;
   const userName = session?.user?.name ?? "Usuário";
   const userInitial = userName.charAt(0).toUpperCase();
-  const hotelName = hotel?.name ?? "Hotel";
+  const hotelName = hotel?.name;
 
+  const slug = (session?.user as any)?.slug;
   const base = `/admin/hotel/${slug}`;
 
   const allItems: NavItem[] = [

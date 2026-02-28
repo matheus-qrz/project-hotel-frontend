@@ -65,6 +65,9 @@ interface AuthState {
     setLoading: (v: boolean) => void;
     withLoading: <T>(fn: () => Promise<T>) => Promise<T>;
 
+    hotelSlug: string | null;
+    setHotelSlug: (slug: string) => void;
+
     // Métodos de sessão
     setHotelId: (id: string) => void;
     setUnitId: (id: string) => void;
@@ -94,6 +97,7 @@ export const useAuthStore = create<AuthState>()(
     persist(
         (set, get) => ({
             hotelId: null,
+            hotelSlug: null,
             unitId: null,
             token: null,
             role: null,
@@ -133,18 +137,22 @@ export const useAuthStore = create<AuthState>()(
                 if (session) {
                     const expiry = Date.now() + SESSION_DURATION;
                     set({
-                        hotelId: session.user?.hotelId || null,
-                        unitId: session.user?.unitId || null,
-                        token: session.token || null,
-                        role: session.user?.role || null,
+                        hotelId: (session.user as any)?.hotelId || null,
+                        hotelSlug: (session.user as any)?.hotelSlug || null, // ✅
+                        unitId: (session.user as any)?.unitId || null,
+                        token: (session.token as any) || null,
+                        role: (session.user as any)?.role || null,
                         tokenExpiry: expiry,
                         isGuest: false,
                     });
                 }
             },
 
+            setHotelSlug: (slug) => set({ hotelSlug: slug }),
+            
             clear: () => set({
                 hotelId: null,
+                hotelSlug: null,
                 unitId: null,
                 token: null,
                 role: null,
@@ -190,6 +198,7 @@ export const useAuthStore = create<AuthState>()(
                         token: token ?? null,
                         role: user?.role ?? 'ADMIN',
                         hotelId: hotel?._id ?? null,
+                        hotelSlug: hotel?.slug ?? null,
                         unitId: unit?._id ?? null,
                         isGuest: false,
                         guestInfo: null,
@@ -232,6 +241,7 @@ export const useAuthStore = create<AuthState>()(
             name: 'hotel-storage',
             partialize: (state) => ({
                 hotelId: state.hotelId,
+                hotelSlug: state.hotelSlug,
                 unitId: state.unitId,
                 token: state.token,
                 role: state.role,

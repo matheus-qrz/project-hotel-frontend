@@ -94,9 +94,7 @@ export const useHotelStore = create<HotelStore>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
 
-      const cleanSlug = slug.split("?")[0];
-
-      const response = await fetch(`${API_URL}/hotel/by-slug/${cleanSlug}`, {
+      const response = await fetch(`${API_URL}/hotel/by-slug/${slug}`, {
         headers: {
           ...useAuthStore.getState().getHeaders(),
         },

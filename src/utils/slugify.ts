@@ -1,9 +1,12 @@
-export const generateRestaurantSlug = (name: string, id: string) => {
+/**
+ * Gera um slug único para um hotel/estabelecimento
+ * Formato: nome-normalizado-id
+ */
+export const generateHotelSlug = (name: string, id: string): string => {
     if (!name || !id) {
         throw new Error('Nome e ID são obrigatórios para gerar o slug');
     }
 
-    // Limpa o ID se for um ObjectId
     const cleanId = id.replace(/^ObjectId\("(.*)"\)$/, '$1');
 
     const normalizedName = name
@@ -17,19 +20,24 @@ export const generateRestaurantSlug = (name: string, id: string) => {
     return `${normalizedName}-${cleanId}`;
 };
 
+/**
+ * Extrai o ID do MongoDB a partir de um slug
+ * Ex: "hotel-beira-mar-69949669b86fa95c3d2b0796" → "69949669b86fa95c3d2b0796"
+ */
 export const extractIdFromSlug = (slug: string): string => {
     return slug.split('-').pop() || '';
 };
 
+/**
+ * Extrai o nome legível a partir de um slug
+ * Ex: "hotel-beira-mar-69949669b86fa95c3d2b0796" → "Hotel Beira Mar"
+ */
 export const extractNameFromSlug = (slug: string): string => {
     if (!slug) return '';
 
-    // Remove o ID do final do slug
     const parts = slug.split('-');
-    // Remove o último elemento (ID) e junta o resto
     const name = parts.slice(0, -1).join(' ');
 
-    // Capitaliza as palavras e remove caracteres especiais
     return name
         .split(' ')
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -39,9 +47,10 @@ export const extractNameFromSlug = (slug: string): string => {
 
 /**
  * Retorna o escopo da rota com base no caminho do navegador
+ * Adaptado para a estrutura de rotas do Roomly
  */
-export function extractScopeFromPathname(pathname: string): "restaurant" | "unit" {
-    if (pathname.includes("/admin/restaurant/")) return "restaurant";
+export function extractScopeFromPathname(pathname: string): "hotel" | "unit" {
+    if (pathname.includes("/admin/hotel/")) return "hotel";
     if (pathname.includes("/admin/unit/")) return "unit";
-    return "unit"; // fallback de segurança
+    return "hotel"; // fallback padrão para o Roomly
 }

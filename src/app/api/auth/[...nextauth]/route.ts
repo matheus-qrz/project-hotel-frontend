@@ -32,7 +32,6 @@ const handler = NextAuth({
 
         if (!data?.user) return null;
 
-        // Roles permitidas para login
         if (!["ADMIN", "MANAGER", "ATTENDANT"].includes(data.user.role)) return null;
 
         return {
@@ -42,7 +41,8 @@ const handler = NextAuth({
           role: data.user.role,
           token: data.token,
           hotelId: data.hotel?._id ?? data.user.hotel ?? null,
-          unitId: data.unit?._id ?? data.user.restaurantUnit ?? null,
+          slug: data.user.slug ?? data.hotel?.slug ?? null,  // ← corrigido
+          unitId: data.user.unitId ?? data.unit?._id ?? null, // ← corrigido
         };
       },
     }),
@@ -50,18 +50,20 @@ const handler = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = (user as any).id;
+        token.id = (user as any)._id;
         token.role = (user as any).role;
         token.hotelId = (user as any).hotelId;
+        token.slug = (user as any).slug;
         token.unitId = (user as any).unitId;
         token.token = (user as any).token;
       }
       return token;
     },
     async session({ session, token }) {
-      (session.user as any).id = token.id;
+      (session.user as any).id = token._id;
       (session.user as any).role = token.role;
       (session.user as any).hotelId = token.hotelId;
+      (session.user as any).slug = token.slug; 
       (session.user as any).unitId = token.unitId;
       (session as any).token = token.token;
       return session;

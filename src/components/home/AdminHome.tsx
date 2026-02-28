@@ -12,6 +12,7 @@ import {
   OrderStatus,
 } from "./types";
 import { Label } from "../ui/label";
+import { Sidebar } from "../dashboard";
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -244,56 +245,7 @@ export default function AdminHome() {
   return (
     <div className="flex min-h-screen max-w-full bg-[#F7F5F2] font-sans text-[#1A1714]">
       {/* ── Sidebar ── */}
-      <aside className="fixed bottom-0 left-0 top-0 z-50 flex w-60 flex-col bg-[#1A1714]">
-        {/* Brand */}
-        <div className="mb-3 border-b border-white/10 px-6 pb-6 pt-7">
-          <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.15em] text-amber-400">
-            <Label>At Your Service,</Label>
-          </p>
-          <p className="text-4xl font-medium text-white">
-            <Label>Pousada Vila Serena</Label>
-          </p>
-          <p className="mt-1 text-xs font-light text-white/40">
-            <Label>Painel Administrativo</Label>
-          </p>
-        </div>
-
-        {/* Nav */}
-        <nav className="flex-1 overflow-y-auto">
-          <p className="px-6 pb-1.5 pt-4 text-[9px] font-semibold uppercase tracking-[0.14em] text-white/30">
-            Principal
-          </p>
-          {navItems.slice(0, 2).map((item) => (
-            <NavItem
-              key={item.label}
-              {...item}
-            />
-          ))}
-
-          <p className="px-6 pb-1.5 pt-5 text-[9px] font-semibold uppercase tracking-[0.14em] text-white/30">
-            Gestão
-          </p>
-          {navItems.slice(2).map((item) => (
-            <NavItem
-              key={item.label}
-              {...item}
-            />
-          ))}
-        </nav>
-
-        {/* User */}
-        <div className="border-t border-white/10 px-6 py-5">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500 text-xs font-semibold text-white">
-              M
-            </div>
-            <div>
-              <p className="text-sm font-medium text-white">Matheus</p>
-              <p className="text-[11px] text-white/35">Administrador</p>
-            </div>
-          </div>
-        </div>
-      </aside>
+      <Sidebar />
 
       {/* ── Main ── */}
       <main className="ml-56 flex min-h-screen flex-1 flex-col">
